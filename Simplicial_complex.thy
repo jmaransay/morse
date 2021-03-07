@@ -5,6 +5,192 @@ theory Simplicial_complex
     Finite_mod_type
 begin
 
+section\<open>Simplicial Complex\<close>
+
+definition simplicial_complex :: "('n::finite) set set => bool"
+  where "simplicial_complex K = (\<forall>\<sigma>\<in>K. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> K)"
+
+text\<open>One example of simplicial complex with four points\<close>
+
+lemma "simplicial_complex {{},{a\<^sub>0::finite_mod_4},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3}}" (is "simplicial_complex ?K")
+proof -
+  have set: "?K = set [{},{a\<^sub>0::finite_mod_4},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3}]" 
+    (is "?K = set ?k") by simp
+  have equiv: "(\<forall>\<sigma>\<in>?K. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K) = list_all (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K) ?k"
+    unfolding set
+    using list_all_iff [of "(\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K)" ?k, symmetric]
+    by simp
+  have "list_all (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K) ?k" by auto
+  thus ?thesis 
+    unfolding simplicial_complex_def
+    unfolding sym [OF equiv] .
+qed
+
+lemma
+  forallb_extended:
+  shows "(\<forall>a\<subseteq>{x,y}. P a) = (P {} \<and> P {x} \<and> P {y} \<and> P {x,y})" 
+proof -
+  have set: "{x,y} = set [x,y]" by simp
+  have "(\<forall>a\<subseteq>{x,y}. P a) = (\<forall>a\<subseteq>set [x,y]. P a)" unfolding set ..
+  also have "... = (\<forall>a\<in>set ` set (subseqs [x,y]). P a)"
+    using Pow_def [of "{x,y}"]
+    using List.subseqs_powset [of "[x,y]"] by simp
+  also have "... = (\<forall>a\<in>set ` set ([[x,y],[x],[y],[]]). P a)"
+    by simp
+  also have "... = (\<forall>a\<in>set ([{x,y},{x},{y},{}]). P a)"
+    by simp
+  also have "... = list_all P [{x,y}, {x}, {y}, {}]"
+    by (rule list_all_iff [symmetric])
+  also have "... = (P {} \<and> P {x} \<and> P {y} \<and> P {x,y})"
+    by auto
+  finally show ?thesis by simp
+qed
+
+text\<open>Another  example of simplicial complex with four points\<close>
+
+lemma "simplicial_complex {{},{a\<^sub>0::finite_mod_4},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1}}" 
+  (is "simplicial_complex ?K")
+proof -
+  have set: "?K = set [{a\<^sub>0,a\<^sub>1},{a\<^sub>3::finite_mod_4},{a\<^sub>2},{a\<^sub>1},{a\<^sub>0},{}]" 
+    (is "?K = set ?k") by auto
+  have "(\<forall>\<sigma>\<in>?K. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K) = (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K) {a\<^sub>0,a\<^sub>1} \<and> list_all (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K) [{a\<^sub>3},{a\<^sub>2},{a\<^sub>1},{a\<^sub>0},{}]"
+    unfolding set
+    using list_all_iff [of "(\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K)" ?k, symmetric]
+    using list_all_simps(1) [of "(\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K)" "{a\<^sub>0,a\<^sub>1}" "[{a\<^sub>3},{a\<^sub>2},{a\<^sub>1},{a\<^sub>0},{}]"]
+    by auto
+  moreover have "(\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K) {a\<^sub>0,a\<^sub>1}"
+    using forallb_extended [of "a\<^sub>0" "a\<^sub>1" "(\<lambda>\<tau>. \<tau> \<in> ?K)"] by auto
+  moreover have "list_all (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> ?K) [{a\<^sub>3},{a\<^sub>2},{a\<^sub>1},{a\<^sub>0},{}]"
+    by auto
+  ultimately show ?thesis unfolding simplicial_complex_def by auto
+qed
+
+text\<open>Another example of simplicial complex with four points; 
+  the proof shall be improved, trying to reduce the repetitions.\<close>
+
+lemma "simplicial_complex {{a\<^sub>2,a\<^sub>3},{a\<^sub>1,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>0,a\<^sub>2},{a\<^sub>3},{a\<^sub>2},{a\<^sub>1},
+      {a\<^sub>0::finite_mod_4},{}}" (is "simplicial_complex ?K")
+proof -
+  have set: "?K = set [{a\<^sub>2,a\<^sub>3},{a\<^sub>1,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>0,a\<^sub>2},{a\<^sub>3},{a\<^sub>2},{a\<^sub>1},{a\<^sub>0::finite_mod_4},{}]"
+        (is "?K = set ?k") by simp
+  have length: "length ?k = Suc 9" by simp
+  have "(\<forall>\<sigma>\<in>set ?k. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) =
+          list_all (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) [{a\<^sub>2,a\<^sub>3},{a\<^sub>1,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>0,a\<^sub>2},{a\<^sub>3},{a\<^sub>2},{a\<^sub>1},{a\<^sub>0},{}]"
+    unfolding list_all_iff [of "(\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k)" ?k, symmetric] by simp
+  also have "...  = (\<forall>n<length ?k. (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) (?k ! n))"
+    using list_all_length [of "(\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k)" ?k] by simp
+  also have "...  = (\<forall>n<Suc 9. (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) (?k ! n))"
+    using length
+    by presburger  
+  also have "... = ((\<forall>\<tau>\<subseteq>?k ! (9::nat). \<tau> \<in> set ?k) \<and> 
+                      (\<forall>n<9. (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) (?k ! n)))" 
+    using  All_less_Suc [of 9 "(\<lambda>n. \<forall>\<tau>\<subseteq>?k ! n. \<tau> \<in> set ?k)"] by simp
+  also have "... = ((\<forall>\<tau>\<subseteq>?k ! (9::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (8::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>n<8. (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) (?k ! n)))"
+    using  All_less_Suc [of 8 "(\<lambda>n. \<forall>\<tau>\<subseteq>?k ! n. \<tau> \<in> set ?k)"] by simp
+  also have "...  = ((\<forall>\<tau>\<subseteq>?k ! (9::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (8::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (7::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>n<7. (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) (?k ! n)))"
+    using  All_less_Suc [of 7 "(\<lambda>n. \<forall>\<tau>\<subseteq>?k ! n. \<tau> \<in> set ?k)"] by simp
+  also have "...  = ((\<forall>\<tau>\<subseteq>?k ! (9::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (8::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (7::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (6::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>n<6. (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) (?k ! n)))"
+    using  All_less_Suc [of 6 "(\<lambda>n. \<forall>\<tau>\<subseteq>?k ! n. \<tau> \<in> set ?k)"] by simp
+  also have "...  = ((\<forall>\<tau>\<subseteq>?k ! (9::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (8::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (7::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (6::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (5::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>n<5. (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) (?k ! n)))"
+    using  All_less_Suc [of 5 "(\<lambda>n. \<forall>\<tau>\<subseteq>?k ! n. \<tau> \<in> set ?k)"] by simp
+  also have "...  = ((\<forall>\<tau>\<subseteq>?k ! (9::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (8::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (7::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (6::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (5::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (4::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>n<4. (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) (?k ! n)))"
+    using  All_less_Suc [of 4 "(\<lambda>n. \<forall>\<tau>\<subseteq>?k ! n. \<tau> \<in> set ?k)"] by simp
+  also have "...  = ((\<forall>\<tau>\<subseteq>?k ! (9::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (8::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (7::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (6::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (5::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (4::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (3::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>n<3. (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) (?k ! n)))"
+    using  All_less_Suc [of 3 "(\<lambda>n. \<forall>\<tau>\<subseteq>?k ! n. \<tau> \<in> set ?k)"] by simp
+  also have "...  = ((\<forall>\<tau>\<subseteq>?k ! (9::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (8::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (7::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (6::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (5::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (4::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (3::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (2::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>n<2. (\<lambda>\<sigma>. \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set ?k) (?k ! n)))"
+    using  All_less_Suc [of 2 "(\<lambda>n. \<forall>\<tau>\<subseteq>?k ! n. \<tau> \<in> set ?k)"] by simp
+  also have "...  = ((\<forall>\<tau>\<subseteq>?k ! (9::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (8::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (7::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (6::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (5::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (4::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (3::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (2::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (1::nat). \<tau> \<in> set ?k) \<and>
+                    (\<forall>\<tau>\<subseteq>?k ! (0::nat). \<tau> \<in> set ?k))"
+    using  All_less_Suc2 [of _ "(\<lambda>n. \<forall>\<tau>\<subseteq>?k ! n. \<tau> \<in> set ?k)"]
+    using  All_less_Suc [of _ "(\<lambda>n. \<forall>\<tau>\<subseteq>?k ! n. \<tau> \<in> set ?k)"]
+    using Suc_1
+    by (smt (z3) less_2_cases_iff one_less_numeral_iff semiring_norm(76))
+  also have "..."
+    apply simp
+    unfolding forallb_extended [of "a\<^sub>2" "a\<^sub>3" "(\<lambda>a. a = {a\<^sub>2, a\<^sub>3} \<or>
+       a = {a\<^sub>1, a\<^sub>3} \<or>
+       a = {a\<^sub>1, a\<^sub>2} \<or>
+       a = {a\<^sub>0, a\<^sub>3} \<or>
+       a = {a\<^sub>0, a\<^sub>2} \<or> a = {a\<^sub>3} \<or> a = {a\<^sub>2} \<or> a = {a\<^sub>1} \<or> a = {a\<^sub>0} \<or> a = {})"] 
+    apply simp
+    unfolding forallb_extended [of "a\<^sub>1" "a\<^sub>3" "(\<lambda>a. a = {a\<^sub>2, a\<^sub>3} \<or>
+       a = {a\<^sub>1, a\<^sub>3} \<or>
+       a = {a\<^sub>1, a\<^sub>2} \<or>
+       a = {a\<^sub>0, a\<^sub>3} \<or>
+       a = {a\<^sub>0, a\<^sub>2} \<or> a = {a\<^sub>3} \<or> a = {a\<^sub>2} \<or> a = {a\<^sub>1} \<or> a = {a\<^sub>0} \<or> a = {})"] 
+    apply simp
+    unfolding forallb_extended [of "a\<^sub>1" "a\<^sub>2" "(\<lambda>a. a = {a\<^sub>2, a\<^sub>3} \<or>
+       a = {a\<^sub>1, a\<^sub>3} \<or>
+       a = {a\<^sub>1, a\<^sub>2} \<or>
+       a = {a\<^sub>0, a\<^sub>3} \<or>
+       a = {a\<^sub>0, a\<^sub>2} \<or> a = {a\<^sub>3} \<or> a = {a\<^sub>2} \<or> a = {a\<^sub>1} \<or> a = {a\<^sub>0} \<or> a = {})"] 
+    apply simp
+    unfolding forallb_extended [of "a\<^sub>0" "a\<^sub>3" "(\<lambda>a. a = {a\<^sub>2, a\<^sub>3} \<or>
+       a = {a\<^sub>1, a\<^sub>3} \<or>
+       a = {a\<^sub>1, a\<^sub>2} \<or>
+       a = {a\<^sub>0, a\<^sub>3} \<or>
+       a = {a\<^sub>0, a\<^sub>2} \<or> a = {a\<^sub>3} \<or> a = {a\<^sub>2} \<or> a = {a\<^sub>1} \<or> a = {a\<^sub>0} \<or> a = {})"] 
+    apply simp
+    unfolding forallb_extended [of "a\<^sub>0" "a\<^sub>2" "(\<lambda>a. a = {a\<^sub>2, a\<^sub>3} \<or>
+       a = {a\<^sub>1, a\<^sub>3} \<or>
+       a = {a\<^sub>1, a\<^sub>2} \<or>
+       a = {a\<^sub>0, a\<^sub>3} \<or>
+       a = {a\<^sub>0, a\<^sub>2} \<or> a = {a\<^sub>3} \<or> a = {a\<^sub>2} \<or> a = {a\<^sub>1} \<or> a = {a\<^sub>0} \<or> a = {})"] 
+    apply simp
+    by (meson subset_singletonD)
+  finally have " \<forall>\<sigma>::finite_mod_4 set
+   \<in>set [{a\<^sub>2, a\<^sub>3}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>3}, {a\<^sub>2}, {a\<^sub>1}, {a\<^sub>0},
+          {}].
+     \<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> set [{a\<^sub>2, a\<^sub>3}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>3}, {a\<^sub>2},
+                     {a\<^sub>1}, {a\<^sub>0}, {}]" by safe
+  thus ?thesis unfolding simplicial_complex_def set .
+qed
+
+text\<open>Simplicial complex induced by a monotone Boolean function\<close>
+
 text\<open>The simplicial complex induced by a monotone Boolean function, Definition 6.9 in Scoville\<close>
 
 text\<open>First we introduce the tuples that make cero a Boolean input\<close>
@@ -62,16 +248,35 @@ definition
   where "simplicial_complex_induced_by_monotone_boolean_function f = 
         {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"
 
+lemma 
+  assumes "monotone_bool_fun (f::bool^'n::class_mod_type => bool)"
+  shows "simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function f)"
+  unfolding simplicial_complex_def
+  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+proof
+  fix \<sigma>
+  assume sigma: "\<sigma> \<in> {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"
+  from sigma obtain x where x_none: "x \<noteq> 1" 
+                      and fx: "f x" and "ceros_of_boolean_input x = \<sigma>" by auto
+  show "\<forall>\<tau>\<subseteq>\<sigma>. \<tau> \<in> {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y} "
+  proof (safe)
+    fix \<tau>
+    assume "\<tau> \<subseteq> \<sigma>"
+    show "\<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = \<tau>"
+sorry
+
 text\<open>The simplicial complex induced by a Boolean function is a subset of the 
-  powerset of the natural numbers, up to the dimension of the range of the Boolean function\<close>
+  powerset of the indexes\<close>
 
 lemma
-  "(simplicial_complex_induced_by_monotone_boolean_function (f::bool^'n::class_mod_type => bool)) \<subseteq> Pow (UNIV)"
+  "(simplicial_complex_induced_by_monotone_boolean_function (f::bool^'n::class_mod_type => bool)) 
+    \<subseteq> Pow (UNIV)"
   unfolding simplicial_complex_induced_by_monotone_boolean_function_def
   using ceros_of_boolean_input_int_subset by auto
 
 lemma
-  "(simplicial_complex_induced_by_monotone_boolean_function_int (f::bool^'n::class_mod_type => bool)) \<subseteq> Pow {0..< int CARD('n)}"
+  "(simplicial_complex_induced_by_monotone_boolean_function_int (f::bool^'n::class_mod_type => bool)) 
+    \<subseteq> Pow {0..< int CARD('n)}"
   unfolding simplicial_complex_induced_by_monotone_boolean_function_int_def
   using ceros_of_boolean_input_int_subset by auto
 
