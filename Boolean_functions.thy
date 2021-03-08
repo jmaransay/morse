@@ -101,7 +101,7 @@ lemma "monotone_bool_fun bool_fun_top"
 lemma "monotone_bool_fun bool_fun_bot"
   by (simp add: bool_fun_bot_def mono_onI monotone_bool_fun_def)
 
-text\<open>The Isar proof of the following result has been produced by Isabelle ``automagically''\<close>
+text\<open>The Isar proof of the following result has been produced by Isabelle automatically:\<close>
 
 lemma
   monotone_threshold:
