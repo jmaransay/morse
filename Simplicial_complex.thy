@@ -133,14 +133,16 @@ proof
         unfolding ceros_of_boolean_input_def by simp
       show "f (\<chi> i::'n. if i \<in> \<tau> then False else True)"
         using fx and x_def and sub and mon 
+        unfolding monotone_bool_fun_def
         using mono_onD [of f UNIV x "(\<chi> i::'n. if i \<in> \<tau> then False else True)"]
-        apply auto try        
+        apply auto unfolding less_eq_vec_def le_bool_def
+        by (metis subset_eq vec_lambda_beta)
       show "(\<chi> i::'n. if i \<in> \<tau> then False else True) \<noteq> (1::(bool, 'n) vec)"
-        using subset using x_none unfolding x_def one_vec_def one_bool_def
-          apply (cases "\<tau> = {}", auto) try
-        apply (simp add: Pow_ne_def)
-  
-sorry
+        using sub using x_none unfolding x_def one_vec_def one_bool_def
+        by (smt (verit, ccfv_threshold) Pow_ne_def UNIV_def mem_Collect_eq subset subset_empty subset_emptyI vec_lambda_inverse)
+    qed
+  qed
+qed
 
 text\<open>The simplicial complex induced by a Boolean function is a subset of the 
   powerset of the indexes\<close>
