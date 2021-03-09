@@ -226,31 +226,69 @@ proof (unfold simplicial_complex_induced_by_monotone_boolean_function_def, rule,
     by (rule ceros_of_boolean_input_in_set)
 qed
 
-lemma
-  assumes x: "(x::finite_mod_4) \<in> A" and "y \<in> A" and "z \<in> A"
-  and "x \<noteq> y" and "x \<noteq> z" and "y \<noteq> z"
-shows "card A \<ge> 3"
-  using CARD_finite_mod_4 finite_mod_4.exhaust finite_mod_4.nchotomy try
+lemma "{{a\<^sub>0},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1},{a\<^sub>0,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>1,a\<^sub>3},{a\<^sub>2,a\<^sub>3}} 
+    \<subseteq> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
+  (is "{?a,?b,?c,?d,?e,?f,?g,?h,?i,?j} \<subseteq> _")
+proof (intro subsetI)
+  fix x
+  assume x: "x \<in> {?a,?b,?c,?d,?e,?f,?g,?h,?i,?j}"
+  show "x \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
+    unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+    unfolding bool_fun_threshold_2_3_def
+    unfolding count_true_def unfolding UNIV_finite_mod_4
+    unfolding ceros_of_boolean_input_def
+    apply (rule) 
+    using boolean_vec_not_one
+    try
+    apply (rule exI [of _ "(\<chi> i::finite_mod_4. if i \<in> ?b then False else True)"]) 
+    using x try
+    apply auto
+  using exI [of _ "(\<chi> i::finite_mod_4. if i \<in> ?b then False else True)"]
+  using boolean_vec_not_one
+  using ceros_of_boolean_input_in_set apply auto
+  try
+  unfolding count_true_def using UNIV_finite_mod_4
+  try
 
-lemma 
+
+lemma assumes "A \<subseteq> B" and "finite B"
+  shows "card A \<le> card B"
+
+
+lemma
+  assumes x: "(x::finite_mod_4) \<in> A" and y: "y \<in> A" and z: "z \<in> A"
+  and xy: "x \<noteq> y" and xz: "x \<noteq> z" and yz: "y \<noteq> z"
+shows "card A \<ge> 3"
+proof (rule ccontr)
+  assume not: "\<not> 3 \<le> card A"
+  have sub: "A \<subseteq> UNIV" by simp
+  have "card A \<le> card (UNIV)"
+    using card_mono [OF finite_class.finite_UNIV sub] apply simp try
+    apply (rule card_mono) using finite_UNIV find_theorems (100) "finite UNIV" try
+  from x and CARD_finite_mod_4 have
+  using CARD_finite_mod_4 finite_mod_4.exhaust finite_mod_4.nchotomy
+  sorry
+
+lemma
   assumes ANE: "A \<noteq> {}" and card: "card A \<le> 2"
   shows "A
     \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
   (is "?A \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3")
 proof (unfold simplicial_complex_induced_by_monotone_boolean_function_def, rule,
-      rule exI [of _ "(\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"], 
+      rule exI [of _ "(\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"],
       intro conjI)
   show "(\<chi> i::finite_mod_4. if i \<in> ?A then False else True) \<noteq> (1::(bool, finite_mod_4) vec)"
-    using boolean_vec_not_one [OF _ ANE] by simp
+    by (rule boolean_vec_not_one [OF _ ANE]) simp
   show "bool_fun_threshold_2_3 (\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"
     apply (unfold bool_fun_threshold_2_3_def count_true_def UNIV_finite_mod_4 ceros_of_boolean_input_def,
-      simp_all add: card finite_mod_4.exhaust finite_mod_4.nchotomy, safe) 
-    using card ANE CARD_finite_mod_4 try
+      simp_all add: card finite_mod_4.exhaust finite_mod_4.nchotomy, safe)
+       apply (cases "a\<^sub>0 \<in> A") try
+       apply (simp_all add: card ANE CARD_finite_mod_4 UNIV_finite_mod_4) try
     assume a2: "a\<^sub>2 \<in> A" and a3: "a\<^sub>3 \<in> A" and a1: "a\<^sub>1 \<in> A"
     hence "3 \<le> card A"
     proof (cases "a\<^sub>0 \<in> A")
       case True
-      have "A = UNIV" using a1 a2 a3 True UNIV_finite_mod_4 try
+      have "A = UNIV" using a1 a2 a3 card ANE CARD_finite_mod_4 True UNIV_finite_mod_4 try
         thus ?case 
       next
       case False
@@ -263,28 +301,5 @@ proof (unfold simplicial_complex_induced_by_monotone_boolean_function_def, rule,
     by (rule ceros_of_boolean_input_in_set)
 qed
 
-
-find_theorems (999) "(?A \<subseteq> ?B)"
-
-lemma "{{a\<^sub>0},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1},{a\<^sub>0,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>1,a\<^sub>3},{a\<^sub>2,a\<^sub>3}} 
-    \<subseteq> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
-  (is "{?a,?b,?c,?d,?e,?f,?g,?h,?i,?j} \<subseteq> _")
-proof (intro subsetI)
-  fix x
-  assume x: "x \<in> {?a,?b,?c,?d,?e,?f,?g,?h,?i,?j}"
-  show "x \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
-  proof (cases "x = ?a")
-    unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-  unfolding bool_fun_threshold_2_3_def
-  unfolding count_true_def unfolding UNIV_finite_mod_4
-  unfolding ceros_of_boolean_input_def
-  apply (rule, rule)
-  apply (rule exI [of _ "(\<chi> i::finite_mod_4. if i \<in> ?b then False else True)"])
-  using exI [of _ "(\<chi> i::finite_mod_4. if i \<in> ?b then False else True)"]
-  using boolean_vec_not_one
-  using ceros_of_boolean_input_in_set apply auto
-  try
-  unfolding count_true_def using UNIV_finite_mod_4
-  try
 
 end
