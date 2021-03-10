@@ -3,7 +3,7 @@ theory Boolean_functions
   imports 
     Main
     "HOL-Analysis.Cartesian_Euclidean_Space"
-    Enum_mod
+    Finite_mod_type
 begin
 
 (*definition monotone :: "'a set => 'a set set => bool"
@@ -62,33 +62,58 @@ definition bool_fun_bot :: "bool^'n => bool"
 
 text\<open>Threshold function, as defined by Scoville in Problem 6.5\<close>
 
+(*definition count_true :: "bool^'n => nat"
+  where "count_true v = (\<Sum> i \<in> UNIV. if v $ i then 1 else 0::nat)"*)
+
 definition count_true :: "bool^'n => nat"
-  where "count_true v = (\<Sum> i \<in> UNIV. if v $ i then 1 else 0::nat)"
+  where "count_true v = card {i. v $ i}"
 
 lemma "count_true (\<chi> i. False) = 0"
   by (simp add: count_true_def)
 
 lemma "count_true (\<chi> i::'a::CARD_1. True) = 1"
   unfolding count_true_def
-  using Cardinality.CARD_1_class.CARD_1 by auto
+  using Cardinality.CARD_1_class.CARD_1
+  by (metis Collect_cong UNIV_def vec_lambda_beta)
 
 lemma "count_true (\<chi> i::finite_mod_1. True) = 1"
-  unfolding count_true_def UNIV_finite_mod_1 by simp
+  unfolding count_true_def 
+  using CARD_finite_mod_1
+  by (metis Collect_cong UNIV_def vec_lambda_beta)
 
 lemma "count_true (\<chi> i::finite_mod_2. True) = 2"
-  unfolding count_true_def UNIV_finite_mod_2 by simp
+  unfolding count_true_def 
+  using CARD_finite_mod_2
+  by (metis Collect_cong UNIV_def vec_lambda_beta)
 
 lemma "count_true (\<chi> i::finite_mod_5. True) = 5"
-  unfolding count_true_def UNIV_finite_mod_5 by simp
+  unfolding count_true_def 
+  using CARD_finite_mod_5
+  by (metis Collect_cong UNIV_def vec_lambda_beta)
 
-lemma "count_true (\<chi> i::finite_mod_5. case (i) of finite_mod_5.a\<^sub>1 \<Rightarrow> True | (_) \<Rightarrow> False) = 1"
-  unfolding count_true_def UNIV_finite_mod_5 by simp
+lemma "Collect (($) (vec_lambda (case_finite_mod_5 True False False False False))) = {finite_mod_5.a\<^sub>0}"
+  using UNIV_finite_mod_5 by fastforce
+
+lemma "count_true (\<chi> i::finite_mod_5. case (i) of finite_mod_5.a\<^sub>0 \<Rightarrow> True | (_) \<Rightarrow> False) = 1"
+proof -
+  have sing: "Collect (($) (vec_lambda (case_finite_mod_5 True False False False False))) = {finite_mod_5.a\<^sub>0}"
+    using UNIV_finite_mod_5 by fastforce
+  show ?thesis
+    unfolding count_true_def
+    unfolding sing by simp
+qed
 
 lemma "count_true (\<chi> i::finite_mod_5. case (i) of finite_mod_5.a\<^sub>1 \<Rightarrow> True 
                                                 | finite_mod_5.a\<^sub>2 \<Rightarrow> True 
                                                 | (_) \<Rightarrow> False) = 2"
-  unfolding count_true_def UNIV_finite_mod_5 by simp
-
+proof -
+  have sing: "Collect (($) (vec_lambda (case_finite_mod_5 False True True False False))) = {finite_mod_5.a\<^sub>1, finite_mod_5.a\<^sub>2}"
+    unfolding Collect_code unfolding enum_finite_mod_5_def by simp
+  show ?thesis
+    unfolding count_true_def
+    unfolding sing by simp
+qed
+  
 definition bool_fun_threshold :: "nat => (bool^'n => bool)"
   where "bool_fun_threshold i = (\<lambda>v. if i \<le> count_true v then True else False)"
 
@@ -106,7 +131,7 @@ text\<open>The Isar proof of the following result has been produced by Isabelle 
 lemma
   monotone_threshold:
   assumes "(u::bool^'n) \<le> v"
-  shows "bool_fun_threshold n u \<le> bool_fun_threshold n v"
+  shows "bool_fun_threshold n u \<le> bool_fun_threshold n v" try
 proof -
   have f1: "\<forall>n f v va. (\<not> (n::nat) \<le> f (v::(bool, 'n) vec) \<or> \<not> v \<le> va \<or> (\<exists>v va. v \<le> va \<and> \<not> f v \<le> f va)) \<or> n \<le> f va"
     by fastforce
@@ -134,6 +159,7 @@ proof -
           then have "(\<Sum>n\<in>UNIV. if vv count_true $ n then 1::nat else 0) \<le> (\<Sum>n\<in>UNIV. if vva count_true $ n then 1 else 0)"
             using f3 by (meson sum_mono)
         then have "\<not> vv count_true \<le> vva count_true \<or> count_true (vv count_true) \<le> count_true (vva count_true)"
+          try
           by (metis count_true_def)
         then have "n \<le> count_true u \<longrightarrow> n \<le> count_true v"
           using f2 assms by blast }

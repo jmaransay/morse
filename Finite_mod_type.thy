@@ -5,6 +5,21 @@ theory Finite_mod_type
     Enum_mod
 begin
 
+lemma CARD_finite_mod_1 [simp]: "CARD(finite_mod_1) = 1"
+  unfolding card_UNIV_length_enum 
+  unfolding enum_finite_mod_1_def by simp
+
+lemma CARD_finite_mod_2 [simp]: "CARD(finite_mod_2) = 2"
+  unfolding card_UNIV_length_enum 
+  unfolding enum_finite_mod_2_def by simp
+
+lemma CARD_finite_mod_3 [simp]: "CARD(finite_mod_3) = 3"
+  unfolding card_UNIV_length_enum 
+  unfolding enum_finite_mod_3_def by simp
+
+lemma CARD_finite_mod_5 [simp]: "CARD(finite_mod_5) = 5"
+  unfolding card_UNIV_length_enum
+  unfolding enum_finite_mod_5_def by simp
 
 instantiation finite_mod_4 :: class_mod_type
 begin
