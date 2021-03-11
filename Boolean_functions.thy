@@ -6,46 +6,10 @@ theory Boolean_functions
     Finite_mod_type
 begin
 
-(*definition monotone :: "'a set => 'a set set => bool"
-  where "monotone u P = (\<forall>s. subset s u \<longrightarrow> s \<in> P)"
-
-definition simplicial_complex :: "nat => nat set set set"
-  where "simplicial_complex n = {s. s \<subseteq> Pow {..n} \<and> (\<forall>(u::nat set)\<in>s. monotone u s)}"
-
-definition simplex :: "nat => nat set set"
-  where "simplex n = {s. subset s {..n}}"
-
-lemma "monotone {..n} (Pow {..n})"
-  by (simp add: Scratch.monotone_def psubset_imp_subset)
-
-lemma "monotone {1,2} {{},{1},{2},{1,2}}"
-  unfolding Scratch.monotone_def by auto
-
-lemma "{} \<in> simplex 0"
-  unfolding simplex_def by auto
-
-lemma "{1,2} \<in> (simplex 9)"
-  unfolding simplex_def by auto
-
-lemma "{{},{1},{2},{1,2}} \<in> (simplicial_complex 2)"
-  unfolding simplicial_complex_def simplex_def Scratch.monotone_def by auto
-
-lemma "{{},{1},{2},{3},{1,2}} \<in> (simplicial_complex 3)" 
-  unfolding simplicial_complex_def simplex_def Scratch.monotone_def by auto
-
-lemma "{{},{1},{2},{3},{1,2},{2,3}} \<in> (simplicial_complex 3)" 
-  unfolding simplicial_complex_def simplex_def Scratch.monotone_def by auto*)
-
 text\<open>Boolean functions\<close>
-
-term "A::bool^'n"
-
-term "f :: bool^'n => bool"
 
 definition bool_fun_dim_n :: "nat => (bool^'n => bool) set"
   where "bool_fun_dim_n n = {f. CARD ('n) = n}"
-
-term "mono_on"
 
 text\<open>Definition of monotonicity\<close>
 
@@ -77,43 +41,36 @@ lemma "count_true (\<chi> i::'a::CARD_1. True) = 1"
   by (metis Collect_cong UNIV_def vec_lambda_beta)
 
 lemma "count_true (\<chi> i::finite_mod_1. True) = 1"
-  unfolding count_true_def 
-  using CARD_finite_mod_1
-  by (metis Collect_cong UNIV_def vec_lambda_beta)
+  unfolding count_true_def
+  unfolding Collect_code
+  unfolding enum_finite_mod_1_def by simp
 
 lemma "count_true (\<chi> i::finite_mod_2. True) = 2"
-  unfolding count_true_def 
-  using CARD_finite_mod_2
-  by (metis Collect_cong UNIV_def vec_lambda_beta)
+  unfolding count_true_def
+  unfolding Collect_code
+  unfolding enum_finite_mod_2_def by simp
 
 lemma "count_true (\<chi> i::finite_mod_5. True) = 5"
-  unfolding count_true_def 
-  using CARD_finite_mod_5
-  by (metis Collect_cong UNIV_def vec_lambda_beta)
+  unfolding count_true_def
+  unfolding Collect_code
+  unfolding enum_finite_mod_5_def by simp
 
 lemma "Collect (($) (vec_lambda (case_finite_mod_5 True False False False False))) = {finite_mod_5.a\<^sub>0}"
-  using UNIV_finite_mod_5 by fastforce
+  unfolding Collect_code
+  unfolding enum_finite_mod_5_def by simp
 
 lemma "count_true (\<chi> i::finite_mod_5. case (i) of finite_mod_5.a\<^sub>0 \<Rightarrow> True | (_) \<Rightarrow> False) = 1"
-proof -
-  have sing: "Collect (($) (vec_lambda (case_finite_mod_5 True False False False False))) = {finite_mod_5.a\<^sub>0}"
-    using UNIV_finite_mod_5 by fastforce
-  show ?thesis
-    unfolding count_true_def
-    unfolding sing by simp
-qed
+  unfolding count_true_def 
+  unfolding Collect_code
+  unfolding enum_finite_mod_5_def by simp
 
 lemma "count_true (\<chi> i::finite_mod_5. case (i) of finite_mod_5.a\<^sub>1 \<Rightarrow> True 
                                                 | finite_mod_5.a\<^sub>2 \<Rightarrow> True 
-                                                | (_) \<Rightarrow> False) = 2"
-proof -
-  have sing: "Collect (($) (vec_lambda (case_finite_mod_5 False True True False False))) = {finite_mod_5.a\<^sub>1, finite_mod_5.a\<^sub>2}"
-    unfolding Collect_code unfolding enum_finite_mod_5_def by simp
-  show ?thesis
-    unfolding count_true_def
-    unfolding sing by simp
-qed
-  
+                                                | (_) \<Rightarrow> False) = 2" 
+  unfolding count_true_def 
+  unfolding Collect_code
+  unfolding enum_finite_mod_5_def by simp
+
 definition bool_fun_threshold :: "nat => (bool^'n => bool)"
   where "bool_fun_threshold i = (\<lambda>v. if i \<le> count_true v then True else False)"
 
@@ -129,49 +86,27 @@ lemma "monotone_bool_fun bool_fun_bot"
 text\<open>The Isar proof of the following result has been produced by Isabelle automatically:\<close>
 
 lemma
+  monotone_collect:
+  assumes ulev: "(u::bool^'n) \<le> v"
+  shows "Collect (($) u) \<subseteq> Collect (($) v)"
+  using ulev
+  unfolding less_eq_vec_def
+  by auto
+
+lemma
+  monotone_count_true:
+  assumes ulev: "(u::bool^'n) \<le> v"
+  shows "count_true u \<le> count_true v"
+  unfolding count_true_def
+  using monotone_collect [OF ulev]
+  by (simp add: card_mono)
+
+lemma
   monotone_threshold:
-  assumes "(u::bool^'n) \<le> v"
-  shows "bool_fun_threshold n u \<le> bool_fun_threshold n v" try
-proof -
-  have f1: "\<forall>n f v va. (\<not> (n::nat) \<le> f (v::(bool, 'n) vec) \<or> \<not> v \<le> va \<or> (\<exists>v va. v \<le> va \<and> \<not> f v \<le> f va)) \<or> n \<le> f va"
-    by fastforce
-  obtain vv :: "((bool, 'n) vec \<Rightarrow> nat) \<Rightarrow> (bool, 'n) vec" 
-    and vva :: "((bool, 'n) vec \<Rightarrow> nat) \<Rightarrow> (bool, 'n) vec" 
-    where
-    "\<forall>x2. (\<exists>v4 v5. v4 \<le> v5 \<and> \<not> x2 v4 \<le> x2 v5) = (vv x2 \<le> vva x2 \<and> \<not> x2 (vv x2) \<le> x2 (vva x2))"
-    by moura
-  then have f2: "\<forall>n f v va. \<not> n \<le> f v \<or> \<not> v \<le> va \<or> vv f \<le> vva f \<and> \<not> f (vv f) \<le> f (vva f) \<or> n \<le> f va"
-    using f1 by presburger
-  obtain nn :: "('n \<Rightarrow> nat) \<Rightarrow> ('n \<Rightarrow> nat) \<Rightarrow> 'n set \<Rightarrow> 'n" where
-    f3: "\<forall>x0 x1 x2. (\<exists>v3. v3 \<in> x2 \<and> \<not> x1 v3 \<le> x0 v3) = (nn x0 x1 x2 \<in> x2 \<and> \<not> x1 (nn x0 x1 x2) \<le> x0 (nn x0 x1 x2))"
-    by moura
-    { assume "vv count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV \<le> vva count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV"
-      moreover
-      { assume "(vv count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV \<le> vva count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV) \<noteq> (bool_fun_threshold n u \<le> bool_fun_threshold n v)"
-        moreover
-        { assume "\<not> vv count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV"
-          then have "(if vv count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV then 1::nat else 0) = 0"
-          by presburger
-        then have "(if vva count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV then 1::nat else 0) = 1 \<and> (if vv count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV then 1::nat else 0) = 1 \<or> nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV \<notin> UNIV \<or> (if vv count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV then 1::nat else 0) \<le> (if vva count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV then 1 else 0)"
-          by linarith }
-        moreover
-        { assume "nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV \<notin> UNIV \<or> (if vv count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV then 1::nat else 0) \<le> (if vva count_true $ nn (\<lambda>n. if vva count_true $ n then 1 else 0) (\<lambda>n. if vv count_true $ n then 1 else 0) UNIV then 1 else 0)"
-          then have "(\<Sum>n\<in>UNIV. if vv count_true $ n then 1::nat else 0) \<le> (\<Sum>n\<in>UNIV. if vva count_true $ n then 1 else 0)"
-            using f3 by (meson sum_mono)
-        then have "\<not> vv count_true \<le> vva count_true \<or> count_true (vv count_true) \<le> count_true (vva count_true)"
-          try
-          by (metis count_true_def)
-        then have "n \<le> count_true u \<longrightarrow> n \<le> count_true v"
-          using f2 assms by blast }
-      ultimately have "n \<le> count_true u \<longrightarrow> (\<not> bool_fun_threshold n u \<or> bool_fun_threshold n v) \<or> (\<not> bool_fun_threshold n u \<or> bool_fun_threshold n v) \<or> n \<le> count_true v"
-        by fastforce }
-    ultimately have "n \<le> count_true u \<longrightarrow> (\<not> bool_fun_threshold n u \<or> bool_fun_threshold n v) \<or> (\<not> bool_fun_threshold n u \<or> bool_fun_threshold n v) \<or> n \<le> count_true v \<or> bool_fun_threshold n u \<le> bool_fun_threshold n v"
-      by linarith }
-  then have "bool_fun_threshold n u \<le> bool_fun_threshold n v \<or> \<not> bool_fun_threshold n u \<or> bool_fun_threshold n v"
-    using f2 by (meson assms bool_fun_threshold_def less_eq_vec_def)
-  then show ?thesis
-    by force
-qed
+  assumes ulev: "(u::bool^'n) \<le> v"
+  shows "bool_fun_threshold n u \<le> bool_fun_threshold n v"
+  unfolding bool_fun_threshold_def
+  using monotone_count_true [OF ulev] by simp
 
 text\<open>It seems that the previous result does not require any assumption in the
   natural number n defining the threshold, even if it seems sensible to introduce it,
@@ -181,8 +116,7 @@ lemma
   assumes "(u::bool^'n) \<le> v"
   and "n < CARD ('n)"
   shows "bool_fun_threshold n u \<le> bool_fun_threshold n v"
-  using assms unfolding less_eq_vec_def less_vec_def vec_eq_iff bool_fun_threshold_def count_true_def  
-  by (smt le_boolI le_less_trans nat_le_linear not_less not_one_le_zero sum_mono)
+  using monotone_threshold [OF assms(1), of n] .
 
 text\<open>The threshold functions are monotone\<close>
 

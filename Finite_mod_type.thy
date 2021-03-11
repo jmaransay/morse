@@ -142,6 +142,38 @@ lemma to_int_a4: "to_int a\<^sub>3 = 3" unfolding to_int_def using RepExt(4) .
 
 lemmas to_int_finite_mod_4 [simp] = to_int_a1 to_int_a2 to_int_a3 to_int_a4
 
+lemma finite_UNIV: "finite {a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3}"
+  by simp
+
+lemma finite_mod_4_enum: "{a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3} = set [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3]"
+  by simp
+
+find_theorems (999) "Finite_Set.fold _ _ (set _)"
+
+lemma cfi: "comp_fun_idem (\<lambda>x A. A \<union> insert x ` A)" 
+  unfolding comp_fun_idem_def
+  unfolding comp_fun_commute_def apply auto unfolding comp_def apply (rule ext) apply auto
+  unfolding comp_fun_idem_axioms_def unfolding comp_def by auto
+
+lemma powerset_finite_mod_4: "Pow {a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3} = {{},{a\<^sub>0},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1},{a\<^sub>0,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>1,a\<^sub>3},{a\<^sub>2,a\<^sub>3},
+      {a\<^sub>0,a\<^sub>1,a\<^sub>2},{a\<^sub>0,a\<^sub>1,a\<^sub>3},{a\<^sub>0,a\<^sub>2,a\<^sub>3},{a\<^sub>1,a\<^sub>2,a\<^sub>3},{a\<^sub>0,a\<^sub>1,a\<^sub>2,a\<^sub>3}}"
+  unfolding Finite_Set.Pow_fold [OF finite_UNIV] 
+  unfolding finite_mod_4_enum
+  unfolding comp_fun_idem.fold_set_fold [OF cfi]
+  unfolding fold_simps (2) [of "(\<lambda>x A. A \<union> insert x ` A)" "a\<^sub>0" "[a\<^sub>1,a\<^sub>2,a\<^sub>3]" "{{}}"]
+  unfolding fold_simps (2) [of "(\<lambda>x A. A \<union> insert x ` A)" "a\<^sub>1" "[a\<^sub>2, a\<^sub>3]" "({{}} \<union> insert a\<^sub>0 ` {{}})"]
+  unfolding fold_simps (2) [of "(\<lambda>x A. A \<union> insert x ` A)" "a\<^sub>2" "[a\<^sub>3]" "({{}} \<union> insert a\<^sub>0 ` {{}} \<union> insert a\<^sub>1 ` ({{}} \<union> insert a\<^sub>0 ` {{}}))"]
+  unfolding fold_simps (2) [of "(\<lambda>x A. A \<union> insert x ` A)" "a\<^sub>3" "[]" "({{}} \<union> insert a\<^sub>0 ` {{}} \<union> insert a\<^sub>1 ` ({{}} \<union> insert a\<^sub>0 ` {{}}) \<union>
+      insert a\<^sub>2 ` ({{}} \<union> insert a\<^sub>0 ` {{}} \<union> insert a\<^sub>1 ` ({{}} \<union> insert a\<^sub>0 ` {{}})))"]
+  unfolding fold_simps (1) 
+  unfolding finite_mod_4_enum [symmetric]
+  by (simp add: insert_commute)
+
+lemma list_powerset_finite_mod_4: "Pow {a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3} 
+  = set [{},{a\<^sub>0},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1},{a\<^sub>0,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>1,a\<^sub>3},{a\<^sub>2,a\<^sub>3},
+      {a\<^sub>0,a\<^sub>1,a\<^sub>2},{a\<^sub>0,a\<^sub>1,a\<^sub>3},{a\<^sub>0,a\<^sub>2,a\<^sub>3},{a\<^sub>1,a\<^sub>2,a\<^sub>3},{a\<^sub>0,a\<^sub>1,a\<^sub>2,a\<^sub>3}]"
+  unfolding powerset_finite_mod_4 by simp
+
 end
 
 end
