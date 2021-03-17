@@ -17,17 +17,22 @@ lemma Pow_ne_pair: "Pow_ne {a,b} = {{a},{b},{a,b}}"
   unfolding Pow_ne_def by auto
 
 definition simplicial_complex :: "('n::finite) set set => bool"
-  where "simplicial_complex K = (\<forall>\<sigma>\<in>K. (Pow_ne \<sigma>) \<subseteq> K)"
+  where "simplicial_complex K \<equiv>  ({} \<notin> K) \<and> (\<forall>\<sigma>\<in>K. (Pow_ne \<sigma>) \<subseteq> K)"
 
 definition simplicial_complex_set :: "('n::finite) set set set"
-  where "simplicial_complex_set = (Collect simplicial_complex)"
+  where "simplicial_complex_set = (Collect simplicial_complex) - {}"
+
+lemma simplicial_complex_not_empty_set:
+  fixes K::"('n::finite) set set"
+  assumes k: "simplicial_complex K"  
+  shows "{} \<notin> K" using k unfolding simplicial_complex_def Pow_ne_def by simp
 
 lemma
   simplicial_complex_monotone:
   fixes K::"('n::finite) set set"
   assumes k: "simplicial_complex K" and s: "s \<in> K" and rs: "r \<subseteq> s" and rne: "r \<noteq> {}"
   shows "r \<in> K"
-  using k rne rs
+  using k rs rne
   unfolding simplicial_complex_def Pow_ne_def
   by (smt (verit, del_insts) Diff_insert_absorb mem_Collect_eq s subset_Diff_insert)
 
@@ -162,31 +167,36 @@ lemma
   assumes mon: "monotone_bool_fun (f::bool^'n::class_mod_type => bool)"
   shows "simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function f)"
   unfolding simplicial_complex_def
-  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-proof
-  fix \<sigma>::"'n set"
-  assume sigma: "\<sigma> \<in> {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"
-  from sigma obtain x where x_none: "x \<noteq> 1" 
+proof (intro conjI) 
+  show "{} \<notin> simplicial_complex_induced_by_monotone_boolean_function f"
+    using empty_set_not_in_simplicial_complex_induced [of f] .
+  show "\<forall>\<sigma>\<in>simplicial_complex_induced_by_monotone_boolean_function f.
+       Pow_ne \<sigma> \<subseteq> simplicial_complex_induced_by_monotone_boolean_function f"
+  proof (rule, unfold simplicial_complex_induced_by_monotone_boolean_function_def)
+    fix \<sigma>::"'n set"
+    assume sigma: "\<sigma> \<in> {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"
+    from sigma obtain x where x_none: "x \<noteq> 1" 
                       and fx: "f x" and ceros_sigma: "ceros_of_boolean_input x = \<sigma>" by auto
-  hence x_def: "x = (\<chi> i::'n. if i \<in> \<sigma> then False else True)"
-    unfolding ceros_of_boolean_input_def by auto
-  show "Pow_ne \<sigma> \<subseteq> {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"
-  proof (safe)
-    fix \<tau>::"'n set"
-    assume subset: "\<tau> \<in> Pow_ne \<sigma>"
-    then have tau: "\<tau> = {i::'n. i \<in> \<tau>}" and sub: "\<tau> \<subseteq> \<sigma>" and tau_ne: "\<tau> \<noteq> {}" unfolding Pow_ne_def by simp_all
-    show "\<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = \<tau>" 
-    proof (rule exI [of _ "(\<chi> i. if i \<in> \<tau> then False else True)"], intro conjI) 
-      show "ceros_of_boolean_input (\<chi> i::'n. if i \<in> \<tau> then False else True) = \<tau>"
-        unfolding ceros_of_boolean_input_def by simp
-      show "f (\<chi> i::'n. if i \<in> \<tau> then False else True)"
-        using fx and x_def and sub and mon 
-        unfolding monotone_bool_fun_def
-        using mono_onD [of f UNIV x "(\<chi> i::'n. if i \<in> \<tau> then False else True)"]
-        apply auto unfolding less_eq_vec_def le_bool_def
-        by (metis subset_eq vec_lambda_beta)
-      show "(\<chi> i::'n. if i \<in> \<tau> then False else True) \<noteq> (1::(bool, 'n) vec)"
-        using boolean_vec_not_one [of \<tau>] tau_ne by simp
+    hence x_def: "x = (\<chi> i::'n. if i \<in> \<sigma> then False else True)"
+      unfolding ceros_of_boolean_input_def by auto
+    show "Pow_ne \<sigma> \<subseteq> {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"
+    proof (safe)
+      fix \<tau>::"'n set"
+      assume subset: "\<tau> \<in> Pow_ne \<sigma>"
+      then have tau: "\<tau> = {i::'n. i \<in> \<tau>}" and sub: "\<tau> \<subseteq> \<sigma>" and tau_ne: "\<tau> \<noteq> {}" unfolding Pow_ne_def by simp_all
+      show "\<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = \<tau>" 
+      proof (rule exI [of _ "(\<chi> i. if i \<in> \<tau> then False else True)"], intro conjI) 
+        show "ceros_of_boolean_input (\<chi> i::'n. if i \<in> \<tau> then False else True) = \<tau>"
+          unfolding ceros_of_boolean_input_def by simp
+        show "f (\<chi> i::'n. if i \<in> \<tau> then False else True)"
+          using fx and x_def and sub and mon 
+          unfolding monotone_bool_fun_def
+          using mono_onD [of f UNIV x "(\<chi> i::'n. if i \<in> \<tau> then False else True)"]
+          apply auto unfolding less_eq_vec_def le_bool_def
+          by (metis subset_eq vec_lambda_beta)
+        show "(\<chi> i::'n. if i \<in> \<tau> then False else True) \<noteq> (1::(bool, 'n) vec)"
+          using boolean_vec_not_one [of \<tau>] tau_ne by simp
+      qed
     qed
   qed
 qed
