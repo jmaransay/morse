@@ -19,6 +19,18 @@ lemma Pow_ne_pair: "Pow_ne {a,b} = {{a},{b},{a,b}}"
 definition simplicial_complex :: "('n::finite) set set => bool"
   where "simplicial_complex K = (\<forall>\<sigma>\<in>K. (Pow_ne \<sigma>) \<subseteq> K)"
 
+definition simplicial_complex_set :: "('n::finite) set set set"
+  where "simplicial_complex_set = (Collect simplicial_complex)"
+
+lemma
+  simplicial_complex_monotone:
+  fixes K::"('n::finite) set set"
+  assumes k: "simplicial_complex K" and s: "s \<in> K" and rs: "r \<subseteq> s" and rne: "r \<noteq> {}"
+  shows "r \<in> K"
+  using k rne rs
+  unfolding simplicial_complex_def Pow_ne_def
+  by (smt (verit, del_insts) Diff_insert_absorb mem_Collect_eq s subset_Diff_insert)
+
 text\<open>One example of simplicial complex with four points\<close>
 
 lemma "simplicial_complex {{a\<^sub>0::finite_mod_4},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3}}"
@@ -48,10 +60,25 @@ text\<open>First we introduce the tuples that make cero a Boolean input\<close>
 definition ceros_of_boolean_input :: "(bool^'n) => 'n set"
   where "ceros_of_boolean_input v = {x. v $ x = False}"
 
+lemma 
+  ceros_of_boolean_input_complementary:
+  shows "ceros_of_boolean_input v = - {x. v $ x}"
+  unfolding ceros_of_boolean_input_def by auto
+
 text\<open>In fact, the following result is trivial\<close>
 
 lemma ceros_in_UNIV: "ceros_of_boolean_input f \<subseteq> (UNIV::'n::finite set)"
   using subset_UNIV .
+
+lemma monotone_ceros_of_boolean_input:
+  fixes r and s::"(bool, 'n::finite) vec"
+  assumes r_le_s: "r \<le> s"
+  shows "ceros_of_boolean_input s \<subseteq> ceros_of_boolean_input r"
+proof (intro subsetI, unfold ceros_of_boolean_input_def, intro CollectI)
+  fix x 
+  assume "x \<in> {x. s $ x = False}" hence nr: "s $ x = False" by simp
+  show "r $ x = False" using r_le_s nr unfolding less_eq_vec_def by auto
+qed
 
 text\<open>The indexes of Boolean inputs demand the underlying type to be a "mod_type",
 that indeed should be a finite type, but it is not proven in the library\<close>
@@ -127,9 +154,11 @@ proof -
   thus ?thesis unfolding one_vec_def one_bool_def by fastforce
 qed
 
-text\<open>The simplicial complex induced by a monotone Boolean function is a simplicial complex\<close>
+text\<open>The simplicial complex induced by a monotone Boolean function is a simplicial complex.
+  This result is proven in Scoville as part of the proof of Proposition 6.16.\<close>
 
 lemma
+  monotone_bool_fun_induces_simplicial_complex:
   assumes mon: "monotone_bool_fun (f::bool^'n::class_mod_type => bool)"
   shows "simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function f)"
   unfolding simplicial_complex_def

@@ -16,6 +16,9 @@ text\<open>Definition of monotonicity\<close>
 definition monotone_bool_fun :: "(bool^'n => bool) => bool"
   where "monotone_bool_fun f = mono_on f UNIV"
 
+definition monotone_bool_fun_set :: "(bool^'n => bool) set"
+  where "monotone_bool_fun_set = (Collect monotone_bool_fun)"
+
 text\<open>Some examples of Boolean functions\<close>
 
 definition bool_fun_top :: "bool^'n => bool"
