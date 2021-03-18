@@ -13,8 +13,12 @@ definition bool_fun_dim_n :: "nat => (bool^'n => bool) set"
 
 text\<open>Definition of monotonicity\<close>
 
+text\<open>Following Scoville, we remove the constant vector 1 from the definition of monotonicity,
+  since otherwise its preimage by ceros_of_bool_input, the empty set, would be an element of the
+  simplicial set.\<close>
+
 definition monotone_bool_fun :: "(bool^'n => bool) => bool"
-  where "monotone_bool_fun f = mono_on f UNIV"
+  where "monotone_bool_fun f = mono_on f (Set.remove (\<chi> i. True) UNIV)"
 
 definition monotone_bool_fun_set :: "(bool^'n => bool) set"
   where "monotone_bool_fun_set = (Collect monotone_bool_fun)"

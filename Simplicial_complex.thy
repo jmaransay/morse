@@ -20,7 +20,7 @@ definition simplicial_complex :: "('n::finite) set set => bool"
   where "simplicial_complex K \<equiv>  ({} \<notin> K) \<and> (\<forall>\<sigma>\<in>K. (Pow_ne \<sigma>) \<subseteq> K)"
 
 definition simplicial_complex_set :: "('n::finite) set set set"
-  where "simplicial_complex_set = (Collect simplicial_complex) - {}"
+  where "simplicial_complex_set = (Collect simplicial_complex)"
 
 lemma simplicial_complex_not_empty_set:
   fixes K::"('n::finite) set set"
