@@ -19,14 +19,39 @@ lemma "bool_vec_from_simplice {a\<^sub>1,a\<^sub>2} = (\<chi> i::finite_mod_4. c
   unfolding bool_vec_from_simplice_def apply simp apply (rule ext)
   by (metis finite_mod_4.exhaust finite_mod_4.simps(13) finite_mod_4.simps(14) finite_mod_4.simps(15) finite_mod_4.simps(16))
 
+(*definition bool_vec_set_from_simplice_set :: "('n::finite) set set => (bool^'n) set"
+  where "bool_vec_set_from_simplice_set K = {\<sigma>. \<exists>k\<in>K. k \<noteq> UNIV \<and> \<sigma> = bool_vec_from_simplice k}"*)
+
 definition bool_vec_set_from_simplice_set :: "('n::finite) set set => (bool^'n) set"
-  where "bool_vec_set_from_simplice_set K = {\<sigma>. \<exists>k\<in>K. k \<noteq> UNIV \<and> \<sigma> = bool_vec_from_simplice k}"
+  where "bool_vec_set_from_simplice_set K = {\<sigma>. \<exists>k\<in>K. \<sigma> = bool_vec_from_simplice k}"
+
+lemma
+  true_not_bool_vec_from_simplice:
+  fixes K::"'n::class_mod_type set set"
+  assumes mon: "simplicial_complex (K::'n::class_mod_type set set)"
+  shows "(\<chi> i. True) \<notin> (bool_vec_set_from_simplice_set K)"
+proof (unfold bool_vec_set_from_simplice_set_def, rule) 
+  assume "(\<chi> i. True) \<in> {\<sigma>. \<exists>k\<in>K. \<sigma> = bool_vec_from_simplice k}"
+  then obtain k where k: "k \<in> K" and eq: "(\<chi> i. True) = bool_vec_from_simplice k" by auto
+  from eq have "k = {}" unfolding bool_vec_from_simplice_def
+    by (smt (verit, ccfv_SIG) ceros_of_boolean_input_in_set emptyE vec_lambda_unique)
+  with k show False
+    using mon simplicial_complex_not_empty_set by blast
+qed
 
 definition boolean_function_from_simplicial_complex :: "('n::finite) set set => (bool^'n => bool)"
   where "boolean_function_from_simplicial_complex K = (\<lambda>x. x \<in> (bool_vec_set_from_simplice_set K))"
 
 lemma "Collect (boolean_function_from_simplicial_complex K) = (bool_vec_set_from_simplice_set K)"
-  unfolding boolean_function_from_simplicial_complex_def  by simp
+  unfolding boolean_function_from_simplicial_complex_def by simp
+
+lemma
+  true_not_in_boolean_function_from_simplicial_complex:
+  fixes K::"'n::class_mod_type set set"
+  assumes mon: "simplicial_complex (K::'n::class_mod_type set set)"
+  shows "\<not> boolean_function_from_simplicial_complex K (\<chi> i. True)"
+  unfolding boolean_function_from_simplicial_complex_def
+  using true_not_bool_vec_from_simplice [OF mon] .
 
 text\<open>The Boolean function induced by a simplicial complex is monotone.
   This result is proven in Scoville as part of the proof of Proposition 6.16.\<close>
@@ -54,6 +79,48 @@ qed
 lemma
   simplicial_complex_induces_monotone_bool_fun:
   assumes mon: "simplicial_complex (K::'n::class_mod_type set set)"
+  shows "mono_on (boolean_function_from_simplicial_complex K) (Set.remove (\<chi> i. True) UNIV)"
+proof (intro mono_onI)
+  fix r and s::"(bool, 'n) vec"
+  assume r: "r \<in> Set.remove (\<chi> i. True) UNIV"
+    and s: "s \<in> Set.remove (\<chi> i. True) UNIV" 
+    and r_le_s: "r \<le> s"
+  show "boolean_function_from_simplicial_complex K r \<le> boolean_function_from_simplicial_complex K s"
+  proof (cases "boolean_function_from_simplicial_complex K r")
+    case False then show ?thesis by simp
+  next
+    case True
+    have ce: "ceros_of_boolean_input s \<subseteq> ceros_of_boolean_input r"
+      using monotone_ceros_of_boolean_input [OF r_le_s] .
+    from True obtain k where r_def: "r = (\<chi> i. if i \<in> k then False else True)" and k: "k \<in> K"
+      unfolding boolean_function_from_simplicial_complex_def
+      unfolding bool_vec_set_from_simplice_set_def
+      unfolding bool_vec_from_simplice_def by auto
+    from k and r_def have r_in_K: "ceros_of_boolean_input r \<in> K" unfolding ceros_of_boolean_input_def by auto
+    have cs_ne: "ceros_of_boolean_input s \<noteq> {}"
+    proof (rule ccontr, simp)
+      assume "ceros_of_boolean_input s = {}"
+      hence "s = (\<chi> i. True)"
+        unfolding ceros_of_boolean_input_def
+        unfolding one_vec_def one_bool_def
+        by (metis (full_types) emptyE mem_Collect_eq vec_lambda_unique)
+      with s show False by simp
+    qed
+    have "boolean_function_from_simplicial_complex K s"
+    proof (unfold boolean_function_from_simplicial_complex_def bool_vec_set_from_simplice_set_def, rule,
+        rule bexI [of _ "ceros_of_boolean_input s"], unfold bool_vec_from_simplice_def)
+      show "s = (\<chi> i. if i \<in> ceros_of_boolean_input s then False else True)" 
+        unfolding ceros_of_boolean_input_def by auto
+      show "ceros_of_boolean_input s \<in> K"
+         using simplicial_complex_monotone [OF mon r_in_K ce cs_ne] .
+     qed
+     thus ?thesis by simp
+  qed
+qed
+
+(*lemma
+  simplicial_complex_induces_monotone_bool_fun:
+  assumes mon: "simplicial_complex (K::'n::class_mod_type set set)"
   shows "monotone_bool_fun (boolean_function_from_simplicial_complex K)"
 proof (unfold monotone_bool_fun_def, intro mono_onI)
   fix r and s::"(bool, 'n) vec"
@@ -63,7 +130,38 @@ proof (unfold monotone_bool_fun_def, intro mono_onI)
     case False then show ?thesis by simp
   next
     case True
+    have ce: "ceros_of_boolean_input s \<subseteq> ceros_of_boolean_input r"
+      using monotone_ceros_of_boolean_input [OF r_le_s] .
+    from True obtain k where r_def: "r = (\<chi> i. if i \<in> k then False else True)" and k: "k \<in> K"
+      unfolding boolean_function_from_simplicial_complex_def
+      unfolding bool_vec_set_from_simplice_set_def
+      unfolding bool_vec_from_simplice_def by auto
+    from k and r_def have r_in_K: "ceros_of_boolean_input r \<in> K" unfolding ceros_of_boolean_input_def by auto
     have "ceros_of_boolean_input s \<noteq> {}"
+    proof (rule ccontr, simp)
+      assume "ceros_of_boolean_input s = {}"
+      hence s: "s = (\<chi> i. True)"
+        unfolding ceros_of_boolean_input_def
+        unfolding one_vec_def one_bool_def
+        by (metis (full_types) emptyE mem_Collect_eq vec_lambda_unique)
+      with r_le_s
+      have "\<not> boolean_function_from_simplicial_complex K s"
+        unfolding s using true_not_in_boolean_function_from_simplicial_complex [OF mon] .
+      with True show False try
+      try
+    have "boolean_function_from_simplicial_complex K s"
+    proof (unfold boolean_function_from_simplicial_complex_def bool_vec_set_from_simplice_set_def, rule,
+        rule bexI [of _ "ceros_of_boolean_input s"], unfold bool_vec_from_simplice_def)
+      show "s = (\<chi> i. if i \<in> ceros_of_boolean_input s then False else True)" 
+        unfolding ceros_of_boolean_input_def by auto
+      show "ceros_of_boolean_input s \<in> K"
+         using simplicial_complex_monotone [OF mon r_in_K ce] .
+
+     next
+    
+    from k and r_def have r: "ceros_of_boolean_input r \<in> K"
+    have "?k "
+    have cs_ne: "ceros_of_boolean_input s \<noteq> {}"
     proof (rule ccontr, simp)
       assume empty: "ceros_of_boolean_input s = {}"
       hence "s = 1"
@@ -73,21 +171,33 @@ proof (unfold monotone_bool_fun_def, intro mono_onI)
       thus False
         using one_not_in_boolean_function_from_simplicial_complex [OF mon]
         using True
-        using r_le_s try
+        using r_le_s
+        sorry
+    qed
     have ce: "ceros_of_boolean_input s \<subseteq> ceros_of_boolean_input r"
       using monotone_ceros_of_boolean_input [OF r_le_s] .  
-    from True obtain k where r_def: "r = (\<chi> i. if i \<in> k then False else True)" and k: "k \<in> K"
+    from True obtain k where r_def: "r = (\<chi> i. if i \<in> k then False else True)" and k: "k \<in> K" and knt: "k \<noteq> UNIV"
       unfolding boolean_function_from_simplicial_complex_def
-      unfolding bool_vec_set_from_simplice_set_def 
+      unfolding bool_vec_set_from_simplice_set_def
       unfolding bool_vec_from_simplice_def by auto
-    then have r: "ceros_of_boolean_input r \<in> K" unfolding ceros_of_boolean_input_def by simp
-    then have s: "ceros_of_boolean_input s \<in> K"
-      using simplicial_complex_monotone [OF mon r, of "ceros_of_boolean_input s"] sorry
+    from k and r_def have r: "ceros_of_boolean_input r \<in> K"
+      unfolding ceros_of_boolean_input_def
+      by simp
+    from r_def and knt have cr_nt: "ceros_of_boolean_input r \<noteq> UNIV"
+      unfolding ceros_of_boolean_input_def using ce by simp
+    then have cs_nt: "ceros_of_boolean_input s \<noteq> UNIV" using ce by auto
+    have s: "ceros_of_boolean_input s \<in> K"
+      using simplicial_complex_monotone [OF mon r ce cs_ne] .   
     have "boolean_function_from_simplicial_complex K s"
       apply (unfold boolean_function_from_simplicial_complex_def bool_vec_set_from_simplice_set_def, rule,
-        rule bexI [of _ "ceros_of_boolean_input s"], unfold bool_vec_from_simplice_def)
-      using s
-       apply (unfold ceros_of_boolean_input_def)
+        rule bexI [of _ "ceros_of_boolean_input s"], unfold bool_vec_from_simplice_def, intro conjI, rule cs_nt)
+       prefer 2
+       apply (rule s)
+      by (unfold ceros_of_boolean_input_def, auto)
+    thus ?thesis by simp
+  qed
+qed
+
       by simp_all
     thus ?thesis by simp
   qed
@@ -123,6 +233,8 @@ qed
         unfolding boolean_function_from_simplicial_complex_def
         unfolding bool_vec_set_from_simplice_set_def
         unfolding simplicial_complex_def
+*)
+
 text\<open>Proposition 6.16 in Scoville\<close>
 
 declare [[show_sorts]]
