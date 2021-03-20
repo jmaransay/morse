@@ -95,6 +95,61 @@ proof (intro mono_onI)
   qed
 qed
 
+text\<open>The following lemma holds for every function x (the premise on monotonicity 
+  can be avoided), except in b = 1. The only reason to introduce the premise on monotonicity
+  is that this way we know that x 1 = 0, and thus we can prove the result for every input vector.  
+  This result is proven in Scoville as part of the proof of Proposition 6.16.\<close>
+
+lemma
+  boolean_function_from_simplicial_complex_simplicial_complex_induced_by_monotone_boolean_function_id: 
+  fixes x :: "(bool, 'a::class_mod_type) vec \<Rightarrow> bool"
+  assumes mon_x: "monotone_bool_fun x"
+  shows "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function x) = x"
+proof (rule ext)
+  fix b :: "bool^'a::class_mod_type"
+  show "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function x) b =
+         x b"
+  proof (cases "x b")
+    case True then have bnt: "b \<noteq> 1" using mon_x unfolding monotone_bool_fun_def
+      by (metis (mono_tags, lifting) one_bool_def one_index vec_lambda_unique)
+    show ?thesis
+    proof -
+      have "b \<noteq> 1 \<and> x b \<and> b = bool_vec_from_simplice (ceros_of_boolean_input b)"
+        unfolding ceros_of_boolean_input_def bool_vec_from_simplice_def
+        using bnt True
+        by auto
+      then show ?thesis
+        unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+        unfolding boolean_function_from_simplicial_complex_def 
+        unfolding bool_vec_set_from_simplice_set_def
+        unfolding mem_Collect_eq by auto
+    qed
+    next
+      case False
+      have "\<not> boolean_function_from_simplicial_complex 
+          (simplicial_complex_induced_by_monotone_boolean_function x) b"
+      proof (rule ccontr, simp)
+        assume "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function x) b"
+        then have "x b"
+        unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+        unfolding boolean_function_from_simplicial_complex_def 
+        unfolding bool_vec_set_from_simplice_set_def
+        unfolding mem_Collect_eq
+      proof (simp)
+        assume "\<exists>k. (\<exists>xa. xa \<noteq> 1 \<and> x xa \<and> ceros_of_boolean_input xa = k) \<and> b = bool_vec_from_simplice k"
+        then obtain k and xa where "xa \<noteq> 1" and x: "x xa" and "ceros_of_boolean_input xa = k"
+          and b: "b = bool_vec_from_simplice k" by auto
+        then have "xa = b" 
+           unfolding ceros_of_boolean_input_def bool_vec_from_simplice_def
+           by auto
+         with x show ?thesis by fast
+       qed
+       with False show False by fast
+     qed
+     thus ?thesis using False by simp
+  qed
+qed
+
 text\<open>Proposition 6.16 in Scoville\<close>
 
 lemma
@@ -112,26 +167,20 @@ proof (intro bij_betwI [of _ _ _ boolean_function_from_simplicial_complex])
   proof
     fix x::"'a set set" assume x: "x \<in> simplicial_complex_set"
     show "boolean_function_from_simplicial_complex x \<in> monotone_bool_fun_set"
-      unfolding monotone_bool_fun_set_def 
+      unfolding monotone_bool_fun_set_def
       unfolding monotone_bool_fun_def
       using x unfolding simplicial_complex_set_def
       unfolding mem_Collect_eq using simplicial_complex_induces_monotone_bool_fun [of x] by simp
   qed
   fix x::"(bool, 'a) vec \<Rightarrow> bool"
   assume "x \<in> monotone_bool_fun_set"
-  hence x_mon: "monotone_bool_fun x" 
+  hence x_mon: "monotone_bool_fun x"
     unfolding monotone_bool_fun_set_def unfolding mem_Collect_eq .
   show "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function x) = x"
-    apply (rule ext)
-    unfolding boolean_function_from_simplicial_complex_def
-    unfolding bool_vec_set_from_simplice_set_def
-    unfolding ceros_of_boolean_input_def
-    unfolding bool_vec_from_simplice_def unfolding CollectD find_theorems "?P ?x"
-    apply (rule ext)
-    using vec_nth_inverse [symmetric]
-    using x_mon
-    unfolding monotone_bool_fun_def mono_on_def
-    apply auto try
-  qed
+    by (rule boolean_function_from_simplicial_complex_simplicial_complex_induced_by_monotone_boolean_function_id [OF x_mon])
+  next
+  fix y :: "'a set set"
+  assume "y \<in> simplicial_complex_set"
+  show "simplicial_complex_induced_by_monotone_boolean_function (boolean_function_from_simplicial_complex y) = y"
 
 end

@@ -18,7 +18,7 @@ text\<open>Following Scoville, we remove the constant vector 1 from the definiti
   simplicial set.\<close>
 
 definition monotone_bool_fun :: "(bool^'n => bool) => bool"
-  where "monotone_bool_fun f = mono_on f (Set.remove (\<chi> i. True) UNIV)"
+  where "monotone_bool_fun f \<equiv> mono_on f (Set.remove (\<chi> i. True) UNIV) \<and> f (\<chi> i. True) = False"
 
 definition monotone_bool_fun_set :: "(bool^'n => bool) set"
   where "monotone_bool_fun_set = (Collect monotone_bool_fun)"
