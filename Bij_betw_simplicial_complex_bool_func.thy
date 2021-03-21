@@ -23,6 +23,16 @@ proof (unfold bool_vec_from_simplice_def, rule)
     using x simplicial_complex_not_empty_set by blast
 qed*)
 
+text\<open>The function bool_vec_from_simplice is the inverse of ceros_of_boolean_input.\<close>
+
+lemma [simp]: "ceros_of_boolean_input (bool_vec_from_simplice \<sigma>) = \<sigma>"
+  unfolding bool_vec_from_simplice_def
+  unfolding ceros_of_boolean_input_def by auto
+
+lemma [simp]: "bool_vec_from_simplice (ceros_of_boolean_input f) = f"
+  unfolding bool_vec_from_simplice_def
+  unfolding ceros_of_boolean_input_def by auto
+
 lemma "bool_vec_from_simplice {a\<^sub>0} = (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> False
                                         | (_) \<Rightarrow> True)"
   unfolding bool_vec_from_simplice_def using UNIV_finite_mod_4 by force
@@ -31,7 +41,7 @@ lemma "bool_vec_from_simplice {a\<^sub>1,a\<^sub>2} = (\<chi> i::finite_mod_4. c
                                         | a\<^sub>2 \<Rightarrow> False
                                         | (_) \<Rightarrow> True)"
   unfolding bool_vec_from_simplice_def apply simp apply (rule ext)
-  by (metis finite_mod_4.exhaust finite_mod_4.simps(13) finite_mod_4.simps(14) finite_mod_4.simps(15) finite_mod_4.simps(16))
+  by (metis finite_mod_4.exhaust finite_mod_4.simps(13,14,15,16))
 
 definition bool_vec_set_from_simplice_set :: "('n::finite) set set => (bool^'n) set"
   where "bool_vec_set_from_simplice_set K = {\<sigma>. \<exists>k\<in>K. \<sigma> = bool_vec_from_simplice k}"
@@ -66,9 +76,9 @@ lemma
   shows "monotone_bool_fun (boolean_function_from_simplicial_complex K)"
 proof (unfold monotone_bool_fun_def, intro mono_onI)
   fix r and s::"(bool, 'n) vec"
-  assume r: "r \<in>  UNIV"
-    and s: "s \<in>  UNIV" 
-    and r_le_s: "r \<le> s"
+  assume (*r: "r \<in>  UNIV"
+    and s: "s \<in>  UNIV"
+    and*) r_le_s: "r \<le> s"
   show "boolean_function_from_simplicial_complex K r \<le> boolean_function_from_simplicial_complex K s"
   proof (cases "boolean_function_from_simplicial_complex K r")
     case False then show ?thesis by simp
@@ -102,15 +112,12 @@ proof (unfold monotone_bool_fun_def, intro mono_onI)
   qed
 qed
 
-text\<open>The following lemma holds for every function x (the premise on monotonicity 
-  can be avoided), except in b = 1. The only reason to introduce the premise on monotonicity
-  is that this way we know that x 1 = 0, and thus we can prove the result for every input vector.  
-  This result is proven in Scoville as part of the proof of Proposition 6.16.\<close>
+text\<open>The following lemma holds for every function x (the premise on x being monotone 
+  can be omitted).\<close>
 
 lemma
   boolean_function_from_simplicial_complex_simplicial_complex_induced_by_monotone_boolean_function_id: 
   fixes x :: "(bool, 'a::class_mod_type) vec \<Rightarrow> bool"
-  assumes mon_x: "monotone_bool_fun x"
   shows "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function x) = x"
 proof (rule ext)
   fix b :: "bool^'a::class_mod_type"
@@ -148,11 +155,13 @@ proof (rule ext)
   qed
 qed
 
+text\<open>The following lemma holds for every set of simplices (the premise on y being a simplicial
+  complex can be omitted).\<close>
+
 lemma
   simplicial_complex_induced_by_monotone_boolean_function_boolean_function_from_simplicial_complex_id:
   fixes y :: "'a::class_mod_type set set"
-  assumes y: "y \<in> simplicial_complex_set"
-  shows "simplicial_complex_induced_by_monotone_boolean_function (boolean_function_from_simplicial_complex y) = y" 
+  shows "simplicial_complex_induced_by_monotone_boolean_function (boolean_function_from_simplicial_complex y) = y"
 proof (intro equalityI)
   show "simplicial_complex_induced_by_monotone_boolean_function (boolean_function_from_simplicial_complex y) \<subseteq> y"
   proof
@@ -171,11 +180,10 @@ next
  proof
    fix x :: "'a set"
    assume x: "x \<in> y" 
-   hence bvs: "ceros_of_boolean_input (bool_vec_from_simplice x) = x"
+   have bvs: "ceros_of_boolean_input (bool_vec_from_simplice x) = x"
      unfolding one_vec_def one_bool_def
      unfolding bool_vec_from_simplice_def 
-     using ceros_of_boolean_input_in_set [of x] 
-     using y unfolding simplicial_complex_set_def by simp
+     using ceros_of_boolean_input_in_set [of x] .
    show "x \<in> simplicial_complex_induced_by_monotone_boolean_function (boolean_function_from_simplicial_complex y)"
      unfolding boolean_function_from_simplicial_complex_def
      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
@@ -213,12 +221,12 @@ proof (intro bij_betwI [of _ _ _ boolean_function_from_simplicial_complex])
   hence x_mon: "monotone_bool_fun x"
     unfolding monotone_bool_fun_set_def unfolding mem_Collect_eq .
   show "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function x) = x"
-    by (rule boolean_function_from_simplicial_complex_simplicial_complex_induced_by_monotone_boolean_function_id [OF x_mon])
+    using boolean_function_from_simplicial_complex_simplicial_complex_induced_by_monotone_boolean_function_id .
   next
   fix y :: "'a set set"
   assume y: "y \<in> simplicial_complex_set"
   show "simplicial_complex_induced_by_monotone_boolean_function (boolean_function_from_simplicial_complex y) = y"
-    using simplicial_complex_induced_by_monotone_boolean_function_boolean_function_from_simplicial_complex_id [OF y] .
+    using simplicial_complex_induced_by_monotone_boolean_function_boolean_function_from_simplicial_complex_id .
 qed
 
 end

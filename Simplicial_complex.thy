@@ -7,16 +7,16 @@ begin
 
 section\<open>Simplicial Complex\<close>
 
-definition Pow_ne :: "'a set => 'a set set"
+(*definition Pow_ne :: "'a set => 'a set set"
   where "Pow_ne A = {B. B \<noteq> {} \<and> B \<subseteq> A}"
 
 lemma Pow_ne_singleton: "Pow_ne {a} = {{a}}"
-  unfolding Pow_ne_def by auto
+  unfolding Pow_ne_def by auto*)
 
 lemma Pow_singleton: "Pow {a} = {{},{a}}"by auto
 
-lemma Pow_ne_pair: "Pow_ne {a,b} = {{a},{b},{a,b}}"
-  unfolding Pow_ne_def by auto
+(*lemma Pow_ne_pair: "Pow_ne {a,b} = {{a},{b},{a,b}}"
+  unfolding Pow_ne_def by auto*)
 
 lemma Pow_pair: "Pow {a,b} = {{},{a},{b},{a,b}}" by auto
 
@@ -192,7 +192,7 @@ proof (rule, unfold simplicial_complex_induced_by_monotone_boolean_function_def)
       fix \<tau> :: "'a set"
       assume subset: "\<tau> \<subseteq> \<sigma>"
       then have tau: "\<tau> = {i::'a. i \<in> \<tau>}" and sub: "\<tau> \<subseteq> \<sigma>"
-        unfolding Pow_ne_def by simp_all
+        unfolding Pow_def by simp_all
       show "\<exists>x. f x \<and> ceros_of_boolean_input x = \<tau>"
       proof (rule exI [of _ "(\<chi> i. if i \<in> \<tau> then False else True)"], intro conjI) 
         show "ceros_of_boolean_input (\<chi> i::'a. if i \<in> \<tau> then False else True) = \<tau>"
@@ -263,6 +263,8 @@ lemma ceros_of_boolean_input_in_set:
   "ceros_of_boolean_input (\<chi> i::'n::class_mod_type. if i \<in> A then False else True) = A"
   unfolding ceros_of_boolean_input_def by simp
 
+section\<open>A particular case of problem 6.17 in Scoville, with some previous results\<close>
+
 lemma
   empty_set_in_simplicial_complex_induced:
   "{} \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
@@ -326,6 +328,8 @@ lemma card_ceros_count_UNIV:
   using card_complementary [of a]
   unfolding ceros_of_boolean_input_def
   unfolding count_true_def by simp
+
+text\<open>The following result is a particular case of Problem 6.17 in Scoville.\<close>
 
 lemma "{{},{a\<^sub>0},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1},{a\<^sub>0,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>1,a\<^sub>3},{a\<^sub>2,a\<^sub>3}}
     = simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
