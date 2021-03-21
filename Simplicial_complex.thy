@@ -13,48 +13,55 @@ definition Pow_ne :: "'a set => 'a set set"
 lemma Pow_ne_singleton: "Pow_ne {a} = {{a}}"
   unfolding Pow_ne_def by auto
 
+lemma Pow_singleton: "Pow {a} = {{},{a}}"by auto
+
 lemma Pow_ne_pair: "Pow_ne {a,b} = {{a},{b},{a,b}}"
   unfolding Pow_ne_def by auto
 
+lemma Pow_pair: "Pow {a,b} = {{},{a},{b},{a,b}}" by auto
+
+(*definition simplicial_complex :: "('n::finite) set set => bool"
+  where "simplicial_complex K \<equiv>  ({} \<notin> K) \<and> (\<forall>\<sigma>\<in>K. (Pow_ne \<sigma>) \<subseteq> K)"*)
+
 definition simplicial_complex :: "('n::finite) set set => bool"
-  where "simplicial_complex K \<equiv>  ({} \<notin> K) \<and> (\<forall>\<sigma>\<in>K. (Pow_ne \<sigma>) \<subseteq> K)"
+  where "simplicial_complex K \<equiv>  (\<forall>\<sigma>\<in>K. (Pow \<sigma>) \<subseteq> K)"
 
 definition simplicial_complex_set :: "('n::finite) set set set"
   where "simplicial_complex_set = (Collect simplicial_complex)"
 
-lemma simplicial_complex_not_empty_set:
+lemma simplicial_complex_empty_set:
   fixes K::"('n::finite) set set"
   assumes k: "simplicial_complex K"  
-  shows "{} \<notin> K" using k unfolding simplicial_complex_def Pow_ne_def by simp
+  shows "K = {} \<or> {} \<in> K" using k unfolding simplicial_complex_def Pow_def by auto
 
 lemma
   simplicial_complex_monotone:
   fixes K::"('n::finite) set set"
-  assumes k: "simplicial_complex K" and s: "s \<in> K" and rs: "r \<subseteq> s" and rne: "r \<noteq> {}"
+  assumes k: "simplicial_complex K" and s: "s \<in> K" and rs: "r \<subseteq> s" (*and rne: "r \<noteq> {}"*)
   shows "r \<in> K"
-  using k rs rne
-  unfolding simplicial_complex_def Pow_ne_def
-  by (smt (verit, del_insts) Diff_insert_absorb mem_Collect_eq s subset_Diff_insert)
+  using k rs s
+  unfolding simplicial_complex_def Pow_def by auto
+  (*by (smt (verit, del_insts) Diff_insert_absorb mem_Collect_eq s subset_Diff_insert)*)
 
 text\<open>One example of simplicial complex with four points\<close>
 
-lemma "simplicial_complex {{a\<^sub>0::finite_mod_4},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3}}"
-  by (simp add: Pow_ne_singleton simplicial_complex_def)
+lemma "simplicial_complex {{},{a\<^sub>0::finite_mod_4},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3}}"
+  by (simp add: Pow_singleton simplicial_complex_def)
 
 lemma "\<not> simplicial_complex {{a\<^sub>0::finite_mod_4, a\<^sub>1},{a\<^sub>1}}"
-  by (simp add: Pow_ne_pair simplicial_complex_def)
+  by (simp add: Pow_pair simplicial_complex_def)
 
 text\<open>Another  example of simplicial complex with four points\<close>
 
-lemma "simplicial_complex {{a\<^sub>0::finite_mod_4},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1}}" 
-  by (simp add: Pow_ne_pair Pow_ne_singleton simplicial_complex_def)
+lemma "simplicial_complex {{},{a\<^sub>0::finite_mod_4},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1}}" 
+  by (simp add: Pow_pair Pow_singleton simplicial_complex_def)
 
 text\<open>Another example of simplicial complex with four points; 
   the proof shall be improved, trying to reduce the repetitions.\<close>
 
 lemma "simplicial_complex 
-    {{a\<^sub>2,a\<^sub>3},{a\<^sub>1,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>0,a\<^sub>2},{a\<^sub>3},{a\<^sub>2},{a\<^sub>1},{a\<^sub>0::finite_mod_4}}"
-  by (simp add: Pow_ne_pair Pow_ne_singleton simplicial_complex_def)
+    {{a\<^sub>2,a\<^sub>3},{a\<^sub>1,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>0,a\<^sub>2},{a\<^sub>3},{a\<^sub>2},{a\<^sub>1},{a\<^sub>0::finite_mod_4},{}}"
+  by (simp add: Pow_pair Pow_singleton simplicial_complex_def)
 
 text\<open>Simplicial complex induced by a monotone Boolean function\<close>
 
@@ -124,13 +131,19 @@ definition
   where "simplicial_complex_induced_by_monotone_boolean_function_int f = 
         {y. \<exists>x. x \<noteq> 1 \<and> f x = True \<and> ceros_of_boolean_input_int x = y}"
 
+(*definition
+  simplicial_complex_induced_by_monotone_boolean_function 
+    :: "(bool^'n::class_mod_type => bool) => 'n set set"
+  where "simplicial_complex_induced_by_monotone_boolean_function f = 
+        {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"*)
+
 definition
   simplicial_complex_induced_by_monotone_boolean_function 
     :: "(bool^'n::class_mod_type => bool) => 'n set set"
   where "simplicial_complex_induced_by_monotone_boolean_function f = 
-        {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"
+        {y. \<exists>x. f x \<and> ceros_of_boolean_input x = y}"
 
-text\<open>The simplicial complex induced by a Boolean function is a subset of the 
+text\<open>The simplicial complex induced by a Boolean function is a subset of the
   powerset of the indexes\<close>
 
 lemma
@@ -139,7 +152,7 @@ lemma
   unfolding simplicial_complex_induced_by_monotone_boolean_function_def
   using ceros_of_boolean_input_int_subset by auto
 
-lemma empty_set_not_in_simplicial_complex_induced: 
+(*lemma empty_set_not_in_simplicial_complex_induced: 
   "{} \<notin> simplicial_complex_induced_by_monotone_boolean_function (f::bool^'n::class_mod_type => bool)"
 proof (rule ccontr, simp)
   assume y: "{} \<in> simplicial_complex_induced_by_monotone_boolean_function f"
@@ -147,7 +160,7 @@ proof (rule ccontr, simp)
       unfolding simplicial_complex_induced_by_monotone_boolean_function_def by auto
   thus False unfolding ceros_of_boolean_input_def using x
     by (metis (full_types) Collect_empty_eq_bot empty_def one_bool_def one_index vec_eq_iff)
-qed
+qed*)
 
 lemma
   boolean_vec_not_one:
@@ -164,43 +177,31 @@ text\<open>The simplicial complex induced by a monotone Boolean function is a si
 
 lemma
   monotone_bool_fun_induces_simplicial_complex:
-  assumes mon: "mono_on f (Set.remove (\<chi> i. True) UNIV)"
+  assumes mon: "monotone_bool_fun f"
   shows "simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function f)"
   unfolding simplicial_complex_def
-proof (intro conjI)
-  show "{} \<notin> simplicial_complex_induced_by_monotone_boolean_function f"
-    using empty_set_not_in_simplicial_complex_induced [of f] .
-  show "\<forall>\<sigma>\<in>simplicial_complex_induced_by_monotone_boolean_function f.
-       Pow_ne \<sigma> \<subseteq> simplicial_complex_induced_by_monotone_boolean_function f"
-  proof (rule, unfold simplicial_complex_induced_by_monotone_boolean_function_def)
+proof (rule, unfold simplicial_complex_induced_by_monotone_boolean_function_def)
     fix \<sigma>::"'a set"
-    assume sigma: "\<sigma> \<in> {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"
-    from sigma obtain x where x_none: "x \<noteq> 1" 
-                      and fx: "f x" and ceros_sigma: "ceros_of_boolean_input x = \<sigma>" by auto
+    assume sigma: "\<sigma> \<in> {y. \<exists>x. f x \<and> ceros_of_boolean_input x = y}"
+    from sigma obtain x where fx: "f x" and ceros_sigma: "ceros_of_boolean_input x = \<sigma>" by auto
     hence x_def: "x = (\<chi> i::'a. if i \<in> \<sigma> then False else True)"
       unfolding ceros_of_boolean_input_def by auto
-    show "Pow_ne \<sigma> \<subseteq> {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"
+    from mon have mono_on: "mono_on f UNIV" unfolding monotone_bool_fun_def .
+    show "Pow \<sigma> \<subseteq> {y. \<exists>x. f x \<and> ceros_of_boolean_input x = y}"
     proof (safe)
-      fix \<tau>::"'a set"
-      assume subset: "\<tau> \<in> Pow_ne \<sigma>"
-      then have tau: "\<tau> = {i::'a. i \<in> \<tau>}" and sub: "\<tau> \<subseteq> \<sigma>" and tau_ne: "\<tau> \<noteq> {}" 
+      fix \<tau> :: "'a set"
+      assume subset: "\<tau> \<subseteq> \<sigma>"
+      then have tau: "\<tau> = {i::'a. i \<in> \<tau>}" and sub: "\<tau> \<subseteq> \<sigma>"
         unfolding Pow_ne_def by simp_all
-      show "\<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = \<tau>" 
+      show "\<exists>x. f x \<and> ceros_of_boolean_input x = \<tau>"
       proof (rule exI [of _ "(\<chi> i. if i \<in> \<tau> then False else True)"], intro conjI) 
         show "ceros_of_boolean_input (\<chi> i::'a. if i \<in> \<tau> then False else True) = \<tau>"
           unfolding ceros_of_boolean_input_def by simp
-        show tau_none: "(\<chi> i::'a. if i \<in> \<tau> then False else True) \<noteq> (1::(bool, 'a) vec)"
-          using boolean_vec_not_one [of \<tau>] tau_ne by simp
         show "f (\<chi> i::'a. if i \<in> \<tau> then False else True)"
         proof -
-          have xin: "x \<in> Set.remove (\<chi> i. True) UNIV" 
-            using x_none unfolding one_vec_def one_bool_def by simp
-          have tauin: "(\<chi> i::'a. if i \<in> \<tau> then False else True) \<in> Set.remove (\<chi> i. True) UNIV"
-            using tau_none unfolding one_vec_def one_bool_def by simp
           have x_le: "x \<le> (\<chi> i. if i \<in> \<tau> then False else True)"
             unfolding x_def using less_eq_vec_def sub by fastforce
-          show ?thesis using mono_onD [OF mon xin tauin x_le] fx by simp
-        qed
+          show ?thesis using mono_onD [OF mono_on _ _ x_le] using fx by simp
       qed
     qed
   qed
@@ -262,14 +263,22 @@ lemma ceros_of_boolean_input_in_set:
   "ceros_of_boolean_input (\<chi> i::'n::class_mod_type. if i \<in> A then False else True) = A"
   unfolding ceros_of_boolean_input_def by simp
 
+lemma
+  empty_set_in_simplicial_complex_induced:
+  "{} \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
+  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+  unfolding bool_fun_threshold_2_3_def 
+  apply rule
+  apply (rule exI [of _ "(\<chi> x. True)"])
+  unfolding count_true_def ceros_of_boolean_input_def apply auto
+  by (metis CARD_finite_mod_4 UNIV_I mem_Collect_eq numeral_le_iff semiring_norm(68) semiring_norm(71) subsetI subset_antisym vec_lambda_beta)
+
 lemma singleton_in_simplicial_complex_induced:
   "{x} \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
   (is "?A \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3")
 proof (unfold simplicial_complex_induced_by_monotone_boolean_function_def, rule,
       rule exI [of _ "(\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"], 
       intro conjI)
-  show "(\<chi> i::finite_mod_4. if i \<in> ?A then False else True) \<noteq> (1::(bool, finite_mod_4) vec)"
-    by (rule boolean_vec_not_one, simp_all)
   show "bool_fun_threshold_2_3 (\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"
     unfolding bool_fun_threshold_2_3_def count_true_def Collect_code enum_finite_mod_4_def by simp
   show "ceros_of_boolean_input (\<chi> i::finite_mod_4. if i \<in> ?A then False else True) = ?A"
@@ -282,8 +291,6 @@ lemma pair_in_simplicial_complex_induced:
 proof (unfold simplicial_complex_induced_by_monotone_boolean_function_def, rule,
       rule exI [of _ "(\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"], 
       intro conjI)
-  show "(\<chi> i::finite_mod_4. if i \<in> ?A then False else True) \<noteq> (1::(bool, finite_mod_4) vec)"
-    by (rule boolean_vec_not_one, simp_all)
   show "bool_fun_threshold_2_3 (\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"
     unfolding bool_fun_threshold_2_3_def count_true_def Collect_code enum_finite_mod_4_def by simp
   show "ceros_of_boolean_input (\<chi> i::finite_mod_4. if i \<in> ?A then False else True) = ?A"
@@ -320,35 +327,28 @@ lemma card_ceros_count_UNIV:
   unfolding ceros_of_boolean_input_def
   unfolding count_true_def by simp
 
-lemma "{{a\<^sub>0},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1},{a\<^sub>0,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>1,a\<^sub>3},{a\<^sub>2,a\<^sub>3}}
+lemma "{{},{a\<^sub>0},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1},{a\<^sub>0,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>1,a\<^sub>3},{a\<^sub>2,a\<^sub>3}}
     = simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
-  (is "{?a,?b,?c,?d,?e,?f,?g,?h,?i,?j} = _")
+  (is "{{},?a,?b,?c,?d,?e,?f,?g,?h,?i,?j} = _")
 proof (rule)
-  show "{{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>2, a\<^sub>3}}
+  show "{{},{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>2, a\<^sub>3}}
     \<subseteq> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
-    by (simp add: singleton_in_simplicial_complex_induced pair_in_simplicial_complex_induced)+ 
+    by (simp add: 
+        empty_set_in_simplicial_complex_induced
+        singleton_in_simplicial_complex_induced pair_in_simplicial_complex_induced)+
   show "simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3
-    \<subseteq> {{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>2, a\<^sub>3}}"
+    \<subseteq> {{},{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>2, a\<^sub>3}}"
       unfolding simplicial_complex_induced_by_monotone_boolean_function_def
       unfolding bool_fun_threshold_2_3_def
     proof
     fix y::"finite_mod_4 set"
-      assume y: "y \<in> {y. \<exists>x. x \<noteq> 1 \<and> (if 2 \<le> count_true x then True else False) \<and> ceros_of_boolean_input x = y}"
+      assume y: "y \<in> {y. \<exists>x. (if 2 \<le> count_true x then True else False) \<and> ceros_of_boolean_input x = y}"
       then obtain x::"(bool, finite_mod_4) vec" 
-        where x_none: "x \<noteq> 1"
-          and ct_ge_2: "(if 2 \<le> count_true x then True else False)" 
+        where ct_ge_2: "(if 2 \<le> count_true x then True else False)" 
           and cx: "ceros_of_boolean_input x = y" by auto
-      have y_nempty: "y \<noteq> {}"
-      proof (rule ccontr)
-        assume y_empty: "\<not> y \<noteq> {}"
-        from cx have "ceros_of_boolean_input x = {}" using y_empty by simp
-        thus False unfolding ceros_of_boolean_input_def
-          using x_none
-        by (metis (full_types) Collect_empty_eq_bot empty_def one_bool_def one_index vec_eq_iff y_empty)
-      qed
       have "count_true x + card (ceros_of_boolean_input x) = card (UNIV::finite_mod_4 set)"
         by (metis add.commute card_ceros_count_UNIV)
-      hence "card (ceros_of_boolean_input x) \<le> 2" 
+      hence "card (ceros_of_boolean_input x) \<le> 2"
         by (metis CARD_finite_mod_4 add.commute ct_ge_2 nat_add_left_cancel_le numeral_Bit0)
       hence card_le: "card y \<le> 2" using cx by simp
       have "y \<in> {{},{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1},{a\<^sub>0, a\<^sub>2},{a\<^sub>0, a\<^sub>3},{a\<^sub>1, a\<^sub>2},{a\<^sub>1, a\<^sub>3},{a\<^sub>2, a\<^sub>3}}"
@@ -363,9 +363,9 @@ proof (rule)
         hence "card y \<ge> 3" by auto
         thus False using card_le by simp
       qed
-      then show "y \<in> {{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>2, a\<^sub>3}}"
-       using y_nempty by simp
- qed
+      then show "y \<in> {{},{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>2, a\<^sub>3}}"
+      by simp
+  qed
 qed
 
 end
