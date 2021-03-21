@@ -84,10 +84,10 @@ definition bool_fun_threshold :: "nat => (bool^'n => bool)"
 text\<open>definition bool_fun_threshold_dim_n :: "(bool^'n => bool) set"
   where "bool_fun_threshold_dim_n = {f. bool_fun_threshold i }"\<close>
 
-lemma "monotone_bool_fun bool_fun_top"
+lemma "mono_on bool_fun_top UNIV"
   by (simp add: bool_fun_top_def mono_onI monotone_bool_fun_def)
 
-lemma "monotone_bool_fun bool_fun_bot"
+lemma "mono_on bool_fun_bot UNIV"
   by (simp add: bool_fun_bot_def mono_onI monotone_bool_fun_def)
 
 text\<open>The Isar proof of the following result has been produced by Isabelle automatically:\<close>
@@ -127,7 +127,7 @@ lemma
 
 text\<open>The threshold functions are monotone\<close>
 
-lemma "monotone_bool_fun (bool_fun_threshold n)"
+lemma "mono_on (bool_fun_threshold n) UNIV"
   by (meson mono_onI monotone_bool_fun_def monotone_threshold)
 
 end
