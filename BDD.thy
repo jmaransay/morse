@@ -10,15 +10,44 @@ section\<open>Relation between boolean functions over vectors and boolfunc as in
 definition vec_to_boolfunc :: "(bool^'n => bool) => 'n boolfunc"
   where "vec_to_boolfunc f = (\<lambda>i. f (vec_lambda i))"
 
+term map
+
+definition vec_to_list :: "bool^'n::{finite, enum} => ('n \<times> bool) list"
+  where "vec_to_list v = map (\<lambda>i::'n. (i, v $ i)) (enum_class.enum::'n list)"
+
+text\<open>TODO: - Prove that class_mod_type is a subclass of enum;
+           - Define the transformation from a boolean funcion to a bdt\<close>
+
+
+term sat_list_to_bdt
+
+term vec_to_list
+
 lemma "vec_to_boolfunc (\<lambda>x. True) = bf_True"
   unfolding vec_to_boolfunc_def ..
+
+lemma "vec_to_boolfunc (bool_fun_top) = bf_True"
+  unfolding vec_to_boolfunc_def bool_fun_top_def ..
 
 lemma "vec_to_boolfunc (\<lambda>x. False) = bf_False"
   unfolding vec_to_boolfunc_def ..
 
+lemma "vec_to_boolfunc (bool_fun_bot) = bf_False"
+  unfolding vec_to_boolfunc_def bool_fun_bot_def ..
+
+lemma "vec_to_boolfunc (bool_fun_threshold_2_3) = bf_False"
+  unfolding vec_to_boolfunc_def
+  unfolding bool_fun_threshold_2_3_def
+  
+
 term sat_list_to_bdt
 
 term eqci
+term emptyci 
+term litci
+
+term orci
+term andci
 
 
 lemma "<emp> do {
