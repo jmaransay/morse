@@ -1,6 +1,6 @@
 
 theory BDD
-  imports 
+  imports
     Bij_betw_simplicial_complex_bool_func
     "ROBDD.BDD_Examples"
 begin
@@ -44,6 +44,13 @@ lemma "val_vec_ifex (IF a\<^sub>2 Trueif Falseif) (\<chi> i. if i = a\<^sub>3 th
 definition vec_to_pairs_list :: "bool^'n::enum \<Rightarrow> ('n \<times> bool) list"
   where "vec_to_pairs_list v = map (\<lambda>i. (i, v $ i)) enum_class.enum"
 
+term bool_fun_threshold_2_3
+term "(\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
+                                        | a\<^sub>1 \<Rightarrow> True
+                                        | (_) \<Rightarrow> False)"
+
+
+
 fun pairs_list_to_bdd :: "('n \<times> bool) list => 'n ifex"
   where  "pairs_list_to_bdd [] = Falseif"
   | "pairs_list_to_bdd (a # l) = (if (snd a) then IF (fst a) Trueif (pairs_list_to_bdd l) 
@@ -67,6 +74,20 @@ fun val_ifex :: "'a ifex \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> boo
   "val_ifex Trueif s = True" |
   "val_ifex Falseif s = False" |
   "val_ifex (IF n t1 t2) s = (if s n then val_ifex t1 s else val_ifex t2 s)"
+
+text\<open>The idea of the following function is as follows:
+    Given a list of variables and a Boolean function on that variables,
+    it builds an ifex tree with the variables, and in each step it includes
+    a new variable in the ifex tree, it includes in the given list
+    the Boolean values False or True, and it proceeds recursively in each branch.
+    When it runs out of variables, it evaluates the Boolean function in the list of Boolean
+    intermediary values.\<close>
+
+fun boolfunc_to_bdd :: "'n list => 'n boolfunc => bool list => 'n ifex"
+  where  "boolfunc_to_bdd [] f boollist = f boollist"
+  | "boolfunc_to_bdd (a # l) f boollist = (IF a (boolfunc_to_bdd l f (False # boollist)) 
+                                                (boolfunc_to_bdd l f (True # boollist)))"
+
 
 text\<open>TODO: - Prove that class_mod_type is a subclass of enum;
            - Define the transformation from a boolean funcion to a bdt\<close>

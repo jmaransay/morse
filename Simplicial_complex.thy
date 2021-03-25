@@ -212,9 +212,9 @@ text\<open>Example 6.10 in Scoville\<close>
 definition bool_fun_threshold_2_3 :: "(bool^finite_mod_4 => bool)"
   where "bool_fun_threshold_2_3 = (\<lambda>v. if 2 \<le> count_true v then True else False)"
 
-lemma "bool_fun_threshold_2_3 
+lemma "bool_fun_threshold_2_3
           (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
-                                        | a\<^sub>1 \<Rightarrow> True 
+                                        | a\<^sub>1 \<Rightarrow> True
                                         | (_) \<Rightarrow> False) = True"
   unfolding bool_fun_threshold_2_3_def 
   unfolding count_true_def
