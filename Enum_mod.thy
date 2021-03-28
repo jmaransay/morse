@@ -517,6 +517,73 @@ qed (simp_all only: enum_finite_mod_4_def enum_all_finite_mod_4_def enum_ex_fini
 
 end
 
+
+instantiation finite_mod_4 :: linorder
+begin
+
+definition
+  "x < y \<longleftrightarrow> (case (x, y) of
+     (a\<^sub>0, a\<^sub>0) \<Rightarrow> False | (a\<^sub>0, _) \<Rightarrow> True
+   |  (a\<^sub>1, a\<^sub>2) \<Rightarrow> True |  (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
+   |  (a\<^sub>2, a\<^sub>3) \<Rightarrow> True  | _ \<Rightarrow> False)"
+
+definition
+  "x \<le> y \<longleftrightarrow> (case (x, y) of
+     (a\<^sub>0, _) \<Rightarrow> True
+   | (a\<^sub>1, a\<^sub>1) \<Rightarrow> True | (a\<^sub>1, a\<^sub>2) \<Rightarrow> True | (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
+   | (a\<^sub>2, a\<^sub>2) \<Rightarrow> True | (a\<^sub>2, a\<^sub>3) \<Rightarrow> True
+   | (a\<^sub>3, a\<^sub>3) \<Rightarrow> True | _ \<Rightarrow> False)"
+
+instance proof (intro_classes)
+  fix x::finite_mod_4
+  show refl: "x \<le> x" unfolding less_eq_finite_mod_4_def
+    by (metis (no_types, lifting) case_prodI finite_mod_4.case(1) finite_mod_4.exhaust finite_mod_4.simps(14) finite_mod_4.simps(15) finite_mod_4.simps(16))
+  fix y::finite_mod_4
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+    unfolding less_eq_finite_mod_4_def
+    by (smt (z3) case_prodD finite_mod_4.case(1) finite_mod_4.exhaust finite_mod_4.simps(14) finite_mod_4.simps(15) finite_mod_4.simps(16))
+  show "x \<le> y \<or> y \<le> x"
+    unfolding less_eq_finite_mod_4_def 
+    apply (cases "x", cases "y")
+    apply simp_all
+      by (metis finite_mod_4.exhaust finite_mod_4.simps(13) finite_mod_4.simps(14) finite_mod_4.simps(15) finite_mod_4.simps(16))+
+  fix z::finite_mod_4
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+    unfolding less_eq_finite_mod_4_def
+    apply (cases "x", cases "y", cases "z") 
+    apply simp_all 
+    by (metis finite_mod_4.exhaust finite_mod_4.simps(13) finite_mod_4.simps(14) finite_mod_4.simps(15) finite_mod_4.simps(16))+
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
+    unfolding less_eq_finite_mod_4_def less_finite_mod_4_def
+    apply (cases "x", cases "y") apply simp_all
+    by (metis (full_types) finite_mod_4.exhaust finite_mod_4.simps(13) finite_mod_4.simps(14) finite_mod_4.simps(15) finite_mod_4.simps(16))+
+qed    
+
+end
+
+(*instantiation finite_mod_4 :: linorder
+begin
+
+definition
+  "x < y \<longleftrightarrow> (case (x, y) of
+     (a\<^sub>0, a\<^sub>0) \<Rightarrow> False | (a\<^sub>0, _) \<Rightarrow> True
+   |  (a\<^sub>1, a\<^sub>2) \<Rightarrow> True |  (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
+   |  (a\<^sub>2, a\<^sub>3) \<Rightarrow> True  | _ \<Rightarrow> False)"
+
+definition
+  "x \<le> y \<longleftrightarrow> (case (x, y) of
+     (a\<^sub>0, _) \<Rightarrow> True
+   | (a\<^sub>1, a\<^sub>1) \<Rightarrow> True | (a\<^sub>1, a\<^sub>2) \<Rightarrow> True | (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
+   | (a\<^sub>2, a\<^sub>2) \<Rightarrow> True | (a\<^sub>2, a\<^sub>3) \<Rightarrow> True
+   | (a\<^sub>3, a\<^sub>3) \<Rightarrow> True | _ \<Rightarrow> False)"
+
+instance apply (intro_classes, unfold less_eq_finite_mod_4_def)
+  apply (auto) try
+    apply auto
+  by (smt (z3) finite_mod_4.exhaust finite_mod_4.simps(13) finite_mod_4.simps(14) finite_mod_4.simps(15) finite_mod_4.simps(16))
+
+
+
 instantiation finite_mod_4 :: finite_distrib_lattice begin
 
 text \<open>\<^term>\<open>a\<^sub>0\<close> $<$ \<^term>\<open>a\<^sub>1\<close>,\<^term>\<open>a\<^sub>2\<close> $<$ \<^term>\<open>a\<^sub>3\<close>,
@@ -525,13 +592,13 @@ text \<open>\<^term>\<open>a\<^sub>0\<close> $<$ \<^term>\<open>a\<^sub>1\<close
 definition
   "x < y \<longleftrightarrow> (case (x, y) of
      (a\<^sub>0, a\<^sub>0) \<Rightarrow> False | (a\<^sub>0, _) \<Rightarrow> True
-   |  (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
+   |  (a\<^sub>1, a\<^sub>2) \<Rightarrow> True |  (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
    |  (a\<^sub>2, a\<^sub>3) \<Rightarrow> True  | _ \<Rightarrow> False)"
 
-definition 
+definition
   "x \<le> y \<longleftrightarrow> (case (x, y) of
      (a\<^sub>0, _) \<Rightarrow> True
-   | (a\<^sub>1, a\<^sub>1) \<Rightarrow> True | (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
+   | (a\<^sub>1, a\<^sub>1) \<Rightarrow> True | (a\<^sub>1, a\<^sub>2) \<Rightarrow> True | (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
    | (a\<^sub>2, a\<^sub>2) \<Rightarrow> True | (a\<^sub>2, a\<^sub>3) \<Rightarrow> True
    | (a\<^sub>3, a\<^sub>3) \<Rightarrow> True | _ \<Rightarrow> False)"
 
@@ -554,12 +621,12 @@ definition
   | (a\<^sub>2, _) \<Rightarrow> a\<^sub>2 | (_, a\<^sub>2) \<Rightarrow> a\<^sub>2
   | _ \<Rightarrow> a\<^sub>0)"
 
-instance
+instance try
   by standard
     (subproofs
       \<open>auto simp add: less_finite_mod_4_def less_eq_finite_mod_4_def Inf_finite_mod_4_def Sup_finite_mod_4_def 
         inf_finite_mod_4_def sup_finite_mod_4_def split: finite_mod_4.splits\<close>)
-end
+end*)
 
 hide_const (open) a\<^sub>0 a\<^sub>1 a\<^sub>2 a\<^sub>3
 
