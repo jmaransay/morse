@@ -130,6 +130,10 @@ proof (intro_classes)
     unfolding uminus_finite_mod_4_def
     unfolding Abs_mod
     using RepExt(1) minus_finite_mod_4_def by fastforce
+  show "(x < y) = (Rep x < Rep y)"
+    by (smt (z3) Rep_finite_mod_4_def finite_mod_4.exhaust finite_mod_4.simps(13) finite_mod_4.simps(14) finite_mod_4.simps(15) finite_mod_4.simps(16) less_finite_mod_4_def prod.simps(2))
+  show "(x \<le> y) = (Rep x \<le> Rep y)"
+    by (smt (z3) RepExt(1) RepExt(2) RepExt(3) RepExt(4) \<open>(x < y) = (Rep x < Rep y)\<close> dual_order.order_iff_strict finite_mod_4.exhaust)
 qed
 
 lemma to_int_a1: "to_int a\<^sub>0 = 0" unfolding to_int_def using RepExt(1) .
@@ -148,9 +152,7 @@ lemma finite_UNIV: "finite {a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3}"
 lemma finite_mod_4_enum: "{a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3} = set [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3]"
   by simp
 
-find_theorems (999) "Finite_Set.fold _ _ (set _)"
-
-lemma cfi: "comp_fun_idem (\<lambda>x A. A \<union> insert x ` A)" 
+lemma cfi: "comp_fun_idem (\<lambda>x A. A \<union> insert x ` A)"
   unfolding comp_fun_idem_def
   unfolding comp_fun_commute_def apply auto unfolding comp_def apply (rule ext) apply auto
   unfolding comp_fun_idem_axioms_def unfolding comp_def by auto

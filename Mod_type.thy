@@ -5,7 +5,7 @@ theory Mod_type
     Enum_mod
 begin
 
-class class_mod_type = zero + one + plus + times + uminus + minus +
+class class_mod_type = zero + one + plus + times + uminus + minus + ord + enum +
   fixes Rep :: "'a \<Rightarrow> int"
   and Abs :: "int \<Rightarrow> 'a"
   assumes type: "type_definition Rep Abs {0..< int CARD('a)}"
@@ -16,6 +16,8 @@ class class_mod_type = zero + one + plus + times + uminus + minus +
   and mult_def: "x * y = Abs ((Rep x * Rep y) mod int CARD('a))"
   and diff_def: "x - y = Abs ((Rep x - Rep y) mod int CARD('a))"
   and minus_def: "- x = Abs ((- Rep x) mod int CARD('a))"
+  and less_def: "x < y = (Rep x < Rep y)"
+  and less_eq_def: "x \<le> y = (Rep x \<le> Rep y)"
 begin
 
 lemma Rep_in: "Rep x \<in> {0::int..<int CARD('a)}"
@@ -72,8 +74,8 @@ lemma Rep_Abs_1: "Rep (Abs 1) = 1"
 lemma Rep_1: "Rep 1 = 1"
   by (simp add: one_def Rep_Abs_1)
 
-lemma Rep_mod: "Rep x mod (int CARD('a)) = Rep x"
-  by (meson Rep_in atLeastLessThan_iff mod_pos_pos_trivial)
+lemma Rep_mod: "Rep x mod (int CARD('a)) = Rep x" try
+  by (meson Rep_in mod_pos_pos_trivial ord_class.atLeastLessThan_iff)
 
 lemmas Rep_simps =
   Rep_inject_sym Rep_inverse Rep_Abs_mod Rep_mod Rep_Abs_0 Rep_Abs_1
@@ -133,6 +135,16 @@ lemma finite_univ: "finite (UNIV::'a set)"
 
 subclass finite
   by (intro_classes) (rule finite_univ)
+
+subclass linorder
+  apply (unfold class.linorder_def class.linorder_axioms_def 
+    class.order_def class.order_axioms_def class.preorder_def less_def less_eq_def, 
+    intro conjI)
+  apply auto [1]
+  apply simp
+  apply simp
+   apply (simp add: Rep_inject_sym)
+  by auto
 
 end
 
