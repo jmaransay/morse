@@ -74,7 +74,7 @@ lemma Rep_Abs_1: "Rep (Abs 1) = 1"
 lemma Rep_1: "Rep 1 = 1"
   by (simp add: one_def Rep_Abs_1)
 
-lemma Rep_mod: "Rep x mod (int CARD('a)) = Rep x" try
+lemma Rep_mod: "Rep x mod (int CARD('a)) = Rep x"
   by (meson Rep_in mod_pos_pos_trivial ord_class.atLeastLessThan_iff)
 
 lemmas Rep_simps =

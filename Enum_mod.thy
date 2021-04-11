@@ -1,6 +1,4 @@
 
-(* Author: Florian Haftmann, TU Muenchen *)
-
 section \<open>Finite types as explicit enumerations\<close>
 
 theory Enum_mod
@@ -9,10 +7,11 @@ begin
 
 subsection \<open>Small finite types as arithmetic modulo its cardinal\<close>
 
-text \<open>Similar types are defined as finite_1 up to finite_5 in Enum.thy, 
-  but they define the bynary minus (see Enum.thy in the HOL folder 
-  of the Isabelle distribution) not modulo the cardinal of the Universe set, 
-  but as in a lattice\<close>
+text \<open>Similar types are defined as finite_1 up to finite_5 in Enum.thy
+  in the Isabelle distribution, but they define the binary minus 
+  (see Enum.thy in the HOL folder of the Isabelle distribution) 
+  not modulo the cardinal of the Universe set, but as in a lattice. 
+  They are neither proven to be a linear order, but a lattice.\<close>
 
 datatype (plugins only: code "quickcheck" extraction) finite_mod_1 =
   a\<^sub>0
@@ -222,28 +221,6 @@ instance
         split: finite_mod_2.splits\<close>)
 end
 
-(*lemma two_finite_mod_2:
-  "2 = a\<^sub>1" apply simp thm numeral.simps
-  apply (simp add: numeral.simps plus_finite_mod_2_def) try
-
-lemma dvd_finite_2_unfold:
-  "x dvd y \<longleftrightarrow> x = a\<^sub>2 \<or> y = a\<^sub>1"
-  by (auto simp add: dvd_def times_finite_mod_2_def split: finite_mod_2.splits)
-   (meson finite_mod_2.exhaust)+
-
-instantiation finite_mod_2 :: "{normalization_semidom, unique_euclidean_semiring}" begin
-definition [simp]: "normalize = (id :: finite_mod_2 \<Rightarrow> _)"
-definition [simp]: "unit_factor = (id :: finite_mod_2 \<Rightarrow> _)"
-definition [simp]: "euclidean_size x = (case x of a\<^sub>1 \<Rightarrow> 0 | a\<^sub>2 \<Rightarrow> 1)"
-definition [simp]: "division_segment (x :: finite_mod_2) = 1"
-instance
-  by standard
-    (subproofs
-      \<open>auto simp add: divide_finite_mod_2_def times_finite_mod_2_def dvd_finite_mod_2_unfold
-        split: finite_mod_2.splits\<close>)
-end*)
-
- 
 hide_const (open) a\<^sub>0 a\<^sub>1
 
 datatype (plugins only: code "quickcheck" extraction) finite_mod_3 =
@@ -303,136 +280,6 @@ proof(rule wf_wellorderI)
   from this[symmetric] show "wf \<dots>" by simp
 qed intro_classes
 
-(*class finite_lattice = finite +  lattice + Inf + Sup  + bot + top +
-  assumes Inf_finite_empty: "Inf {} = Sup UNIV"
-  assumes Inf_finite_insert: "Inf (insert a A) = a \<sqinter> Inf A"
-  assumes Sup_finite_empty: "Sup {} = Inf UNIV"
-  assumes Sup_finite_insert: "Sup (insert a A) = a \<squnion> Sup A"
-  assumes bot_finite_def: "bot = Inf UNIV"
-  assumes top_finite_def: "top = Sup UNIV"
-begin
-
-subclass complete_lattice
-proof
-  fix x A
-  show "x \<in> A \<Longrightarrow> \<Sqinter>A \<le> x"
-    by (metis Set.set_insert abel_semigroup.commute local.Inf_finite_insert local.inf.abel_semigroup_axioms local.inf.left_idem local.inf.orderI)
-  show "x \<in> A \<Longrightarrow> x \<le> \<Squnion>A"
-    by (metis Set.set_insert insert_absorb2 local.Sup_finite_insert local.sup.absorb_iff2)
-next
-  fix A z
-  have "\<Squnion> UNIV = z \<squnion> \<Squnion>UNIV"
-    by (subst Sup_finite_insert [symmetric], simp add: insert_UNIV)
-  from this have [simp]: "z \<le> \<Squnion>UNIV"
-    using local.le_iff_sup by auto
-  have "(\<forall> x. x \<in> A \<longrightarrow> z \<le> x) \<longrightarrow> z \<le> \<Sqinter>A"
-    by (rule finite_induct [of A "\<lambda> A . (\<forall> x. x \<in> A \<longrightarrow> z \<le> x) \<longrightarrow> z \<le> \<Sqinter>A"])
-      (simp_all add: Inf_finite_empty Inf_finite_insert)
-  from this show "(\<And>x. x \<in> A \<Longrightarrow> z \<le> x) \<Longrightarrow> z \<le> \<Sqinter>A"
-    by simp
-
-  have "\<Sqinter> UNIV = z \<sqinter> \<Sqinter>UNIV"
-    by (subst Inf_finite_insert [symmetric], simp add: insert_UNIV)
-  from this have [simp]: "\<Sqinter>UNIV \<le> z"
-    by (simp add: local.inf.absorb_iff2)
-  have "(\<forall> x. x \<in> A \<longrightarrow> x \<le> z) \<longrightarrow> \<Squnion>A \<le> z"
-    by (rule finite_induct [of A "\<lambda> A . (\<forall> x. x \<in> A \<longrightarrow> x \<le> z) \<longrightarrow> \<Squnion>A \<le> z" ], simp_all add: Sup_finite_empty Sup_finite_insert)
-  from this show " (\<And>x. x \<in> A \<Longrightarrow> x \<le> z) \<Longrightarrow> \<Squnion>A \<le> z"
-    by blast
-next
-  show "\<Sqinter>{} = \<top>"
-    by (simp add: Inf_finite_empty top_finite_def)
-  show " \<Squnion>{} = \<bottom>"
-    by (simp add: Sup_finite_empty bot_finite_def)
-qed
-end
-
-class finite_distrib_lattice = finite_lattice + distrib_lattice 
-begin
-lemma finite_inf_Sup: "a \<sqinter> (Sup A) = Sup {a \<sqinter> b | b . b \<in> A}"
-proof (rule finite_induct [of A "\<lambda> A . a \<sqinter> (Sup A) = Sup {a \<sqinter> b | b . b \<in> A}"], simp_all)
-  fix x::"'a"
-  fix F
-  assume "x \<notin> F"
-  assume [simp]: "a \<sqinter> \<Squnion>F = \<Squnion>{a \<sqinter> b |b. b \<in> F}"
-  have [simp]: " insert (a \<sqinter> x) {a \<sqinter> b |b. b \<in> F} = {a \<sqinter> b |b. b = x \<or> b \<in> F}"
-    by blast
-  have "a \<sqinter> (x \<squnion> \<Squnion>F) = a \<sqinter> x \<squnion> a \<sqinter> \<Squnion>F"
-    by (simp add: inf_sup_distrib1)
-  also have "... = a \<sqinter> x \<squnion> \<Squnion>{a \<sqinter> b |b. b \<in> F}"
-    by simp
-  also have "... = \<Squnion>{a \<sqinter> b |b. b = x \<or> b \<in> F}"
-    by (unfold Sup_insert[THEN sym], simp)
-  finally show "a \<sqinter> (x \<squnion> \<Squnion>F) = \<Squnion>{a \<sqinter> b |b. b = x \<or> b \<in> F}"
-    by simp
-qed
-
-lemma finite_Inf_Sup: "\<Sqinter>(Sup ` A) \<le> \<Squnion>(Inf ` {f ` A |f. \<forall>Y\<in>A. f Y \<in> Y})"
-proof (rule finite_induct [of A "\<lambda>A. \<Sqinter>(Sup ` A) \<le> \<Squnion>(Inf ` {f ` A |f. \<forall>Y\<in>A. f Y \<in> Y})"], simp_all add: finite_UnionD)
-  fix x::"'a set"
-  fix F
-  assume "x \<notin> F"
-  have [simp]: "{\<Squnion>x \<sqinter> b |b . b \<in> Inf ` {f ` F |f. \<forall>Y\<in>F. f Y \<in> Y} } = {\<Squnion>x \<sqinter> (Inf (f ` F)) |f  . (\<forall>Y\<in>F. f Y \<in> Y)}"
-    by auto
-  define fa where "fa = (\<lambda> (b::'a) f Y . (if Y = x then b else f Y))"
-  have "\<And>f b. \<forall>Y\<in>F. f Y \<in> Y \<Longrightarrow> b \<in> x \<Longrightarrow> insert b (f ` (F \<inter> {Y. Y \<noteq> x})) = insert (fa b f x) (fa b f ` F) \<and> fa b f x \<in> x \<and> (\<forall>Y\<in>F. fa b f Y \<in> Y)"
-    by (auto simp add: fa_def)
-  from this have B: "\<And>f b. \<forall>Y\<in>F. f Y \<in> Y \<Longrightarrow> b \<in> x \<Longrightarrow> fa b f ` ({x} \<union> F) \<in> {insert (f x) (f ` F) |f. f x \<in> x \<and> (\<forall>Y\<in>F. f Y \<in> Y)}"
-    by blast
-  have [simp]: "\<And>f b. \<forall>Y\<in>F. f Y \<in> Y \<Longrightarrow> b \<in> x \<Longrightarrow> b \<sqinter> (\<Sqinter>x\<in>F. f x)  \<le> \<Squnion>(Inf ` {insert (f x) (f ` F) |f. f x \<in> x \<and> (\<forall>Y\<in>F. f Y \<in> Y)})"
-    using B apply (rule SUP_upper2)
-    using \<open>x \<notin> F\<close> apply (simp_all add: fa_def Inf_union_distrib)
-    apply (simp add: image_mono Inf_superset_mono inf.coboundedI2)
-    done
-  assume "\<Sqinter>(Sup ` F) \<le> \<Squnion>(Inf ` {f ` F |f. \<forall>Y\<in>F. f Y \<in> Y})"
-
-  from this have "\<Squnion>x \<sqinter> \<Sqinter>(Sup ` F) \<le> \<Squnion>x \<sqinter> \<Squnion>(Inf ` {f ` F |f. \<forall>Y\<in>F. f Y \<in> Y})"
-    using inf.coboundedI2 by auto
-  also have "... = Sup {\<Squnion>x \<sqinter> (Inf (f ` F)) |f  .  (\<forall>Y\<in>F. f Y \<in> Y)}"
-    by (simp add: finite_inf_Sup)
-
-  also have "... = Sup {Sup {Inf (f ` F) \<sqinter> b | b . b \<in> x} |f  .  (\<forall>Y\<in>F. f Y \<in> Y)}"
-    by (subst inf_commute) (simp add: finite_inf_Sup)
-
-  also have "... \<le> \<Squnion>(Inf ` {insert (f x) (f ` F) |f. f x \<in> x \<and> (\<forall>Y\<in>F. f Y \<in> Y)})"
-    apply (rule Sup_least, clarsimp)+
-    apply (subst inf_commute, simp)
-    done
-
-  finally show "\<Squnion>x \<sqinter> \<Sqinter>(Sup ` F) \<le> \<Squnion>(Inf ` {insert (f x) (f ` F) |f. f x \<in> x \<and> (\<forall>Y\<in>F. f Y \<in> Y)})"
-    by simp
-qed
-
-subclass complete_distrib_lattice
-  by (standard, rule finite_Inf_Sup)
-end
-
-instantiation finite_3 :: finite_lattice
-begin
-
-definition "\<Sqinter>A = (if a\<^sub>1 \<in> A then a\<^sub>1 else if a\<^sub>2 \<in> A then a\<^sub>2 else a\<^sub>3)"
-definition "\<Squnion>A = (if a\<^sub>3 \<in> A then a\<^sub>3 else if a\<^sub>2 \<in> A then a\<^sub>2 else a\<^sub>1)"
-definition [simp]: "bot = a\<^sub>1"
-definition [simp]: "top = a\<^sub>3"
-definition [simp]: "inf = (min :: finite_3 \<Rightarrow> _)"
-definition [simp]: "sup = (max :: finite_3 \<Rightarrow> _)"
-
-instance
-proof
-qed (auto simp add: Inf_finite_3_def Sup_finite_3_def max_def min_def less_eq_finite_3_def less_finite_3_def split: finite_3.split)
-end
-
-instance finite_3 :: complete_lattice ..
-
-instance finite_3 :: finite_distrib_lattice
-proof 
-qed (auto simp add: min_def max_def)
-
-instance finite_3 :: complete_distrib_lattice ..
-
-instance finite_3 :: complete_linorder ..
-*)
-
 instantiation finite_mod_3 :: "{field, idom_abs_sgn, idom_modulo}" begin
 definition [simp]: "0 = a\<^sub>0"
 definition [simp]: "1 = a\<^sub>1"
@@ -460,32 +307,6 @@ instance
         split: finite_mod_3.splits\<close>)
 end
 
-(*lemma two_finite_mod_3 [simp]:
-  "2 = a\<^sub>3"
-  by (simp add: numeral.simps plus_finite_mod_3_def)
-
-lemma dvd_finite_3_unfold:
-  "x dvd y \<longleftrightarrow> x = a\<^sub>2 \<or> x = a\<^sub>3 \<or> y = a\<^sub>1"
-  by (cases x) (auto simp add: dvd_def times_finite_3_def split: finite_3.splits)
-
-instantiation finite_3 :: "{normalization_semidom, unique_euclidean_semiring}" begin
-definition [simp]: "normalize x = (case x of a\<^sub>3 \<Rightarrow> a\<^sub>2 | _ \<Rightarrow> x)"
-definition [simp]: "unit_factor = (id :: finite_3 \<Rightarrow> _)"
-definition [simp]: "euclidean_size x = (case x of a\<^sub>1 \<Rightarrow> 0 | _ \<Rightarrow> 1)"
-definition [simp]: "division_segment (x :: finite_3) = 1"
-instance
-proof
-  fix x :: finite_3
-  assume "x \<noteq> 0"
-  then show "is_unit (unit_factor x)"
-    by (cases x) (simp_all add: dvd_finite_3_unfold)
-qed
-  (subproofs
-    \<open>auto simp add: divide_finite_3_def times_finite_3_def
-      dvd_finite_3_unfold inverse_finite_3_def plus_finite_3_def
-      split: finite_3.splits\<close>)
-end
-*)
 hide_const (open) a\<^sub>0 a\<^sub>1 a\<^sub>2
 
 datatype (plugins only: code "quickcheck" extraction) finite_mod_4 =
@@ -516,7 +337,6 @@ instance proof
 qed (simp_all only: enum_finite_mod_4_def enum_all_finite_mod_4_def enum_ex_finite_mod_4_def UNIV_finite_mod_4, simp_all)
 
 end
-
 
 instantiation finite_mod_4 :: linorder
 begin
@@ -561,73 +381,6 @@ qed
 
 end
 
-(*instantiation finite_mod_4 :: linorder
-begin
-
-definition
-  "x < y \<longleftrightarrow> (case (x, y) of
-     (a\<^sub>0, a\<^sub>0) \<Rightarrow> False | (a\<^sub>0, _) \<Rightarrow> True
-   |  (a\<^sub>1, a\<^sub>2) \<Rightarrow> True |  (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
-   |  (a\<^sub>2, a\<^sub>3) \<Rightarrow> True  | _ \<Rightarrow> False)"
-
-definition
-  "x \<le> y \<longleftrightarrow> (case (x, y) of
-     (a\<^sub>0, _) \<Rightarrow> True
-   | (a\<^sub>1, a\<^sub>1) \<Rightarrow> True | (a\<^sub>1, a\<^sub>2) \<Rightarrow> True | (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
-   | (a\<^sub>2, a\<^sub>2) \<Rightarrow> True | (a\<^sub>2, a\<^sub>3) \<Rightarrow> True
-   | (a\<^sub>3, a\<^sub>3) \<Rightarrow> True | _ \<Rightarrow> False)"
-
-instance apply (intro_classes, unfold less_eq_finite_mod_4_def)
-  apply (auto) try
-    apply auto
-  by (smt (z3) finite_mod_4.exhaust finite_mod_4.simps(13) finite_mod_4.simps(14) finite_mod_4.simps(15) finite_mod_4.simps(16))
-
-
-
-instantiation finite_mod_4 :: finite_distrib_lattice begin
-
-text \<open>\<^term>\<open>a\<^sub>0\<close> $<$ \<^term>\<open>a\<^sub>1\<close>,\<^term>\<open>a\<^sub>2\<close> $<$ \<^term>\<open>a\<^sub>3\<close>,
-  but \<^term>\<open>a\<^sub>1\<close> and \<^term>\<open>a\<^sub>2\<close> are incomparable.\<close>
-
-definition
-  "x < y \<longleftrightarrow> (case (x, y) of
-     (a\<^sub>0, a\<^sub>0) \<Rightarrow> False | (a\<^sub>0, _) \<Rightarrow> True
-   |  (a\<^sub>1, a\<^sub>2) \<Rightarrow> True |  (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
-   |  (a\<^sub>2, a\<^sub>3) \<Rightarrow> True  | _ \<Rightarrow> False)"
-
-definition
-  "x \<le> y \<longleftrightarrow> (case (x, y) of
-     (a\<^sub>0, _) \<Rightarrow> True
-   | (a\<^sub>1, a\<^sub>1) \<Rightarrow> True | (a\<^sub>1, a\<^sub>2) \<Rightarrow> True | (a\<^sub>1, a\<^sub>3) \<Rightarrow> True
-   | (a\<^sub>2, a\<^sub>2) \<Rightarrow> True | (a\<^sub>2, a\<^sub>3) \<Rightarrow> True
-   | (a\<^sub>3, a\<^sub>3) \<Rightarrow> True | _ \<Rightarrow> False)"
-
-definition
-  "Inf A = (if a\<^sub>0 \<in> A \<or> a\<^sub>1 \<in> A \<and> a\<^sub>2 \<in> A then a\<^sub>0 else if a\<^sub>1 \<in> A then a\<^sub>1 else if a\<^sub>2 \<in> A then a\<^sub>2 else a\<^sub>3)"
-definition
-  "Sup A = (if a\<^sub>3 \<in> A \<or> a\<^sub>1 \<in> A \<and> a\<^sub>2 \<in> A then a\<^sub>3 else if a\<^sub>1 \<in> A then a\<^sub>1 else if a\<^sub>2 \<in> A then a\<^sub>2 else a\<^sub>0)"
-definition [simp]: "bot = a\<^sub>0"
-definition [simp]: "top = a\<^sub>3"
-definition
-  "inf x y = (case (x, y) of
-     (a\<^sub>0, _) \<Rightarrow> a\<^sub>0 | (_, a\<^sub>0) \<Rightarrow> a\<^sub>0 | (a\<^sub>1, a\<^sub>2) \<Rightarrow> a\<^sub>0 | (a\<^sub>2, a\<^sub>1) \<Rightarrow> a\<^sub>0
-   | (a\<^sub>1, _) \<Rightarrow> a\<^sub>1 | (_, a\<^sub>1) \<Rightarrow> a\<^sub>1
-   | (a\<^sub>2, _) \<Rightarrow> a\<^sub>2 | (_, a\<^sub>2) \<Rightarrow> a\<^sub>2
-   | _ \<Rightarrow> a\<^sub>3)"
-definition
-  "sup x y = (case (x, y) of
-     (a\<^sub>3, _) \<Rightarrow> a\<^sub>3 | (_, a\<^sub>3) \<Rightarrow> a\<^sub>3 | (a\<^sub>1, a\<^sub>2) \<Rightarrow> a\<^sub>3 | (a\<^sub>2, a\<^sub>1) \<Rightarrow> a\<^sub>3
-  | (a\<^sub>1, _) \<Rightarrow> a\<^sub>1 | (_, a\<^sub>1) \<Rightarrow> a\<^sub>1
-  | (a\<^sub>2, _) \<Rightarrow> a\<^sub>2 | (_, a\<^sub>2) \<Rightarrow> a\<^sub>2
-  | _ \<Rightarrow> a\<^sub>0)"
-
-instance try
-  by standard
-    (subproofs
-      \<open>auto simp add: less_finite_mod_4_def less_eq_finite_mod_4_def Inf_finite_mod_4_def Sup_finite_mod_4_def 
-        inf_finite_mod_4_def sup_finite_mod_4_def split: finite_mod_4.splits\<close>)
-end*)
-
 hide_const (open) a\<^sub>0 a\<^sub>1 a\<^sub>2 a\<^sub>3
 
 datatype (plugins only: code "quickcheck" extraction) finite_mod_5 =
@@ -660,73 +413,53 @@ qed (simp_all only: enum_finite_mod_5_def enum_all_finite_mod_5_def enum_ex_fini
 
 end
 
-instantiation finite_mod_5 :: finite_lattice
+instantiation finite_mod_5 :: linorder
 begin
-
-text \<open>The non-distributive pentagon lattice $N_5$\<close>
 
 definition
   "x < y \<longleftrightarrow> (case (x, y) of
-     (a\<^sub>0, a\<^sub>0) \<Rightarrow> False | (a\<^sub>0, _) \<Rightarrow> True
-   | (a\<^sub>1, a\<^sub>2) \<Rightarrow> True  | (a\<^sub>1, a\<^sub>4) \<Rightarrow> True
-   | (a\<^sub>2, a\<^sub>4) \<Rightarrow> True
-   | (a\<^sub>3, a\<^sub>4) \<Rightarrow> True  | _ \<Rightarrow> False)"
+      (a\<^sub>0, a\<^sub>1) \<Rightarrow> True | (a\<^sub>0, a\<^sub>2) \<Rightarrow> True | (a\<^sub>0, a\<^sub>3) \<Rightarrow> True | (a\<^sub>0, a\<^sub>4) \<Rightarrow> True
+   |  (a\<^sub>1, a\<^sub>2) \<Rightarrow> True | (a\<^sub>1, a\<^sub>3) \<Rightarrow> True | (a\<^sub>1, a\<^sub>4) \<Rightarrow> True
+   |  (a\<^sub>2, a\<^sub>3) \<Rightarrow> True | (a\<^sub>2, a\<^sub>4) \<Rightarrow> True
+   |  (a\<^sub>3, a\<^sub>4) \<Rightarrow> True
+   | _ \<Rightarrow> False)"
 
 definition
   "x \<le> y \<longleftrightarrow> (case (x, y) of
      (a\<^sub>0, _) \<Rightarrow> True
-   | (a\<^sub>1, a\<^sub>1) \<Rightarrow> True | (a\<^sub>1, a\<^sub>2) \<Rightarrow> True | (a\<^sub>1, a\<^sub>4) \<Rightarrow> True
-   | (a\<^sub>2, a\<^sub>2) \<Rightarrow> True | (a\<^sub>2, a\<^sub>4) \<Rightarrow> True
+   | (a\<^sub>1, a\<^sub>1) \<Rightarrow> True | (a\<^sub>1, a\<^sub>2) \<Rightarrow> True | (a\<^sub>1, a\<^sub>3) \<Rightarrow> True | (a\<^sub>1, a\<^sub>4) \<Rightarrow> True
+   | (a\<^sub>2, a\<^sub>2) \<Rightarrow> True | (a\<^sub>2, a\<^sub>3) \<Rightarrow> True | (a\<^sub>2, a\<^sub>4) \<Rightarrow> True
    | (a\<^sub>3, a\<^sub>3) \<Rightarrow> True | (a\<^sub>3, a\<^sub>4) \<Rightarrow> True
-   | (a\<^sub>4, a\<^sub>4) \<Rightarrow> True | _ \<Rightarrow> False)"
+   | (a\<^sub>4, a\<^sub>4) \<Rightarrow> True
+   | _ \<Rightarrow> False)"
 
-definition
-  "Inf A = 
-  (if a\<^sub>0 \<in> A \<or> a\<^sub>3 \<in> A \<and> (a\<^sub>1 \<in> A \<or> a\<^sub>2 \<in> A) then a\<^sub>0
-   else if a\<^sub>1 \<in> A then a\<^sub>1
-   else if a\<^sub>2 \<in> A then a\<^sub>2
-   else if a\<^sub>3 \<in> A then a\<^sub>3
-   else a\<^sub>4)"
-definition
-  "Sup A = 
-  (if a\<^sub>4 \<in> A \<or> a\<^sub>3 \<in> A \<and> (a\<^sub>1 \<in> A \<or> a\<^sub>2 \<in> A) then a\<^sub>4
-   else if a\<^sub>2 \<in> A then a\<^sub>2
-   else if a\<^sub>1 \<in> A then a\<^sub>1
-   else if a\<^sub>3 \<in> A then a\<^sub>3
-   else a\<^sub>0)"
-definition [simp]: "bot = a\<^sub>0"
-definition [simp]: "top = a\<^sub>4"
-definition
-  "inf x y = (case (x, y) of
-     (a\<^sub>0, _) \<Rightarrow> a\<^sub>0 | (_, a\<^sub>0) \<Rightarrow> a\<^sub>0 | (a\<^sub>1, a\<^sub>3) \<Rightarrow> a\<^sub>0 | (a\<^sub>3, a\<^sub>1) \<Rightarrow> a\<^sub>0 | (a\<^sub>2, a\<^sub>3) \<Rightarrow> a\<^sub>0 | (a\<^sub>3, a\<^sub>2) \<Rightarrow> a\<^sub>0
-   | (a\<^sub>1, _) \<Rightarrow> a\<^sub>1 | (_, a\<^sub>1) \<Rightarrow> a\<^sub>1
-   | (a\<^sub>2, _) \<Rightarrow> a\<^sub>2 | (_, a\<^sub>2) \<Rightarrow> a\<^sub>2
-   | (a\<^sub>3, _) \<Rightarrow> a\<^sub>3 | (_, a\<^sub>3) \<Rightarrow> a\<^sub>3
-   | _ \<Rightarrow> a\<^sub>4)"
-definition
-  "sup x y = (case (x, y) of
-     (a\<^sub>4, _) \<Rightarrow> a\<^sub>4 | (_, a\<^sub>4) \<Rightarrow> a\<^sub>4 | (a\<^sub>1, a\<^sub>3) \<Rightarrow> a\<^sub>4 | (a\<^sub>3, a\<^sub>1) \<Rightarrow> a\<^sub>4 | (a\<^sub>2, a\<^sub>3) \<Rightarrow> a\<^sub>4 | (a\<^sub>3, a\<^sub>2) \<Rightarrow> a\<^sub>4
-   | (a\<^sub>2, _) \<Rightarrow> a\<^sub>2 | (_, a\<^sub>2) \<Rightarrow> a\<^sub>2
-   | (a\<^sub>1, _) \<Rightarrow> a\<^sub>1 | (_, a\<^sub>1) \<Rightarrow> a\<^sub>1
-   | (a\<^sub>3, _) \<Rightarrow> a\<^sub>3 | (_, a\<^sub>3) \<Rightarrow> a\<^sub>3
-   | _ \<Rightarrow> a\<^sub>0)"
+instance proof (intro_classes)
+  fix x::finite_mod_5
+  show refl: "x \<le> x" unfolding less_eq_finite_mod_5_def
+    by (smt (z3) curry_case_prod curry_conv finite_mod_5.case(1) finite_mod_5.case(2) finite_mod_5.case(3) finite_mod_5.case(4) finite_mod_5.case(5) finite_mod_5.exhaust)
+  fix y::finite_mod_5
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+    unfolding less_eq_finite_mod_4_def
+    by (smt (z3) curry_case_prod curry_conv finite_mod_5.case(1) finite_mod_5.case(2) finite_mod_5.case(3) finite_mod_5.case(4) finite_mod_5.case(5) finite_mod_5.exhaust less_eq_finite_mod_5_def)
+  show "x \<le> y \<or> y \<le> x"
+    unfolding less_eq_finite_mod_5_def 
+    apply (cases "x", cases "y")
+    apply simp_all
+    by (metis finite_mod_5.exhaust finite_mod_5.simps(21) finite_mod_5.simps(22) finite_mod_5.simps(23) finite_mod_5.simps(24) finite_mod_5.simps(25))+
+  fix z::finite_mod_5
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+    unfolding less_eq_finite_mod_5_def
+    apply (cases "x", cases "y", cases "z") 
+    apply simp_all
+    by (metis finite_mod_5.exhaust finite_mod_5.simps(21) finite_mod_5.simps(22) finite_mod_5.simps(23) finite_mod_5.simps(24) finite_mod_5.simps(25))+
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
+    unfolding less_eq_finite_mod_5_def less_finite_mod_5_def
+    apply (cases "x", cases "y") apply simp_all
+    by (smt (z3) finite_mod_5.exhaust finite_mod_5.simps(21) finite_mod_5.simps(22) finite_mod_5.simps(23) finite_mod_5.simps(24) finite_mod_5.simps(25))+
+  qed
 
-instance
-  by standard
-    (subproofs
-      \<open>auto simp add: less_eq_finite_mod_5_def less_finite_mod_5_def inf_finite_mod_5_def sup_finite_mod_5_def 
-        Inf_finite_mod_5_def Sup_finite_mod_5_def split: finite_mod_5.splits if_split_asm\<close>)
 end
 
-
-instance  finite_mod_5 :: complete_lattice ..
-
-
 hide_const (open) a\<^sub>0 a\<^sub>1 a\<^sub>2 a\<^sub>3 a\<^sub>4
-
-subsection \<open>Closing up\<close>
-
-(*hide_type (open) finite_mod_1 finite_mod_2 finite_mod_3 finite_mod_4 finite_mod_5*)
-(*hide_const (open) enum enum_all enum_ex all_n_lists ex_n_lists ntrancl*)
 
 end
