@@ -178,4 +178,37 @@ lemma list_powerset_finite_mod_4: "Pow {a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub
 
 end
 
+instantiation bit0 :: (finite) class_mod_type
+begin
+
+interpretation bit0:
+  class_mod_type
+      "map (Abs_bit0' \<circ> int) (upt 0 (CARD('a bit0)))" 
+      "(\<lambda>P. (\<forall>b::'a::finite bit0 \<in> set enum_class.enum. P b))"
+      "(\<lambda>P. (\<exists>b::'a bit0 \<in> set enum_class.enum. P b))"
+      "(\<lambda>x y. (Abs_bit0'::int \<Rightarrow> 'a bit0) (Rep_bit0 x - Rep_bit0 y))"
+      "1"
+      "(\<lambda>x y. Abs_bit0' (Rep_bit0 x + Rep_bit0 y))"
+      "(\<lambda>x y. Abs_bit0' (Rep_bit0 x * Rep_bit0 y))"
+      "(\<lambda>x. Abs_bit0' (- Rep_bit0 x))"
+      "0"
+      "(\<lambda>a b. Rep_bit0 a \<le> Rep_bit0 b)"
+      "(\<lambda>a b. Rep_bit0 a < Rep_bit0 b)"
+      "Rep_bit0"
+      "Abs_bit0"
+proof
+  show "0 = Abs_bit0 0" unfolding zero_bit0_def ..
+  show "1 = Abs_bit0 1" unfolding one_bit0_def ..
+  fix x :: "'a bit0" and y :: "'a bit0"
+  show "(Abs_bit0' :: int \<Rightarrow> 'a bit0) (Rep_bit0 x - Rep_bit0 y) =
+           Abs_bit0 ((Rep_bit0 x - Rep_bit0 y) mod int CARD('a bit0))" unfolding Abs_bit0'_def ..
+  show "(Abs_bit0' :: int \<Rightarrow> 'a bit0) (Rep_bit0 x + Rep_bit0 y) =
+           Abs_bit0 ((Rep_bit0 x + Rep_bit0 y) mod int CARD('a bit0))" unfolding Abs_bit0'_def ..
+  show "(Abs_bit0' :: int \<Rightarrow> 'a bit0) (Rep_bit0 x * Rep_bit0 y) =
+           Abs_bit0 ((Rep_bit0 x * Rep_bit0 y) mod int CARD('a bit0))" unfolding Abs_bit0'_def ..
+  
+
+
+
+
 end

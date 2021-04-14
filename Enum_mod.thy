@@ -11,7 +11,7 @@ text \<open>Similar types are defined as finite_1 up to finite_5 in Enum.thy
   in the Isabelle distribution, but they define the binary minus 
   (see Enum.thy in the HOL folder of the Isabelle distribution) 
   not modulo the cardinal of the Universe set, but as in a lattice. 
-  They are neither proven to be a linear order, but a lattice.\<close>
+  They are neither proven to be instances of linear order, but lattices.\<close>
 
 datatype (plugins only: code "quickcheck" extraction) finite_mod_1 =
   a\<^sub>0
