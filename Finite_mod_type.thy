@@ -178,37 +178,70 @@ lemma list_powerset_finite_mod_4: "Pow {a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub
 
 end
 
-instantiation bit0 :: (finite) class_mod_type
+text\<open>TODO: prove that the bit0 type constructor is an instance of class_mod_type\<close>
+
+instantiation bit0:: (finite) class_mod_type
 begin
 
-interpretation bit0:
-  class_mod_type
-      "map (Abs_bit0' \<circ> int) (upt 0 (CARD('a bit0)))" 
-      "(\<lambda>P. (\<forall>b::'a::finite bit0 \<in> set enum_class.enum. P b))"
-      "(\<lambda>P. (\<exists>b::'a bit0 \<in> set enum_class.enum. P b))"
-      "(\<lambda>x y. (Abs_bit0'::int \<Rightarrow> 'a bit0) (Rep_bit0 x - Rep_bit0 y))"
-      "1"
-      "(\<lambda>x y. Abs_bit0' (Rep_bit0 x + Rep_bit0 y))"
-      "(\<lambda>x y. Abs_bit0' (Rep_bit0 x * Rep_bit0 y))"
-      "(\<lambda>x. Abs_bit0' (- Rep_bit0 x))"
-      "0"
-      "(\<lambda>a b. Rep_bit0 a \<le> Rep_bit0 b)"
-      "(\<lambda>a b. Rep_bit0 a < Rep_bit0 b)"
-      "Rep_bit0"
-      "Abs_bit0"
-proof
-  show "0 = Abs_bit0 0" unfolding zero_bit0_def ..
-  show "1 = Abs_bit0 1" unfolding one_bit0_def ..
-  fix x :: "'a bit0" and y :: "'a bit0"
-  show "(Abs_bit0' :: int \<Rightarrow> 'a bit0) (Rep_bit0 x - Rep_bit0 y) =
-           Abs_bit0 ((Rep_bit0 x - Rep_bit0 y) mod int CARD('a bit0))" unfolding Abs_bit0'_def ..
-  show "(Abs_bit0' :: int \<Rightarrow> 'a bit0) (Rep_bit0 x + Rep_bit0 y) =
-           Abs_bit0 ((Rep_bit0 x + Rep_bit0 y) mod int CARD('a bit0))" unfolding Abs_bit0'_def ..
-  show "(Abs_bit0' :: int \<Rightarrow> 'a bit0) (Rep_bit0 x * Rep_bit0 y) =
-           Abs_bit0 ((Rep_bit0 x * Rep_bit0 y) mod int CARD('a bit0))" unfolding Abs_bit0'_def ..
-  
+definition "(Rep::'a bit0 => int) x = Rep_bit0 x"
+definition "(Abs::int => 'a bit0) x = Abs_bit0' x"
 
+instance proof (intro_classes)
+  show "(1::nat) < CARD('a bit0)"
+    by (metis One_nat_def one_less_card)
+  fix x y :: "'a bit0"
+  show "x + y = Abs ((Rep x + Rep y) mod int CARD('a bit0))"
+    sorry
+  show "x - y = Abs ((Rep x - Rep y) mod int CARD('a bit0))"
+    sorry
+  show "x * y = Abs ((Rep x * Rep y) mod int CARD('a bit0))"
+    sorry
+  show "- x = Abs (- Rep x mod int CARD('a bit0))"
+    sorry
+  show "(x < y) = (Rep x < Rep y)"
+    sorry
+  show "(x \<le> y) = (Rep x \<le> Rep y)"
+    sorry
+  show "(0::'a bit0) = Abs (0::int)"
+    sorry
+  show "(1::'a bit0) = Abs (1::int)"
+    sorry
+  show "type_definition (Rep::'a bit0 => int) Abs {0::int..<int CARD('a bit0)}"
+    sorry
+qed
 
+end
 
+text\<open>TODO: prove that the bit1 type constructor is an instance of class_mod_type\<close>
+
+instantiation bit1:: (finite) class_mod_type
+begin
+
+definition "(Rep::'a bit1 => int) x = Rep_bit1 x"
+definition "(Abs::int => 'a bit1) x = Abs_bit1' x"
+
+instance proof (intro_classes)
+  show "(1::nat) < CARD('a bit1)"
+    by (metis One_nat_def one_less_card)
+  fix x y :: "'a bit1"
+  show "x + y = Abs ((Rep x + Rep y) mod int CARD('a bit1))"
+    sorry
+  show "x - y = Abs ((Rep x - Rep y) mod int CARD('a bit1))"
+    sorry
+  show "x * y = Abs ((Rep x * Rep y) mod int CARD('a bit1))"
+    sorry
+  show "- x = Abs (- Rep x mod int CARD('a bit1))"
+    sorry
+  show "(x < y) = (Rep x < Rep y)"
+    sorry
+  show "(x \<le> y) = (Rep x \<le> Rep y)"
+    sorry
+  show "(0::'a bit1) = Abs (0::int)"
+    sorry
+  show "(1::'a bit1) = Abs (1::int)"
+    sorry
+  show "type_definition (Rep::'a bit1 => int) Abs {0::int..<int CARD('a bit1)}"
+    sorry
+qed
 
 end
