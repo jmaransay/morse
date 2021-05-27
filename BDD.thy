@@ -339,6 +339,21 @@ proof -
         (simp only: Klist_set Klist_map lUNIV_map boolfunc_from_sc_alt boolfunc_from_sc_list[OF lUNIV_set sc_Klist] bdd_from_sc_def)
 qed
 
-export_code bdd_from_sc (* I guess this means its actually executable? *)
+(*code_printing 
+  constant blit' \<rightharpoonup> (Haskell) "map Heap.writeArray "*)
+
+code_identifier
+  code_module Product_Type \<rightharpoonup> (SML) IBDD 
+    and (OCaml) IBDD and (Haskell) IBDD
+  | code_module Typerep \<rightharpoonup> (SML) IBDD
+    and (OCaml) IBDD and (Haskell) IBDD
+  | code_module String \<rightharpoonup> (SML) IBDD
+    and (OCaml) IBDD and (Haskell) IBDD
+
+export_code open bdd_from_sc ex_2_3
+  in Haskell module_name IBDD file BDD
+
+export_code bdd_from_sc ex_2_3 (* I guess this means its actually executable? *)
+  in SML module_name IBDD file SMLBDD
 
 end

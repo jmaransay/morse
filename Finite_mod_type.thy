@@ -245,3 +245,5 @@ instance proof (intro_classes)
 qed
 
 end
+
+end
