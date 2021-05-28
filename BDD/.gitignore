@@ -1,2 +1,7 @@
 *.hi
 *.o
+Data_Bits.hs
+Heap.hs
+IBDD.hs
+Uint32.hs
+

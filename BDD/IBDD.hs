@@ -29,7 +29,8 @@ module
         case_ifexici, restrict_topci, min, lowest_topsci, equal_IFEXD,
         param_optci, dcli, iteci_lu, andci, bdd_from_vertex_list, orci,
         bdd_from_sc_list, initial_capacity, arl_empty, ht_new, pointermap_empty,
-        emptyci, ex_2_3, top_set, bdd_from_sc)
+        emptyci, ex_2_3, ex_true, ex_false, another_ex, top_set, bdd_from_sc,
+        one_another_ex)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -1240,9 +1241,129 @@ ex_2_3 =
           nat_of_integer (3 :: Integer)]
         (nat_list_from_sc nat_from_finite4 sc_threshold_2_3) s;
     graphifyci
-      [Char False True False False True True False False,
+      [Char False False True False True True True False,
+        Char False False False True False True True False,
+        Char False True False False True True True False,
+        Char True False True False False True True False,
+        Char True True False False True True True False,
+        Char False False False True False True True False,
+        Char True True True True False True True False,
+        Char False False True True False True True False,
+        Char False False True False False True True False,
         Char True True True True True False True False,
-        Char True True False False True True False False]
+        Char False False True False True True True False,
+        Char True True True False True True True False,
+        Char True True True True False True True False,
+        Char True True True True True False True False,
+        Char False False True False True True True False,
+        Char False False False True False True True False,
+        Char False True False False True True True False,
+        Char True False True False False True True False,
+        Char True False True False False True True False]
+      a b
+   };
+
+ex_true :: Heap.ST Heap.RealWorld [Char];
+ex_true =
+  do { 
+    s <- emptyci;
+    (a, b) <-
+      bdd_from_sc_list
+        [zero_nat, one_nat, nat_of_integer (2 :: Integer),
+          nat_of_integer (3 :: Integer)]
+        (nat_list_from_sc nat_from_finite4
+          (insert bot_set
+            (insert (insert A_0 bot_set)
+              (insert (insert A_1 bot_set)
+                (insert (insert A_2 bot_set)
+                  (insert (insert A_3 bot_set)
+                    (insert (insert A_0 (insert A_1 bot_set))
+                      (insert (insert A_0 (insert A_2 bot_set))
+                        (insert (insert A_0 (insert A_3 bot_set))
+                          (insert (insert A_1 (insert A_2 bot_set))
+                            (insert (insert A_1 (insert A_3 bot_set))
+                              (insert (insert A_2 (insert A_3 bot_set))
+                                (insert
+                                  (insert A_0 (insert A_1 (insert A_2 bot_set)))
+                                  (insert
+                                    (insert A_0
+                                      (insert A_1 (insert A_3 bot_set)))
+                                    (insert
+                                      (insert A_0
+(insert A_2 (insert A_3 bot_set)))
+                                      (insert
+(insert A_1 (insert A_2 (insert A_3 bot_set)))
+(insert (insert A_0 (insert A_1 (insert A_2 (insert A_3 bot_set))))
+  bot_set)))))))))))))))))
+        s;
+    graphifyci
+      [Char False False True False True True True False,
+        Char False True False False True True True False,
+        Char True False True False True True True False,
+        Char True False True False False True True False]
+      a b
+   };
+
+ex_false :: Heap.ST Heap.RealWorld [Char];
+ex_false =
+  do { 
+    s <- emptyci;
+    (a, b) <-
+      bdd_from_sc_list
+        [zero_nat, one_nat, nat_of_integer (2 :: Integer),
+          nat_of_integer (3 :: Integer)]
+        (nat_list_from_sc nat_from_finite4 bot_set) s;
+    graphifyci
+      [Char False True True False False True True False,
+        Char True False False False False True True False,
+        Char False False True True False True True False,
+        Char True True False False True True True False,
+        Char True False True False False True True False]
+      a b
+   };
+
+another_ex :: Heap.ST Heap.RealWorld [Char];
+another_ex =
+  do { 
+    s <- emptyci;
+    (a, b) <-
+      bdd_from_sc_list
+        [zero_nat, one_nat, nat_of_integer (2 :: Integer),
+          nat_of_integer (3 :: Integer)]
+        (nat_list_from_sc nat_from_finite4
+          (insert bot_set
+            (insert (insert A_0 bot_set)
+              (insert (insert A_1 bot_set)
+                (insert (insert A_2 bot_set)
+                  (insert (insert A_3 bot_set)
+                    (insert (insert A_0 (insert A_1 bot_set))
+                      (insert (insert A_0 (insert A_2 bot_set))
+                        (insert (insert A_0 (insert A_3 bot_set))
+                          (insert (insert A_1 (insert A_2 bot_set))
+                            (insert (insert A_1 (insert A_3 bot_set))
+                              (insert (insert A_2 (insert A_3 bot_set))
+                                (insert
+                                  (insert A_0 (insert A_1 (insert A_2 bot_set)))
+                                  (insert
+                                    (insert A_0
+                                      (insert A_1 (insert A_3 bot_set)))
+                                    (insert
+                                      (insert A_0
+(insert A_2 (insert A_3 bot_set)))
+                                      (insert
+(insert A_1 (insert A_2 (insert A_3 bot_set))) bot_set))))))))))))))))
+        s;
+    graphifyci
+      [Char True False False False False True True False,
+        Char False True True True False True True False,
+        Char True True True True False True True False,
+        Char False False True False True True True False,
+        Char False False False True False True True False,
+        Char True False True False False True True False,
+        Char False True False False True True True False,
+        Char True True True True True False True False,
+        Char True False True False False True True False,
+        Char False False False True True True True False]
       a b
    };
 
@@ -1256,5 +1377,53 @@ bdd_from_sc ::
                       Bddi_ext () -> Heap.ST Heap.RealWorld (Nat, Bddi_ext ());
 bdd_from_sc m k =
   bdd_from_sc_list (nat_list_from_vertex m top_set) (nat_list_from_sc m k);
+
+one_another_ex :: Heap.ST Heap.RealWorld [Char];
+one_another_ex =
+  do { 
+    s <- emptyci;
+    (a, b) <-
+      bdd_from_sc_list
+        [zero_nat, one_nat, nat_of_integer (2 :: Integer),
+          nat_of_integer (3 :: Integer)]
+        (nat_list_from_sc nat_from_finite4
+          (insert bot_set
+            (insert (insert A_0 bot_set)
+              (insert (insert A_1 bot_set)
+                (insert (insert A_2 bot_set)
+                  (insert (insert A_3 bot_set)
+                    (insert (insert A_0 (insert A_1 bot_set))
+                      (insert (insert A_0 (insert A_2 bot_set))
+                        (insert (insert A_0 (insert A_3 bot_set))
+                          (insert (insert A_1 (insert A_2 bot_set))
+                            (insert (insert A_1 (insert A_3 bot_set))
+                              (insert (insert A_2 (insert A_3 bot_set))
+                                (insert
+                                  (insert A_0 (insert A_1 (insert A_2 bot_set)))
+                                  (insert
+                                    (insert A_0
+                                      (insert A_1 (insert A_3 bot_set)))
+                                    (insert
+                                      (insert A_1
+(insert A_2 (insert A_3 bot_set)))
+                                      bot_set)))))))))))))))
+        s;
+    graphifyci
+      [Char True True True True False True True False,
+        Char False True True True False True True False,
+        Char True False True False False True True False,
+        Char True True True True True False True False,
+        Char True False False False False True True False,
+        Char False True True True False True True False,
+        Char True True True True False True True False,
+        Char False False True False True True True False,
+        Char False False False True False True True False,
+        Char True False True False False True True False,
+        Char False True False False True True True False,
+        Char True True True True True False True False,
+        Char True False True False False True True False,
+        Char False False False True True True True False]
+      a b
+   };
 
 }
