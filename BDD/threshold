@@ -1,0 +1,28 @@
+digraph threshold_two_three {
+0[label=F];
+1[label=T];
+5[label=3];
+6[label=2];
+19[label=2];
+25[label=1];
+20[label=1];
+26[label=0];
+{rank=same;0;}
+{rank=same;1;}
+{rank=same;5;}
+{rank=same;19;6;}
+{rank=same;20;25;}
+{rank=same;26;}
+26 -> 20;
+26 -> 25 [style=dotted];
+20 -> 1;
+20 -> 19 [style=dotted];
+25 -> 19;
+25 -> 6 [style=dotted];
+19 -> 1;
+19 -> 5 [style=dotted];
+6 -> 5;
+6 -> 0 [style=dotted];
+5 -> 1;
+5 -> 0 [style=dotted];
+}

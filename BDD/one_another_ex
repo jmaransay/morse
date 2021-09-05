@@ -1,0 +1,18 @@
+digraph one_another_ex {
+0[label=F];
+1[label=T];
+5[label=3];
+20[label=2];
+25[label=0];
+{rank=same;0;}
+{rank=same;1;}
+{rank=same;5;}
+{rank=same;20;}
+{rank=same;25;}
+25 -> 1;
+25 -> 20 [style=dotted];
+20 -> 1;
+20 -> 5 [style=dotted];
+5 -> 1;
+5 -> 0 [style=dotted];
+}
