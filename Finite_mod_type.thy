@@ -180,34 +180,68 @@ end
 
 text\<open>TODO: prove that the bit0 type constructor is an instance of class_mod_type\<close>
 
+
+
+
 instantiation bit0:: (finite) class_mod_type
 begin
 
 definition "(Rep::'a bit0 => int) x = Rep_bit0 x"
 definition "(Abs::int => 'a bit0) x = Abs_bit0' x"
 
+lemma Abs_bit0'_mod [simp]: "(Abs_bit0'::int \<Rightarrow> 'a bit0) x = Abs_bit0' (x mod int CARD('a bit0))"
+  unfolding Abs_bit0'_def
+  by auto
+          
 instance proof (intro_classes)
   show "(1::nat) < CARD('a bit0)"
     by (metis One_nat_def one_less_card)
   fix x y :: "'a bit0"
   show "x + y = Abs ((Rep x + Rep y) mod int CARD('a bit0))"
-    sorry
+    unfolding plus_bit0_def
+    unfolding Abs_bit0_def
+    unfolding Rep_bit0_def
+    using Abs_bit0'_mod
+    by arith
   show "x - y = Abs ((Rep x - Rep y) mod int CARD('a bit0))"
-    sorry
+    unfolding minus_bit0_def
+    unfolding Abs_bit0_def
+    unfolding Rep_bit0_def
+    using Abs_bit0'_mod
+    by arith
   show "x * y = Abs ((Rep x * Rep y) mod int CARD('a bit0))"
-    sorry
+    unfolding times_bit0_def
+    unfolding Abs_bit0_def
+    unfolding Rep_bit0_def
+    using Abs_bit0'_mod
+    by arith
   show "- x = Abs (- Rep x mod int CARD('a bit0))"
-    sorry
+    unfolding uminus_bit0_def
+    unfolding Abs_bit0_def
+    unfolding Rep_bit0_def
+    using Abs_bit0'_mod
+    by arith
   show "(x < y) = (Rep x < Rep y)"
-    sorry
+    unfolding less_bit0_def
+    unfolding Rep_bit0_def
+    by auto
   show "(x \<le> y) = (Rep x \<le> Rep y)"
-    sorry
+    unfolding less_eq_bit0_def
+    unfolding Rep_bit0_def
+    by auto
   show "(0::'a bit0) = Abs (0::int)"
-    sorry
+    unfolding Abs_bit0_def
+    unfolding Abs_bit0'_def
+    unfolding zero_bit0_def
+    by auto
   show "(1::'a bit0) = Abs (1::int)"
-    sorry
+    unfolding Abs_bit0_def
+    unfolding Abs_bit0'_def
+    unfolding one_bit0_def
+    using \<open>(1::nat) < CARD('a bit0)\<close>
+    by auto
   show "type_definition (Rep::'a bit0 => int) Abs {0::int..<int CARD('a bit0)}"
-    sorry
+    by (smt (verit) Abs_bit0'_code Finite_mod_type.Abs_bit0_def Finite_mod_type.Rep_bit0_def bit0.Rep_mod bit0.type type_definition_def)
 qed
 
 end
@@ -220,28 +254,59 @@ begin
 definition "(Rep::'a bit1 => int) x = Rep_bit1 x"
 definition "(Abs::int => 'a bit1) x = Abs_bit1' x"
 
+lemma Abs_bit1'_mod [simp]: "(Abs_bit1'::int \<Rightarrow> 'a bit1) x = Abs_bit1' (x mod int CARD('a bit1))"
+  unfolding Abs_bit1'_def
+  by auto
+
 instance proof (intro_classes)
   show "(1::nat) < CARD('a bit1)"
     by (metis One_nat_def one_less_card)
   fix x y :: "'a bit1"
   show "x + y = Abs ((Rep x + Rep y) mod int CARD('a bit1))"
-    sorry
+    unfolding plus_bit1_def
+    unfolding Abs_bit1_def
+    unfolding Rep_bit1_def
+    using Abs_bit1'_mod
+    by arith
   show "x - y = Abs ((Rep x - Rep y) mod int CARD('a bit1))"
-    sorry
+    unfolding minus_bit1_def
+    unfolding Abs_bit1_def
+    unfolding Rep_bit1_def
+    using Abs_bit1'_mod
+    by arith
   show "x * y = Abs ((Rep x * Rep y) mod int CARD('a bit1))"
-    sorry
+    unfolding times_bit1_def
+    unfolding Abs_bit1_def
+    unfolding Rep_bit1_def
+    using Abs_bit1'_mod
+    by arith
   show "- x = Abs (- Rep x mod int CARD('a bit1))"
-    sorry
+    unfolding uminus_bit1_def
+    unfolding Abs_bit1_def
+    unfolding Rep_bit1_def
+    using Abs_bit1'_mod
+    by arith
   show "(x < y) = (Rep x < Rep y)"
-    sorry
+    unfolding less_bit1_def
+    unfolding Rep_bit1_def
+    by auto
   show "(x \<le> y) = (Rep x \<le> Rep y)"
-    sorry
+    unfolding less_eq_bit1_def
+    unfolding Rep_bit1_def
+    by auto
   show "(0::'a bit1) = Abs (0::int)"
-    sorry
+    unfolding Abs_bit1_def
+    unfolding Abs_bit1'_def
+    unfolding zero_bit1_def
+    by auto
   show "(1::'a bit1) = Abs (1::int)"
-    sorry
+    unfolding Abs_bit1_def
+    unfolding Abs_bit1'_def
+    unfolding one_bit1_def
+    using \<open>(1::nat) < CARD('a bit1)\<close>
+    by auto
   show "type_definition (Rep::'a bit1 => int) Abs {0::int..<int CARD('a bit1)}"
-    sorry
+    by (smt (verit, ccfv_threshold) Abs_bit1'_code Finite_mod_type.Abs_bit1_def Finite_mod_type.Rep_bit1_def bit1.Rep_mod bit1.type type_definition_def)
 qed
 
 end
