@@ -185,8 +185,10 @@ next
   qed
 qed
 
+(*The following theorem, from ``Homology of Boolean functions and the
+complexity of simplicial homology'', Erick J. Chastain and Nicholas A. Scoville, apparently does not hold*)
 
-lemma eq_times: 
+(*lemma eq_times: 
 "simplicial_complex_induced_by_monotone_boolean_function_times (bool_fun_times f g)
 = (simplicial_complex_induced_by_monotone_boolean_function f) \<times> (simplicial_complex_induced_by_monotone_boolean_function g)"
 proof
@@ -225,6 +227,6 @@ next
       using simp_ceros
       by force
   qed
-qed
+qed*)
 
 end
