@@ -1,9 +1,9 @@
 
 theory Mod_type
-  imports 
-    "HOL-Analysis.Cartesian_Euclidean_Space"
+  imports
+    "HOL-Library.Numeral_Type"
     Enum_mod
-begin
+begin find_theorems "CARD (_)"
 
 class class_mod_type = zero + one + plus + times + uminus + minus + ord + enum +
   fixes Rep :: "'a \<Rightarrow> int"
@@ -31,12 +31,6 @@ lemma Rep_Abs_inverse: assumes y: "y \<in> {0::int..<int CARD('a)}"
   shows "Rep (Abs y) = y"
   by (rule type_definition.Abs_inverse [of Rep Abs "{0::int..<int CARD('a)}"])
    (rule local.type, rule y)
-
-(*sublocale f: mod_type "int CARD ('a)" Rep Abs
-  using mod_type.intro [of Rep Abs "CARD('a)"]
-  apply (intro_locales)
-  using local.add_def local.diff_def local.minus_def local.mult_def local.one_def 
-    local.size1 local.type local.zero_def by fastforce*)
 
 lemma size0: "0 < int CARD ('a)"
   using size1 by simp
@@ -120,7 +114,7 @@ proof (unfold surj_def, rule)
   fix y::'a
   show "\<exists>x::int. y = from_int x"
     apply (rule exI [of _ "Rep y"])
-    apply (unfold from_int_def) try
+    apply (unfold from_int_def)
     using Rep_inverse Rep_mod by presburger
 qed
 

@@ -13,7 +13,7 @@ section\<open>Simplicial Complex\<close>
 lemma Pow_ne_singleton: "Pow_ne {a} = {{a}}"
   unfolding Pow_ne_def by auto*)
 
-lemma Pow_singleton: "Pow {a} = {{},{a}}"by auto
+lemma Pow_singleton: "Pow {a} = {{},{a}}" by auto
 
 (*lemma Pow_ne_pair: "Pow_ne {a,b} = {{a},{b},{a,b}}"
   unfolding Pow_ne_def by auto*)
@@ -23,20 +23,55 @@ lemma Pow_pair: "Pow {a,b} = {{},{a},{b},{a,b}}" by auto
 (*definition simplicial_complex :: "('n::finite) set set => bool"
   where "simplicial_complex K \<equiv>  ({} \<notin> K) \<and> (\<forall>\<sigma>\<in>K. (Pow_ne \<sigma>) \<subseteq> K)"*)
 
-definition simplicial_complex :: "('n::finite) set set => bool"
-  where "simplicial_complex K \<equiv>  (\<forall>\<sigma>\<in>K. (Pow \<sigma>) \<subseteq> K)"
+locale simplicial_complex 
+  = fixes n::"nat"
+begin
 
-definition simplicial_complex_set :: "('n::finite) set set set"
+definition simplices :: "nat set set"
+  where "simplices = Pow {0..<n}"
+
+lemma "{} \<in> simplices"
+  unfolding simplices_def by simp
+
+lemma "{0..<n} \<in> simplices"
+  unfolding simplices_def by simp
+
+lemma finite_simplex:
+  assumes "\<sigma> \<in> simplices"
+  shows "finite \<sigma>"
+  by (metis Pow_iff assms finite_atLeastLessThan finite_subset simplices_def)
+
+definition simplicial_complex :: "nat set set => bool"
+  where "simplicial_complex K \<equiv>  (\<forall>\<sigma>\<in>K. (\<sigma> \<in> simplices) \<and> (Pow \<sigma>) \<subseteq> K)"
+
+(*definition simplicial_complex :: "('n::finite) set set => bool"
+  where "simplicial_complex K \<equiv>  (\<forall>\<sigma>\<in>K. (Pow \<sigma>) \<subseteq> K)"
+*)
+
+lemma 
+  finite_simplicial_complex:
+  assumes "simplicial_complex K"
+  shows "finite K"
+  by (metis assms finite_Pow_iff finite_atLeastLessThan rev_finite_subset simplices_def simplicial_complex_def subsetI)
+
+lemma finite_simplices:
+  assumes "simplicial_complex K"
+  and "v \<in> K"
+shows "finite v"
+  using assms finite_simplex simplicial_complex.simplicial_complex_def by blast
+
+
+definition simplicial_complex_set :: "nat set set set"
   where "simplicial_complex_set = (Collect simplicial_complex)"
 
 lemma simplicial_complex_empty_set:
-  fixes K::"('n::finite) set set"
-  assumes k: "simplicial_complex K"  
+  fixes K::"nat set set"
+  assumes k: "simplicial_complex K"
   shows "K = {} \<or> {} \<in> K" using k unfolding simplicial_complex_def Pow_def by auto
 
 lemma
   simplicial_complex_monotone:
-  fixes K::"('n::finite) set set"
+  fixes K::"nat set set"
   assumes k: "simplicial_complex K" and s: "s \<in> K" and rs: "r \<subseteq> s" (*and rne: "r \<noteq> {}"*)
   shows "r \<in> K"
   using k rs s
@@ -45,23 +80,33 @@ lemma
 
 text\<open>One example of simplicial complex with four points\<close>
 
-lemma "simplicial_complex {{},{a\<^sub>0::finite_mod_4},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3}}"
-  by (simp add: Pow_singleton simplicial_complex_def)
+lemma 
+  assumes three: "(3::nat) < n"
+  shows "simplicial_complex {{},{0},{1},{2},{3}}"
+  apply (simp_all add: Pow_singleton simplicial_complex_def simplices_def)
+  using Suc_lessD three by presburger
 
-lemma "\<not> simplicial_complex {{a\<^sub>0::finite_mod_4, a\<^sub>1},{a\<^sub>1}}"
+lemma "\<not> simplicial_complex {{0,1},{1}}"
   by (simp add: Pow_pair simplicial_complex_def)
 
-text\<open>Another  example of simplicial complex with four points\<close>
+text\<open>Another example of simplicial complex with four points\<close>
 
-lemma "simplicial_complex {{},{a\<^sub>0::finite_mod_4},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1}}" 
-  by (simp add: Pow_pair Pow_singleton simplicial_complex_def)
+lemma 
+  assumes three: "(3::nat) < n"
+  shows "simplicial_complex {{},{0},{1},{2},{3},{0,1}}"
+  apply (simp add: Pow_pair Pow_singleton simplicial_complex_def simplices_def)
+  using Suc_lessD three by presburger
 
-text\<open>Another example of simplicial complex with four points; 
-  the proof shall be improved, trying to reduce the repetitions.\<close>
+text\<open>Another example of simplicial complex with four points\<close>
 
-lemma "simplicial_complex 
-    {{a\<^sub>2,a\<^sub>3},{a\<^sub>1,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>0,a\<^sub>2},{a\<^sub>3},{a\<^sub>2},{a\<^sub>1},{a\<^sub>0::finite_mod_4},{}}"
-  by (simp add: Pow_pair Pow_singleton simplicial_complex_def)
+lemma 
+  assumes three: "(3::nat) < n"
+  shows "simplicial_complex
+    {{2,3},{1,3},{1,2},{0,3},{0,2},{3},{2},{1},{0},{}}"
+  apply (simp add: Pow_pair Pow_singleton simplicial_complex_def simplices_def)
+  using Suc_lessD three by presburger
+
+end
 
 text\<open>Simplicial complex induced by a monotone Boolean function\<close>
 
@@ -69,38 +114,55 @@ text\<open>The simplicial complex induced by a monotone Boolean function, Defini
 
 text\<open>First we introduce the tuples that make cero a Boolean input\<close>
 
-definition ceros_of_boolean_input :: "(bool^'n) => 'n set"
-  where "ceros_of_boolean_input v = {x. v $ x = False}"
+definition ceros_of_boolean_input :: "(bool vec) => nat set"
+  where "ceros_of_boolean_input v = {x. x < dim_vec v \<and> vec_index v x = False}"
 
-lemma 
+lemma
+  ceros_of_boolean_input_l_dim:
+  assumes a: "a \<in> ceros_of_boolean_input x"
+  shows "a < dim_vec x"
+  using a unfolding ceros_of_boolean_input_def by simp
+
+lemma "ceros_of_boolean_input v = {x. x < dim_vec v \<and> \<not> vec_index v x}"
+  unfolding ceros_of_boolean_input_def by simp
+
+lemma
   ceros_of_boolean_input_complementary:
-  shows "ceros_of_boolean_input v = - {x. v $ x}"
+  shows "ceros_of_boolean_input v = {x. x < dim_vec v} - {x. vec_index v x}"
   unfolding ceros_of_boolean_input_def by auto
 
 text\<open>In fact, the following result is trivial\<close>
 
-lemma ceros_in_UNIV: "ceros_of_boolean_input f \<subseteq> (UNIV::'n::finite set)"
+lemma ceros_in_UNIV: "ceros_of_boolean_input f \<subseteq> (UNIV::nat set)"
   using subset_UNIV .
 
 lemma monotone_ceros_of_boolean_input:
-  fixes r and s::"(bool, 'n::finite) vec"
+  fixes r and s::"bool vec"
   assumes r_le_s: "r \<le> s"
   shows "ceros_of_boolean_input s \<subseteq> ceros_of_boolean_input r"
-proof (intro subsetI, unfold ceros_of_boolean_input_def, intro CollectI)
+proof (intro subsetI, unfold ceros_of_boolean_input_def, intro CollectI, rule conjI)
   fix x 
-  assume "x \<in> {x. s $ x = False}" hence nr: "s $ x = False" by simp
-  show "r $ x = False" using r_le_s nr unfolding less_eq_vec_def by auto
+  assume "x \<in> {x. x < dim_vec s \<and> vec_index s x = False}" 
+  hence xl: "x < dim_vec s" and nr: "vec_index s x = False" by simp_all
+  show "vec_index r x = False"
+    using r_le_s nr xl unfolding Matrix.less_eq_vec_def
+    by auto
+  show "x < dim_vec r"
+  using r_le_s xl unfolding Matrix.less_eq_vec_def
+    by auto
 qed
 
 text\<open>The indexes of Boolean inputs demand the underlying type to be a "mod_type",
 that indeed should be a finite type, but it is not proven in the library\<close>
 
-definition ceros_of_boolean_input_int :: "(bool^'n::class_mod_type) => int set"
-  where "ceros_of_boolean_input_int v = image to_int (ceros_of_boolean_input v)"
+definition ceros_of_boolean_input_int :: "(bool Matrix.vec) => int set"
+  where "ceros_of_boolean_input_int v = image int (ceros_of_boolean_input v)"
 
 lemma ceros_of_boolean_input_int_subset:
-  "ceros_of_boolean_input_int (f::(bool^'n::class_mod_type)) \<subseteq> {0 ..< int CARD('n)}"
-  by (metis Rep_in ceros_of_boolean_input_int_def imageE subsetI to_int_def)
+  "ceros_of_boolean_input_int (v::(bool Matrix.vec)) \<subseteq> {0 ..< int (dim_vec v)}"
+  unfolding ceros_of_boolean_input_int_def
+  unfolding ceros_of_boolean_input_def
+  by auto
 
 text\<open>We introduce here two instantiations of the Boolean type for the type classes 0 and one
   that will simplify notation at some points:\<close>
@@ -127,9 +189,9 @@ end
 
 definition
   simplicial_complex_induced_by_monotone_boolean_function_int
-    :: "(bool^'n::class_mod_type => bool) => int set set"
+    :: "(bool vec => bool) => int set set"
   where "simplicial_complex_induced_by_monotone_boolean_function_int f = 
-        {y. \<exists>x. x \<noteq> 1 \<and> f x = True \<and> ceros_of_boolean_input_int x = y}"
+        {y. \<exists>x. x \<noteq> Matrix.vec (dim_vec x) (\<lambda>x. True) \<and> f x = True \<and> ceros_of_boolean_input_int x = y}"
 
 (*definition
   simplicial_complex_induced_by_monotone_boolean_function 
@@ -138,19 +200,25 @@ definition
         {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"*)
 
 definition
-  simplicial_complex_induced_by_monotone_boolean_function 
-    :: "(bool^'n::class_mod_type => bool) => 'n set set"
-  where "simplicial_complex_induced_by_monotone_boolean_function f = 
-        {y. \<exists>x. f x \<and> ceros_of_boolean_input x = y}"
+  simplicial_complex_induced_by_monotone_boolean_function
+    :: "nat => (bool vec => bool) => nat set set"
+  where "simplicial_complex_induced_by_monotone_boolean_function n f = 
+        {y. \<exists>x. dim_vec x = n \<and> f x \<and> ceros_of_boolean_input x = y}"
 
 text\<open>The simplicial complex induced by a Boolean function is a subset of the
   powerset of the indexes\<close>
 
 lemma
-  "simplicial_complex_induced_by_monotone_boolean_function (f::bool^'n::class_mod_type => bool)
-    \<subseteq> Pow (UNIV)"
-  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-  using ceros_of_boolean_input_int_subset by auto
+  simplicial_complex_induced_by_monotone_boolean_function_subset:
+  "simplicial_complex_induced_by_monotone_boolean_function n (v::bool vec => bool)
+    \<subseteq> Pow (({0..n}::nat set))"
+  using ceros_of_boolean_input_def 
+   simplicial_complex_induced_by_monotone_boolean_function_def
+  by force
+
+corollary
+  "simplicial_complex_induced_by_monotone_boolean_function n (v::bool Matrix.vec => bool)
+    \<subseteq> Pow ((UNIV::nat set))" by simp
 
 (*lemma empty_set_not_in_simplicial_complex_induced: 
   "{} \<notin> simplicial_complex_induced_by_monotone_boolean_function (f::bool^'n::class_mod_type => bool)"
@@ -162,7 +230,7 @@ proof (rule ccontr, simp)
     by (metis (full_types) Collect_empty_eq_bot empty_def one_bool_def one_index vec_eq_iff)
 qed*)
 
-lemma
+(*lemma
   boolean_vec_not_one:
   assumes A: "A \<subseteq> (UNIV::'n::class_mod_type set)" and ANE: "A \<noteq> {}"
   shows "(\<chi> i. if i \<in> A then False else True) \<noteq> 1"
@@ -170,49 +238,77 @@ proof -
   from A and ANE obtain x where x: "x \<in> A" by auto
   have "(\<chi> i. if i \<in> A then False else True) $ x = False" using x by simp
   thus ?thesis unfolding one_vec_def one_bool_def by fastforce
-qed
+qed*)
 
 text\<open>The simplicial complex induced by a monotone Boolean function is a simplicial complex.
   This result is proven in Scoville as part of the proof of Proposition 6.16.\<close>
 
+context simplicial_complex
+begin
+
 lemma
   monotone_bool_fun_induces_simplicial_complex:
-  assumes mon: "monotone_bool_fun f"
-  shows "simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function f)"
+  assumes mon: "boolean_functions.monotone_bool_fun n f"
+  shows "simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function n f)"
   unfolding simplicial_complex_def
-proof (rule, unfold simplicial_complex_induced_by_monotone_boolean_function_def)
-    fix \<sigma>::"'a set"
-    assume sigma: "\<sigma> \<in> {y. \<exists>x. f x \<and> ceros_of_boolean_input x = y}"
-    from sigma obtain x where fx: "f x" and ceros_sigma: "ceros_of_boolean_input x = \<sigma>" by auto
-    hence x_def: "x = (\<chi> i::'a. if i \<in> \<sigma> then False else True)"
-      unfolding ceros_of_boolean_input_def by auto
-    from mon have mono_on: "mono_on f UNIV" unfolding monotone_bool_fun_def .
-    show "Pow \<sigma> \<subseteq> {y. \<exists>x. f x \<and> ceros_of_boolean_input x = y}"
-    proof (safe)
-      fix \<tau> :: "'a set"
-      assume subset: "\<tau> \<subseteq> \<sigma>"
-      then have tau: "\<tau> = {i::'a. i \<in> \<tau>}" and sub: "\<tau> \<subseteq> \<sigma>"
-        unfolding Pow_def by simp_all
-      show "\<exists>x. f x \<and> ceros_of_boolean_input x = \<tau>"
-      proof (rule exI [of _ "(\<chi> i. if i \<in> \<tau> then False else True)"], intro conjI) 
-        show "ceros_of_boolean_input (\<chi> i::'a. if i \<in> \<tau> then False else True) = \<tau>"
-          unfolding ceros_of_boolean_input_def by simp
-        show "f (\<chi> i::'a. if i \<in> \<tau> then False else True)"
-        proof -
-          have x_le: "x \<le> (\<chi> i. if i \<in> \<tau> then False else True)"
-            unfolding x_def using less_eq_vec_def sub by fastforce
-          show ?thesis using mono_onD [OF mono_on _ _ x_le] using fx by simp
+proof (rule, unfold simplicial_complex_induced_by_monotone_boolean_function_def, safe)
+    fix \<sigma> :: "nat set" and x :: "bool Matrix.vec"
+    assume fx: "f x" and dim_vec_x: "n = dim_vec x"
+    show "ceros_of_boolean_input x \<in> simplicial_complex.simplices (dim_vec x)"
+      using ceros_of_boolean_input_def dim_vec_x simplices_def by force
+  next
+    fix \<sigma> :: "nat set" and x :: "bool vec" and \<tau> :: "nat set"
+    assume fx: "f x" and dim_vec_x: "n = dim_vec x" and tau_def: "\<tau> \<subseteq> ceros_of_boolean_input x"
+    show "\<exists>xb. dim_vec xb = dim_vec x \<and> f xb \<and> ceros_of_boolean_input xb = \<tau>"
+    proof (rule exI [of _ "Matrix.vec n (\<lambda>i. if i \<in> \<tau> then False else True)"], intro conjI)
+     show "dim_vec (vec n (\<lambda>i. if i \<in> \<tau> then False else True)) = dim_vec x"
+      unfolding dim_vec using dim_vec_x .
+     from mon have mono: "mono_on f (carrier_vec n)" 
+      unfolding boolean_functions.monotone_bool_fun_def .
+     show "f (vec n (\<lambda>i. if i \<in> \<tau> then False else True))"
+     proof -
+      have "f x \<le> f (vec n (\<lambda>i. if i \<in> \<tau> then False else True))"
+      proof (rule mono_onD [OF mono])
+        show "x \<in> carrier_vec n" using dim_vec_x by simp
+        show "vec n (\<lambda>i. if i \<in> \<tau> then False else True) \<in> carrier_vec n" by simp
+        show "x \<le> vec n (\<lambda>i. if i \<in> \<tau> then False else True)" 
+          using tau_def dim_vec_x unfolding ceros_of_boolean_input_def
+          using less_eq_vec_def by fastforce
       qed
+      thus ?thesis using fx by simp
     qed
+    show "ceros_of_boolean_input (vec n (\<lambda>i. if i \<in> \<tau> then False else True)) = \<tau>"
+      using \<open>\<tau> \<subseteq> ceros_of_boolean_input x\<close> ceros_of_boolean_input_def dim_vec_x by auto
   qed
 qed
 
+end
+
 text\<open>Example 6.10 in Scoville\<close>
 
-definition bool_fun_threshold_2_3 :: "(bool^finite_mod_4 => bool)"
+definition bool_fun_threshold_2_3 :: "(bool vec => bool)"
   where "bool_fun_threshold_2_3 = (\<lambda>v. if 2 \<le> count_true v then True else False)"
 
+lemma set_list_four: shows "{0..<4} = set [0,1,2,3::nat]" by auto
+
+lemma comp_fun_commute_lambda: 
+  "comp_fun_commute ((+)
+  \<circ> (\<lambda>i. if vec 4 f $ i then 1 else (0::nat)))"
+  unfolding comp_fun_commute_def by auto
+
 lemma "bool_fun_threshold_2_3
+          (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False)) = True"
+  unfolding bool_fun_threshold_2_3_def 
+  unfolding count_true_def 
+  unfolding dim_vec
+  unfolding sum.eq_fold
+  using index_vec [of _ 4]
+  apply auto
+  unfolding set_list_four
+  unfolding comp_fun_commute.fold_set_fold_remdups [OF comp_fun_commute_lambda]
+  by simp
+
+(*lemma "bool_fun_threshold_2_3
           (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
                                         | a\<^sub>1 \<Rightarrow> True
                                         | (_) \<Rightarrow> False) = True"
@@ -220,8 +316,18 @@ lemma "bool_fun_threshold_2_3
   unfolding count_true_def
   unfolding Collect_code
   unfolding enum_finite_mod_4_def by simp
+*)
 
 lemma foo1:
+  "0 \<notin> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
+  and foo2: "1 \<notin> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
+  and foo3: "2 \<in> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
+  and foo4: "3 \<in> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
+  unfolding ceros_of_boolean_input_int_def
+  unfolding ceros_of_boolean_input_def
+  unfolding Rep_finite_mod_4_def by simp_all
+
+(*lemma foo1:
   "a\<^sub>0 \<notin> ceros_of_boolean_input (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
                                         | a\<^sub>1 \<Rightarrow> True 
                                         | (_) \<Rightarrow> False)"
@@ -237,139 +343,539 @@ lemma foo1:
   unfolding ceros_of_boolean_input_int_def
   unfolding ceros_of_boolean_input_def
   unfolding Rep_finite_mod_4_def by simp_all
+*)
 
-lemma "{a\<^sub>2,a\<^sub>3} \<subseteq> ceros_of_boolean_input (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
-                                        | a\<^sub>1 \<Rightarrow> True 
-                                        | (_) \<Rightarrow> False)"
+lemma "{2,3} \<subseteq> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
   using foo1 foo2 foo3 foo4 UNIV_finite_mod_4 by simp
 
-lemma "bool_fun_threshold_2_3 (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> False
-                                        | a\<^sub>1 \<Rightarrow> False
-                                        | a\<^sub>2 \<Rightarrow> False
-                                        | (_) \<Rightarrow> True) = False"
+lemma "bool_fun_threshold_2_3 (vec 4 (\<lambda>i. if i = 3 then True else False)) = False"
   unfolding bool_fun_threshold_2_3_def 
   unfolding count_true_def
-  unfolding Collect_code
-  unfolding enum_finite_mod_4_def by simp
+  unfolding dim_vec
+  unfolding sum.eq_fold
+  using index_vec [of _ 4]
+  apply auto
+  unfolding set_list_four
+  unfolding comp_fun_commute.fold_set_fold_remdups [OF comp_fun_commute_lambda]
+  by simp
 
-lemma "bool_fun_threshold_2_3 (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> False
-                                        | (_) \<Rightarrow> True)"
+lemma "bool_fun_threshold_2_3 (Matrix.vec 4 (\<lambda>i. if i = 0 then False else True))"
   unfolding bool_fun_threshold_2_3_def 
-  unfolding count_true_def 
-  unfolding Collect_code
-  unfolding enum_finite_mod_4_def by simp
-
-lemma ceros_of_boolean_input_in_set:
-  "ceros_of_boolean_input (\<chi> i::'n::class_mod_type. if i \<in> A then False else True) = A"
-  unfolding ceros_of_boolean_input_def by simp
+  unfolding count_true_def
+  unfolding dim_vec
+  unfolding sum.eq_fold
+  using index_vec [of _ 4]
+  apply auto
+  unfolding set_list_four
+  unfolding comp_fun_commute.fold_set_fold_remdups [OF comp_fun_commute_lambda]
+  by simp
 
 section\<open>A particular case of problem 6.17 in Scoville, with some previous results\<close>
 
 lemma
   empty_set_in_simplicial_complex_induced:
-  "{} \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
+  "{} \<in> simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3"
   unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-  unfolding bool_fun_threshold_2_3_def 
+  unfolding bool_fun_threshold_2_3_def
   apply rule
-  apply (rule exI [of _ "(\<chi> x. True)"])
-  unfolding count_true_def ceros_of_boolean_input_def apply auto
-  by (metis CARD_finite_mod_4 UNIV_I mem_Collect_eq numeral_le_iff semiring_norm(68) semiring_norm(71) subsetI subset_antisym vec_lambda_beta)
+  apply (rule exI [of _ "Matrix.vec 4 (\<lambda>x. True)"])
+  unfolding count_true_def ceros_of_boolean_input_def by auto
 
 lemma singleton_in_simplicial_complex_induced:
-  "{x} \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
-  (is "?A \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3")
+  assumes x: "x < 4"
+  shows "{x} \<in> simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3"
+  (is "?A \<in> simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3")
 proof (unfold simplicial_complex_induced_by_monotone_boolean_function_def, rule,
-      rule exI [of _ "(\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"], 
+      rule exI [of _ "Matrix.vec 4 (\<lambda>i. if i \<in> ?A then False else True)"], 
       intro conjI)
-  show "bool_fun_threshold_2_3 (\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"
-    unfolding bool_fun_threshold_2_3_def count_true_def Collect_code enum_finite_mod_4_def by simp
-  show "ceros_of_boolean_input (\<chi> i::finite_mod_4. if i \<in> ?A then False else True) = ?A"
-    by (rule ceros_of_boolean_input_in_set)
+  show "dim_vec (Matrix.vec 4 (\<lambda>i. if i \<in> {x} then False else True)) = 4" by simp
+  show "bool_fun_threshold_2_3 (Matrix.vec 4 (\<lambda>i. if i \<in> ?A then False else True))"
+    unfolding bool_fun_threshold_2_3_def 
+    unfolding count_true_def
+    unfolding dim_vec
+    unfolding sum.eq_fold
+    using index_vec [of _ 4]
+    apply auto
+    unfolding set_list_four
+    unfolding comp_fun_commute.fold_set_fold_remdups [OF comp_fun_commute_lambda]
+    by simp
+  show "ceros_of_boolean_input (Matrix.vec 4 (\<lambda>i. if i \<in> ?A then False else True)) = ?A"
+    unfolding ceros_of_boolean_input_def using x by auto
 qed
 
 lemma pair_in_simplicial_complex_induced:
-  "{x,y} \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
-  (is "?A \<in> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3")
+  assumes x: "x < 4" and y: "y < 4"
+  shows "{x,y} \<in> simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3"
+  (is "?A \<in> simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3")
 proof (unfold simplicial_complex_induced_by_monotone_boolean_function_def, rule,
-      rule exI [of _ "(\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"], 
+      rule exI [of _ "Matrix.vec 4 (\<lambda>i. if i \<in> ?A then False else True)"], 
       intro conjI)
-  show "bool_fun_threshold_2_3 (\<chi> i::finite_mod_4. if i \<in> ?A then False else True)"
-    unfolding bool_fun_threshold_2_3_def count_true_def Collect_code enum_finite_mod_4_def by simp
-  show "ceros_of_boolean_input (\<chi> i::finite_mod_4. if i \<in> ?A then False else True) = ?A"
-    by (rule ceros_of_boolean_input_in_set)
+  show "dim_vec (Matrix.vec 4 (\<lambda>i. if i \<in> {x, y} then False else True)) = 4" by simp
+  show "bool_fun_threshold_2_3 (Matrix.vec 4 (\<lambda>i. if i \<in> ?A then False else True))"
+    unfolding bool_fun_threshold_2_3_def 
+    unfolding count_true_def
+    unfolding dim_vec
+    unfolding sum.eq_fold
+    using index_vec [of _ 4]
+    apply auto
+    unfolding set_list_four
+    unfolding comp_fun_commute.fold_set_fold_remdups [OF comp_fun_commute_lambda]
+    by simp
+  show "ceros_of_boolean_input (vec 4 (\<lambda>i. if i \<in> ?A then False else True)) = ?A"
+    unfolding ceros_of_boolean_input_def using x y by auto
 qed
 
-lemma finite_False: "finite {x.(a::bool^'n::finite) $ x = False}" by auto
+lemma finite_False: "finite {x. x < dim_vec a \<and> vec_index (a::bool vec) x = False}" by auto
 
-lemma finite_True: "finite {x.(a::bool^'n::finite) $ x = True}" by auto
+lemma finite_True: "finite {x. x < dim_vec a \<and> vec_index (a::bool vec) x = True}" by auto
 
-lemma UNIV_disjoint: "{x.(a::bool^'n::finite) $ x = False} \<inter> {x. a $ x = True} = {}"
+lemma UNIV_disjoint: "{x. x < dim_vec a \<and> vec_index (a::bool vec) x = True} 
+  \<inter> {x. x < dim_vec a \<and> vec_index (a::bool vec) x = False} = {}"
   by auto
 
-lemma UNIV_union: "{x. (a::bool^'n::finite) $ x = False} \<union> {x. a $ x = True} = UNIV"
+lemma UNIV_union: "{x. x < dim_vec a \<and> vec_index (a::bool vec) x = True} 
+  \<union> {x. x < dim_vec a \<and> vec_index (a::bool vec) x = False} = {x. x < dim_vec a}"
   by auto
 
-lemma card_UNIV_union: "card {x. (a::bool^'n::finite) $ x = False} + card {x. a $ x = True} = card (UNIV::'n set)"
+lemma card_UNIV_union:
+  "card {x. x < dim_vec a \<and> vec_index (a::bool vec) x = True}
+  + card {x. x < dim_vec a \<and> vec_index (a::bool vec) x = False} 
+  = card {x. x < dim_vec a}"
   (is "card ?true + card ?false = _")
 proof -
   have "card ?true + card ?false = card (?true \<union> ?false) + card (?true \<inter> ?false)"
-    by (rule card_Un_Int [OF finite_False finite_True]) 
-  also have "... = card (UNIV::'n set) + card {}"
+    using card_Un_Int [OF finite_True [of a] finite_False [of a]] .
+  also have "... = card {x. x < dim_vec a}"
     unfolding UNIV_union UNIV_disjoint by simp
   finally show ?thesis by simp
 qed
 
-lemma card_complementary: 
-  "card (ceros_of_boolean_input (a::bool^'n::finite)) + card ({x. a $ x = True}) = card (UNIV::'n set)"
-  by (metis card_UNIV_union ceros_of_boolean_input_def)
+lemma card_complementary:
+  "card (ceros_of_boolean_input v)
+    + card {x. x < (dim_vec v) \<and> (vec_index v x = True)} = (dim_vec v)"
+  unfolding ceros_of_boolean_input_def
+  using card_UNIV_union [of v] by simp
 
-lemma card_ceros_count_UNIV: 
-  "card (ceros_of_boolean_input a) + count_true ((a::bool^'n::finite)) = card (UNIV::'n set)"
+corollary
+  card_ceros_of_boolean_input:
+  shows "card (ceros_of_boolean_input a) \<le> dim_vec a"
+ using card_complementary [of a] by simp
+  
+
+lemma 
+  assumes "dim_vec v = n"
+  shows "v \<in> carrier_vec n" using carrier_vecI [OF assms] .
+
+lemma
+  vec_fun:
+  assumes "v \<in> carrier_vec n"
+  shows "\<exists>f. v = vec n f" using assms unfolding carrier_vec_def by fastforce
+
+corollary
+  assumes "dim_vec v = n"
+  shows "\<exists>f. v = vec n f"
+  using carrier_vecI [OF assms] unfolding carrier_vec_def by fastforce
+
+lemma
+  vec_l_eq:
+  assumes "i < n"
+  shows "vec (Suc n) f $ i = vec n f $ i"
+  by (simp add: assms less_SucI)
+
+lemma
+  card_boolean_function:
+  assumes d: "v \<in> carrier_vec n"
+  shows "card {x. x < n  \<and> v $ x = True} = (\<Sum>i = 0..<n. if v $ i then 1 else (0::nat))"
+using d proof (induction n arbitrary: v rule: nat_less_induct)
+  case (1 n)
+  assume hyp: "\<forall>m<n. \<forall>x. x \<in> carrier_vec m \<longrightarrow> 
+      card {xa. xa < m \<and> x $ xa = True} = (\<Sum>i = 0..<m. if x $ i then 1 else 0)"
+    and d: "v \<in> carrier_vec n"
+  show "card {x. x < n \<and> v $ x = True} = (\<Sum>i = 0..<n. if v $ i then 1 else 0)"
+  using d proof (cases n)
+    case 0
+    then show ?thesis by simp
+  next
+    case (Suc m)
+    assume v: "v \<in> carrier_vec n"
+    obtain f :: "nat => bool" where v_f: "v = vec n f" using vec_fun [OF v] by auto
+    have "card {x. x < m \<and> (vec m f) $ x = True} = (\<Sum>i = 0..<m. if (vec m f) $ i then 1 else 0)"
+      using hyp v Suc by simp
+    show ?thesis unfolding v_f unfolding Suc
+    proof (cases "vec (Suc m) f $ m = True") 
+      case True
+      have one: "{x. x < Suc m \<and> vec (Suc m) f $ x = True} =
+          ({x. x < m \<and> vec (Suc m) f $ x = True} \<union> {x. x = m \<and> (vec (Suc m) f) $ x = True})"
+        by auto
+      have two: "disjnt {x. x < m \<and> vec (Suc m) f $ x = True} {x. x = m \<and> (vec (Suc m) f) $ x = True}"
+        using disjnt_iff by blast
+      have "card {x. x < Suc m \<and> vec (Suc m) f $ x = True}
+            = card {x. x < m \<and> (vec (Suc m) f) $ x = True} + card {x. x = m \<and> (vec (Suc m) f) $ x = True}"
+        unfolding one
+        by (rule card_Un_disjnt [OF _ _ two], simp_all)
+      also have "... = card {x. x < m \<and> (vec  m f) $ x = True} + 1"
+      proof -
+        have one: "{x. x < m \<and> vec (Suc m) f $ x = True} = {x. x < m \<and> vec m f $ x = True}"
+          using vec_l_eq [of _ m] by auto
+        have eq: "{x. x = m \<and> vec (Suc m) f $ x = True} = {m}" using True by auto
+        hence two: "card {x. x = m \<and> vec (Suc m) f $ x = True} = 1" by simp
+        show ?thesis using one two by simp
+      qed
+      finally have lhs: "card {x. x < Suc m \<and> vec (Suc m) f $ x = True} = card {x. x < m \<and> vec m f $ x = True} + 1" .
+      have "(\<Sum>i = 0..<Suc m. if vec (Suc m) f $ i then 1 else 0) = 
+           (\<Sum>i = 0..<m. if vec (Suc m) f $ i then 1 else 0) + (if vec (Suc m) f $ m then 1 else 0)"
+        by simp
+      also have "... = (\<Sum>i = 0..<m. if vec m f $ i then 1 else 0) + 1"
+        using vec_l_eq [of _ m] True by simp
+      finally have rhs: "(\<Sum>i = 0..<Suc m. if vec (Suc m) f $ i then 1 else 0) = 
+        (\<Sum>i = 0..<m. if vec m f $ i then 1 else 0) + 1" .
+      show "card {x. x < Suc m \<and> vec (Suc m) f $ x = True} =
+        (\<Sum>i = 0..<Suc m. if vec (Suc m) f $ i then 1 else 0)"
+        unfolding lhs rhs using hyp Suc by simp
+    next
+      case False
+      have one: "{x. x < Suc m \<and> vec (Suc m) f $ x = True} =
+          ({x. x < m \<and> vec (Suc m) f $ x = True} \<union> {x. x = m \<and> (vec (Suc m) f) $ x = True})"
+        by auto
+      have two: "disjnt {x. x < m \<and> vec (Suc m) f $ x = True} {x. x = m \<and> (vec (Suc m) f) $ x = True}"
+        using disjnt_iff by blast
+      have "card {x. x < Suc m \<and> vec (Suc m) f $ x = True}
+            = card {x. x < m \<and> (vec (Suc m) f) $ x = True} + card {x. x = m \<and> (vec (Suc m) f) $ x = True}"
+        unfolding one
+        by (rule card_Un_disjnt [OF _ _ two], simp_all)
+      also have "... = card {x. x < m \<and> (vec  m f) $ x = True} + 0"
+      proof -
+        have one: "{x. x < m \<and> vec (Suc m) f $ x = True} = {x. x < m \<and> vec m f $ x = True}"
+          using vec_l_eq [of _ m] by auto
+        have eq: "{x. x = m \<and> vec (Suc m) f $ x = True} = {}" using False by auto
+        hence two: "card {x. x = m \<and> vec (Suc m) f $ x = True} = 0" by simp
+        show ?thesis using one two by simp
+      qed
+      finally have lhs: "card {x. x < Suc m \<and> vec (Suc m) f $ x = True} = card {x. x < m \<and> vec m f $ x = True} + 0" .
+      have "(\<Sum>i = 0..<Suc m. if vec (Suc m) f $ i then 1 else 0) = 
+           (\<Sum>i = 0..<m. if vec (Suc m) f $ i then 1 else 0) + (if vec (Suc m) f $ m then 1 else 0)"
+        by simp
+      also have "... = (\<Sum>i = 0..<m. if vec m f $ i then 1 else 0)"
+        using vec_l_eq [of _ m] False by simp
+      finally have rhs: "(\<Sum>i = 0..<Suc m. if vec (Suc m) f $ i then 1 else 0) = 
+        (\<Sum>i = 0..<m. if vec m f $ i then 1 else 0)" .
+      show "card {x. x < Suc m \<and> vec (Suc m) f $ x = True} =
+        (\<Sum>i = 0..<Suc m. if vec (Suc m) f $ i then 1 else 0)"
+        unfolding lhs rhs using hyp Suc by simp
+    qed
+  qed
+qed
+
+lemma card_ceros_count_UNIV:
+  shows "card (ceros_of_boolean_input a) + count_true ((a::bool vec)) = dim_vec a"
   using card_complementary [of a]
+  using card_boolean_function
   unfolding ceros_of_boolean_input_def
   unfolding count_true_def by simp
 
-text\<open>The following result is a particular case of Problem 6.17 in Scoville.\<close>
+text\<open>We calculate the carrier set of the ceros_of_boolean_input function for dimensions
+    2, 3 and 4.\<close>
 
-lemma "{{},{a\<^sub>0},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0,a\<^sub>1},{a\<^sub>0,a\<^sub>2},{a\<^sub>0,a\<^sub>3},{a\<^sub>1,a\<^sub>2},{a\<^sub>1,a\<^sub>3},{a\<^sub>2,a\<^sub>3}}
-    = simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
+
+section\<open>Vectors of dimension 2\<close>
+
+lemma
+  dim_vec_2_cases:
+  assumes dx: "dim_vec x = 2"
+  shows "(x $ 0 = x $ 1 = True) \<or> (x $ 0 = False \<and> x $ 1 = True)
+       \<or> (x $ 0 = True \<and> x $ 1 = False) \<or> (x $ 0 = x $ 1 = False)"
+  by auto
+
+lemma tt_2: assumes dx: "dim_vec x = 2" 
+  and be: "x $ 0 = True \<and> x $ 1 = True"
+  shows "ceros_of_boolean_input x = {}"
+  using dx be unfolding ceros_of_boolean_input_def using less_2_cases by auto
+
+lemma tf_2: assumes dx: "dim_vec x = 2" 
+  and be: "x $ 0 = True \<and> x $ 1 = False"
+  shows "ceros_of_boolean_input x = {1}"
+  using dx be unfolding ceros_of_boolean_input_def using less_2_cases by auto
+
+lemma ft_2: assumes dx: "dim_vec x = 2" 
+  and be: "x $ 0 = False \<and> x $ 1 = True"
+  shows "ceros_of_boolean_input x = {0}"
+  using dx be unfolding ceros_of_boolean_input_def using less_2_cases by auto
+
+lemma ff_2: assumes dx: "dim_vec x = 2" 
+  and be: "x $ 0 = False \<and> x $ 1 = False"
+  shows "ceros_of_boolean_input x = {0,1}"
+  using dx be unfolding ceros_of_boolean_input_def using less_2_cases by auto
+
+lemma
+  assumes dx: "dim_vec x = 2"
+  shows "ceros_of_boolean_input x \<in> {{},{0},{1},{0,1}}"
+  using dim_vec_2_cases [OF ]
+  using tt_2 [OF dx] tf_2 [OF dx] ft_2 [OF dx] ff_2 [OF dx]
+  by (metis insertCI)
+
+section\<open>Vectors of dimension 3\<close>
+
+lemma less_3_cases:
+  assumes n: "n < 3" shows "n = 0 \<or> n = 1 \<or> n = (2::nat)" 
+  using n by linarith
+
+lemma
+  dim_vec_3_cases:
+  assumes dx: "dim_vec x = 3"
+  shows "(x $ 0 = x $ 1 = x $ 2 = False) \<or> (x $ 0 = x $ 1 = False \<and> x $ 2 = True)
+       \<or> (x $ 0 = x $ 2 = False \<and> x $ 1 = True) \<or> (x $ 0 = False \<and> x $ 1 = x $ 2 = True)
+       \<or> (x $ 0 = True \<and> x $ 1 = x $ 2 = False) \<or> (x $ 0 = x $ 2 = True \<and> x $ 1 = False)
+       \<or> (x $ 0 = x $ 1 = True \<and> x $ 2 = False) \<or> (x $ 0 = x $ 1 = x $ 2 = True)"
+  by auto
+
+lemma fff_3: assumes dx: "dim_vec x = 3" 
+  and be: "x $ 0 = False \<and> x $ 1 = False \<and> x $ 2 = False"
+  shows "ceros_of_boolean_input x = {0,1,2}"
+  using dx be 
+  unfolding ceros_of_boolean_input_def 
+  using less_3_cases by auto
+
+lemma fft_3: assumes dx: "dim_vec x = 3" 
+  and be: "x $ 0 = False \<and> x $ 1 = False \<and> x $ 2 = True"
+  shows "ceros_of_boolean_input x = {0,1}"
+  using dx be unfolding ceros_of_boolean_input_def 
+  using less_3_cases by auto
+
+lemma ftf_3: assumes dx: "dim_vec x = 3"
+  and be: "x $ 0 = False \<and> x $ 1 = True \<and> x $ 2 = False"
+  shows "ceros_of_boolean_input x = {0,2}"
+  using dx be unfolding ceros_of_boolean_input_def 
+  using less_3_cases by fastforce
+
+lemma ftt_3: assumes dx: "dim_vec x = 3"
+  and be: "x $ 0 = False \<and> x $ 1 = True \<and> x $ 2 = True"
+  shows "ceros_of_boolean_input x = {0}"
+  using dx be unfolding ceros_of_boolean_input_def 
+  using less_3_cases by auto
+
+lemma tff_3: assumes dx: "dim_vec x = 3" 
+  and be: "x $ 0 = True \<and> x $ 1 = False \<and> x $ 2 = False"
+  shows "ceros_of_boolean_input x = {1,2}"
+  using dx be unfolding ceros_of_boolean_input_def 
+  using less_3_cases by auto
+
+lemma tft_3: assumes dx: "dim_vec x = 3" 
+  and be: "x $ 0 = True \<and> x $ 1 = False \<and> x $ 2 = True"
+  shows "ceros_of_boolean_input x = {1}"
+  using dx be unfolding ceros_of_boolean_input_def 
+  using less_3_cases by auto
+
+lemma ttf_3: assumes dx: "dim_vec x = 3"
+  and be: "x $ 0 = True \<and> x $ 1 = True \<and> x $ 2 = False"
+  shows "ceros_of_boolean_input x = {2}"
+  using dx be unfolding ceros_of_boolean_input_def 
+  using less_3_cases by fastforce
+
+lemma ttt_3: assumes dx: "dim_vec x = 3"
+  and be: "x $ 0 = True \<and> x $ 1 = True \<and> x $ 2 = True"
+  shows "ceros_of_boolean_input x = {}"
+  using dx be unfolding ceros_of_boolean_input_def
+  using less_3_cases by auto
+
+lemma
+  assumes dx: "dim_vec x = 3"
+  shows "ceros_of_boolean_input x \<in> {{},{0},{1},{2},{0,1},{0,2},{1,2},{0,1,2}}"
+  using dim_vec_3_cases [OF ]
+  using fff_3 [OF dx] fft_3 [OF dx] ftf_3 [OF dx] ftt_3 [OF dx]
+  using tff_3 [OF dx] tft_3 [OF dx] ttf_3 [OF dx] ttt_3 [OF dx]
+  by (smt (z3) insertCI)
+
+section\<open>Vectors of dimension 4\<close>
+
+lemma less_4_cases:
+  assumes n: "n < 4"
+  shows "n = 0 \<or> n = 1 \<or> n = 2 \<or> n = (3::nat)"
+  using n by linarith
+
+lemma
+  dim_vec_4_cases:
+  assumes dx: "dim_vec x = 4"
+  shows "(x $ 0 = x $ 1 = x $ 2 = x $ 3 = False) \<or> (x $ 0 = x $ 1 = x $ 2 = False \<and> x $ 3 = True)
+       \<or> (x $ 0 = x $ 1 = x $ 3 = False \<and> x $ 2 = True) \<or> (x $ 0 = x $ 1 = False \<and> x $ 2 = x $ 3 = True)
+       \<or> (x $ 0 = x $ 2 = x $ 3 = False \<and> x $ 1 = True) \<or> (x $ 0 = x $ 2 = False \<and> x $ 1 = x $ 3 = True)
+       \<or> (x $ 0 = x $ 3 = False \<and> x $ 1 = x $ 2 = True) \<or> (x $ 0 = False \<and> x $ 1 = x $ 2 = x $ 3 = True) 
+       \<or> (x $ 0 = True \<and> x $ 1 = x $ 2 = x $ 3 = False) \<or> (x $ 0 = x $ 3 = True \<and> x $ 1 = x $ 2 = False)
+       \<or> (x $ 0 = x $ 2 = True \<and> x $ 1 = x $ 3 = False) \<or> (x $ 0 = x $ 2 = x $ 3 = True \<and> x $ 1 = False)
+       \<or> (x $ 0 = x $ 1 = True \<and> x $ 2 = x $ 3 = False) \<or> (x $ 0 = x $ 1 = x $ 3 = True \<and> x $ 2 = False)
+       \<or> (x $ 0 = x $ 1 = x $ 2 = True \<and> x $ 3 = False) \<or> (x $ 0 = x $ 1 = x $ 2 = x $ 3 = True)"
+  by blast
+
+lemma ffff_4: assumes dx: "dim_vec x = 4" 
+  and be: "x $ 0 = False \<and> x $ 1 = False \<and> x $ 2 = False \<and> x $ 3 = False"
+  shows "ceros_of_boolean_input x = {0,1,2,3}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma ffft_4: assumes dx: "dim_vec x = 4" 
+  and be: "x $ 0 = False \<and> x $ 1 = False \<and> x $ 2 = False \<and> x $ 3 = True"
+  shows "ceros_of_boolean_input x = {0,1,2}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma fftf_4: assumes dx: "dim_vec x = 4" 
+  and be: "x $ 0 = False \<and> x $ 1 = False \<and> x $ 2 = True \<and> x $ 3 = False"
+  shows "ceros_of_boolean_input x = {0,1,3}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma fftt_4: assumes dx: "dim_vec x = 4"
+  and be: "x $ 0 = False \<and> x $ 1 = False \<and> x $ 2 = True \<and> x $ 3 = True"
+  shows "ceros_of_boolean_input x = {0,1}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma ftff_4: assumes dx: "dim_vec x = 4"
+  and be: "x $ 0 = False \<and> x $ 1 = True \<and> x $ 2 = False \<and> x $ 3 = False"
+  shows "ceros_of_boolean_input x = {0,2,3}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma ftft_4: assumes dx: "dim_vec x = 4"
+  and be: "x $ 0 = False \<and> x $ 1 = True \<and> x $ 2 = False \<and> x $ 3 = True"
+  shows "ceros_of_boolean_input x = {0,2}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma fttf_4: assumes dx: "dim_vec x = 4"
+  and be: "x $ 0 = False \<and> x $ 1 = True \<and> x $ 2 = True \<and> x $ 3 = False"
+  shows "ceros_of_boolean_input x = {0,3}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma fttt_4: assumes dx: "dim_vec x = 4"
+  and be: "x $ 0 = False \<and> x $ 1 = True \<and> x $ 2 = True \<and> x $ 3 = True"
+  shows "ceros_of_boolean_input x = {0}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma tfff_4: assumes dx: "dim_vec x = 4" 
+  and be: "x $ 0 = True \<and> x $ 1 = False \<and> x $ 2 = False \<and> x $ 3 = False"
+  shows "ceros_of_boolean_input x = {1,2,3}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma tfft_4: assumes dx: "dim_vec x = 4" 
+  and be: "x $ 0 = True \<and> x $ 1 = False \<and> x $ 2 = False \<and> x $ 3 = True"
+  shows "ceros_of_boolean_input x = {1,2}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma tftf_4: assumes dx: "dim_vec x = 4" 
+  and be: "x $ 0 = True \<and> x $ 1 = False \<and> x $ 2 = True \<and> x $ 3 = False"
+  shows "ceros_of_boolean_input x = {1,3}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma tftt_4: assumes dx: "dim_vec x = 4"
+  and be: "x $ 0 = True \<and> x $ 1 = False \<and> x $ 2 = True \<and> x $ 3 = True"
+  shows "ceros_of_boolean_input x = {1}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma ttff_4: assumes dx: "dim_vec x = 4"
+  and be: "x $ 0 = True \<and> x $ 1 = True \<and> x $ 2 = False \<and> x $ 3 = False"
+  shows "ceros_of_boolean_input x = {2,3}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma ttft_4: assumes dx: "dim_vec x = 4"
+  and be: "x $ 0 = True \<and> x $ 1 = True \<and> x $ 2 = False \<and> x $ 3 = True"
+  shows "ceros_of_boolean_input x = {2}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma tttf_4: assumes dx: "dim_vec x = 4"
+  and be: "x $ 0 = True \<and> x $ 1 = True \<and> x $ 2 = True \<and> x $ 3 = False"
+  shows "ceros_of_boolean_input x = {3}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma tttt_4: assumes dx: "dim_vec x = 4"
+  and be: "x $ 0 = True \<and> x $ 1 = True \<and> x $ 2 = True \<and> x $ 3 = True"
+  shows "ceros_of_boolean_input x = {}"
+  using dx be
+  unfolding ceros_of_boolean_input_def 
+  using less_4_cases by auto
+
+lemma
+  ceros_of_boolean_input_set:
+  assumes dx: "dim_vec x = 4"
+  shows "ceros_of_boolean_input x \<in> {{},{0},{1},{2},{3},{0,1},{0,2},{0,3},{1,2},{1,3},{2,3},
+    {0,1,2},{0,1,3},{0,2,3},{1,2,3},{0,1,2,3}}"
+  using dim_vec_4_cases [OF ]
+  using ffff_4 [OF dx] ffft_4 [OF dx] fftf_4 [OF dx] fftt_4 [OF dx]
+  using ftff_4 [OF dx] ftft_4 [OF dx] fttf_4 [OF dx] fttt_4 [OF dx]
+  using tfff_4 [OF dx] tfft_4 [OF dx] tftf_4 [OF dx] tftt_4 [OF dx]
+  using ttff_4 [OF dx] ttft_4 [OF dx] tttf_4 [OF dx] tttt_4 [OF dx]
+  by (smt (z3) insertCI)
+
+context simplicial_complex
+begin
+
+section\<open>A particular case of problem 6.17 in Scoville, with some previous results\<close>
+
+lemma
+  shows "{{},{0},{1},{2},{3},{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}}
+    = simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3"
   (is "{{},?a,?b,?c,?d,?e,?f,?g,?h,?i,?j} = _")
 proof (rule)
-  show "{{},{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>2, a\<^sub>3}}
-    \<subseteq> simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3"
-    by (simp add: 
+  show "{{},?a,?b,?c,?d,?e,?f,?g,?h,?i,?j}
+    \<subseteq> simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3"
+    by (simp add:
         empty_set_in_simplicial_complex_induced
         singleton_in_simplicial_complex_induced pair_in_simplicial_complex_induced)+
-  show "simplicial_complex_induced_by_monotone_boolean_function bool_fun_threshold_2_3
-    \<subseteq> {{},{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>2, a\<^sub>3}}"
+  show "simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3
+    \<subseteq> {{},?a,?b,?c,?d,?e,?f,?g,?h,?i,?j}"
       unfolding simplicial_complex_induced_by_monotone_boolean_function_def
       unfolding bool_fun_threshold_2_3_def
     proof
-    fix y::"finite_mod_4 set"
-      assume y: "y \<in> {y. \<exists>x. (if 2 \<le> count_true x then True else False) \<and> ceros_of_boolean_input x = y}"
-      then obtain x::"(bool, finite_mod_4) vec" 
+    fix y::"nat set"
+    assume y: "y \<in> {y. \<exists>x. dim_vec x = 4 \<and> (if 2 \<le> count_true x then True else False) \<and> ceros_of_boolean_input x = y}"
+      then obtain x::"bool vec" 
         where ct_ge_2: "(if 2 \<le> count_true x then True else False)" 
-          and cx: "ceros_of_boolean_input x = y" by auto
-      have "count_true x + card (ceros_of_boolean_input x) = card (UNIV::finite_mod_4 set)"
-        by (metis add.commute card_ceros_count_UNIV)
+          and cx: "ceros_of_boolean_input x = y" and dx: "dim_vec x = 4" by auto
+      have "count_true x + card (ceros_of_boolean_input x) = dim_vec x"
+       using card_ceros_count_UNIV [of x] by simp
       hence "card (ceros_of_boolean_input x) \<le> 2"
-        by (metis CARD_finite_mod_4 add.commute ct_ge_2 nat_add_left_cancel_le numeral_Bit0)
+        using ct_ge_2
+        using card_boolean_function
+        using dx by presburger
       hence card_le: "card y \<le> 2" using cx by simp
-      have "y \<in> {{},{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1},{a\<^sub>0, a\<^sub>2},{a\<^sub>0, a\<^sub>3},{a\<^sub>1, a\<^sub>2},{a\<^sub>1, a\<^sub>3},{a\<^sub>2, a\<^sub>3}}"
+      have "y \<in> {{},?a,?b,?c,?d,?e,?f,?g,?h,?i,?j}"
       proof (rule ccontr)
-        assume "y \<notin> {{},{a\<^sub>0},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0, a\<^sub>1},{a\<^sub>0, a\<^sub>2},{a\<^sub>0, a\<^sub>3},{a\<^sub>1, a\<^sub>2},{a\<^sub>1, a\<^sub>3},{a\<^sub>2, a\<^sub>3}}"
-        then have y_nin: "y \<notin> set [{},{a\<^sub>0},{a\<^sub>1},{a\<^sub>2},{a\<^sub>3},{a\<^sub>0, a\<^sub>1},{a\<^sub>0, a\<^sub>2},{a\<^sub>0, a\<^sub>3},{a\<^sub>1, a\<^sub>2},{a\<^sub>1, a\<^sub>3},{a\<^sub>2, a\<^sub>3}]" by simp
-        have y_in: "y \<in> Pow UNIV" by simp 
-        have "y \<in> set [{a\<^sub>0,a\<^sub>1,a\<^sub>2},{a\<^sub>0,a\<^sub>1,a\<^sub>3},{a\<^sub>0,a\<^sub>2,a\<^sub>3},{a\<^sub>1,a\<^sub>2,a\<^sub>3},{a\<^sub>0,a\<^sub>1,a\<^sub>2,a\<^sub>3}]"
-          using DiffI [OF y_in y_nin] 
-          unfolding UNIV_finite_mod_4
-          unfolding list_powerset_finite_mod_4 by simp
+        assume "y \<notin> {{},?a,?b,?c,?d,?e,?f,?g,?h,?i,?j}"
+        then have y_nin: "y \<notin> set [{},?a,?b,?c,?d,?e,?f,?g,?h,?i,?j]" by simp
+        have "y \<in> set [{0,1,2},{0,1,3},{0,2,3},{1,2,3},{0,1,2,3}]"
+          using ceros_of_boolean_input_set [OF dx] y_nin
+          unfolding cx by simp
         hence "card y \<ge> 3" by auto
         thus False using card_le by simp
       qed
-      then show "y \<in> {{},{a\<^sub>0}, {a\<^sub>1}, {a\<^sub>2}, {a\<^sub>3}, {a\<^sub>0, a\<^sub>1}, {a\<^sub>0, a\<^sub>2}, {a\<^sub>0, a\<^sub>3}, {a\<^sub>1, a\<^sub>2}, {a\<^sub>1, a\<^sub>3}, {a\<^sub>2, a\<^sub>3}}"
+      then show "y \<in> {{},?a,?b,?c,?d,?e,?f,?g,?h,?i,?j}"
       by simp
   qed
 qed
+
+end
 
 end

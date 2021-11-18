@@ -260,48 +260,4 @@ next
   qed
 qed
 
-(*The following theorem, from ``Homology of Boolean functions and the
-complexity of simplicial homology'', Erick J. Chastain and Nicholas A. Scoville, apparently does not hold*)
-
-(*lemma eq_times: 
-"simplicial_complex_induced_by_monotone_boolean_function_times (bool_fun_times f g)
-= (simplicial_complex_induced_by_monotone_boolean_function f) \<times> (simplicial_complex_induced_by_monotone_boolean_function g)"
-proof
-  show "(simplicial_complex_induced_by_monotone_boolean_function f) \<times> (simplicial_complex_induced_by_monotone_boolean_function g) \<subseteq> simplicial_complex_induced_by_monotone_boolean_function_times (bool_fun_times f g)"
-  proof
-    fix \<gamma>::"('a set)*('b set)"
-    assume pert: "\<gamma> \<in> (simplicial_complex_induced_by_monotone_boolean_function f) \<times> (simplicial_complex_induced_by_monotone_boolean_function g)"
-    hence "(fst \<gamma>) \<in> simplicial_complex_induced_by_monotone_boolean_function f"
-      by auto
-    hence sigma: "f (bool_vec_from_simplice (fst \<gamma>))"
-      by (metis (mono_tags, lifting) bool_vec_set_from_simplice_set_def boolean_function_from_simplicial_complex_def boolean_function_from_simplicial_complex_simplicial_complex_induced_by_monotone_boolean_function_id mem_Collect_eq)
-    from pert have "(snd \<gamma>) \<in> simplicial_complex_induced_by_monotone_boolean_function g"
-      by auto
-    hence tau: "g (bool_vec_from_simplice (snd \<gamma>))"
-      by (metis (mono_tags, lifting) bool_vec_set_from_simplice_set_def boolean_function_from_simplicial_complex_def boolean_function_from_simplicial_complex_simplicial_complex_induced_by_monotone_boolean_function_id mem_Collect_eq)
-    from sigma and tau have sigtau: "bool_fun_times f g (bool_vec_from_simplice ((fst \<gamma>) \<times> (snd \<gamma>)))"
-      using simp_ceros
-      unfolding bool_fun_times_def
-      unfolding set_fst_def
-      unfolding set_snd_def
-      by simp
-    from sigma and tau show "\<gamma> \<in> simplicial_complex_induced_by_monotone_boolean_function_times (bool_fun_times f g)"
-      using bool_vec_from_simplice_def ceros_of_boolean_input_in_set mem_Collect_eq simplicial_complex_induced_by_monotone_boolean_function_times_def
-      by blast
-  qed
-next
-  show "simplicial_complex_induced_by_monotone_boolean_function_ast (bool_fun_ast f g) \<subseteq> set_ast (simplicial_complex_induced_by_monotone_boolean_function f) (simplicial_complex_induced_by_monotone_boolean_function g)"
-  proof
-    fix \<gamma>::"'a set*'b set"
-    assume pert: "\<gamma> \<in> simplicial_complex_induced_by_monotone_boolean_function_ast (bool_fun_ast f g)"
-    hence sigma: "(fst \<gamma>) \<in> simplicial_complex_induced_by_monotone_boolean_function f"
-      by (smt (verit) bool_fun_ast_def fst_es_simplice mem_Collect_eq simplicial_complex_induced_by_monotone_boolean_function_def)
-    from pert have tau: "(snd \<gamma>) \<in> simplicial_complex_induced_by_monotone_boolean_function g"
-      by (smt (verit) bool_fun_ast_def snd_es_simplice mem_Collect_eq simplicial_complex_induced_by_monotone_boolean_function_def)
-    from sigma and tau show "\<gamma> \<in> set_ast (simplicial_complex_induced_by_monotone_boolean_function f) (simplicial_complex_induced_by_monotone_boolean_function g)"
-      using simp_ceros
-      by force
-  qed
-qed*)
-
 end
