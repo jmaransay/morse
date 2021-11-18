@@ -835,6 +835,7 @@ begin
 section\<open>A particular case of problem 6.17 in Scoville, with some previous results\<close>
 
 lemma
+  simplicial_complex_induced_by_monotone_boolean_function_4_bool_fun_threshold_2_3:
   shows "{{},{0},{1},{2},{3},{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}}
     = simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3"
   (is "{{},?a,?b,?c,?d,?e,?f,?g,?h,?i,?j} = _")

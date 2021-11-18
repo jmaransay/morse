@@ -9,28 +9,26 @@ module
         hashcode_nat, Linorder(..), Set(..), membera, member, less_eq_set,
         equal_set, typerep_list, Char(..), equal_char, typerep_prod,
         default_prod, plus_nat, def_hashmap_size_prod, hashcode_prod,
-        Finite_mod_4(..), equal_finite_mod_4, Finite(..), Linorder_list(..),
-        equal_linorder_list, less_eq_linorder_list_pre, less_eq_linorder_list,
-        less_linorder_list, IFEXD(..), Hashtable(..), Pointermap_impl_ext(..),
-        Bddi_ext(..), one_nat, suc, minus_nat, nth, len, new, ntha, upd, const,
-        image, entriesi, arl_nth, pm_pthi, dpmi, destrci, remdups, serializeci,
-        apsnd, divmod_integer, modulo_integer, modulo_nat, divide_integer,
-        divide_nat, bit_cut_integer, char_of_integer, char_of_nat,
-        string_of_nat, graphifyci1, map_filter, the_thing_By, the_thing,
-        labelci, mapM, fstp, trd, foldr, graphifyci, bot_set, removeAll,
-        inserta, insert, sc_threshold_2_3, gen_length, size_list, part,
-        sort_key, sorted_list_of_set, linorder_list_unwrap,
+        Linorder_list(..), equal_linorder_list, less_eq_linorder_list_pre,
+        less_eq_linorder_list, less_linorder_list, IFEXD(..), Hashtable(..),
+        Pointermap_impl_ext(..), Bddi_ext(..), one_nat, suc, minus_nat, nth,
+        upt, len, new, ntha, upd, const, image, entriesi, arl_nth, pm_pthi,
+        dpmi, destrci, remdups, serializeci, apsnd, divmod_integer,
+        modulo_integer, modulo_nat, divide_integer, divide_nat, bit_cut_integer,
+        char_of_integer, char_of_nat, string_of_nat, graphifyci1, map_filter,
+        the_thing_By, the_thing, labelci, mapM, fstp, trd, foldr, graphifyci,
+        bot_set, removeAll, inserta, insert, sc_threshold_2_3, gen_length,
+        size_list, part, sort_key, sorted_list_of_set, linorder_list_unwrap,
         sorted_list_of_list_set, nat_list_from_vertex, nat_list_from_sc,
-        nat_from_finite4, getentryi, times_nat, blit, array_grow, arl_append,
-        load_factor, the_array, replicate, ht_new_sz, nat_of_uint32,
-        nat_of_hashcode, bounded_hashcode_nat, ls_update, the_size, ht_upd,
-        ht_insls, ht_copy, ht_rehash, ht_update, ls_lookup, ht_lookup,
-        pointermap_getmki, dpmi_update, ifci, tci, fci, litci, dcli_update,
-        case_ifexici, restrict_topci, min, lowest_topsci, equal_IFEXD,
-        param_optci, dcli, iteci_lu, andci, bdd_from_vertex_list, orci,
-        bdd_from_sc_list, initial_capacity, arl_empty, ht_new, pointermap_empty,
-        emptyci, ex_2_3, ex_true, ex_false, another_ex, top_set, bdd_from_sc,
-        one_another_ex)
+        getentryi, times_nat, blit, array_grow, arl_append, load_factor,
+        the_array, replicate, ht_new_sz, nat_of_uint32, nat_of_hashcode,
+        bounded_hashcode_nat, ls_update, the_size, ht_upd, ht_insls, ht_copy,
+        ht_rehash, ht_update, ls_lookup, ht_lookup, pointermap_getmki,
+        dpmi_update, ifci, tci, fci, litci, dcli_update, case_ifexici,
+        restrict_topci, min, lowest_topsci, equal_IFEXD, param_optci, dcli,
+        iteci_lu, andci, bdd_from_vertex_list, orci, bdd_from_sc_list,
+        initial_capacity, arl_empty, ht_new, pointermap_empty, emptyci, ex_2_3,
+        ex_true, ex_false, another_ex, bdd_from_sc, one_another_ex)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -273,39 +271,6 @@ instance (Hashable a, Hashable b) => Hashable (a, b) where {
   def_hashmap_size = def_hashmap_size_prod;
 };
 
-data Finite_mod_4 = A_0 | A_1 | A_2 | A_3;
-
-equal_finite_mod_4 :: Finite_mod_4 -> Finite_mod_4 -> Bool;
-equal_finite_mod_4 A_2 A_3 = False;
-equal_finite_mod_4 A_3 A_2 = False;
-equal_finite_mod_4 A_1 A_3 = False;
-equal_finite_mod_4 A_3 A_1 = False;
-equal_finite_mod_4 A_1 A_2 = False;
-equal_finite_mod_4 A_2 A_1 = False;
-equal_finite_mod_4 A_0 A_3 = False;
-equal_finite_mod_4 A_3 A_0 = False;
-equal_finite_mod_4 A_0 A_2 = False;
-equal_finite_mod_4 A_2 A_0 = False;
-equal_finite_mod_4 A_0 A_1 = False;
-equal_finite_mod_4 A_1 A_0 = False;
-equal_finite_mod_4 A_3 A_3 = True;
-equal_finite_mod_4 A_2 A_2 = True;
-equal_finite_mod_4 A_1 A_1 = True;
-equal_finite_mod_4 A_0 A_0 = True;
-
-instance Eq Finite_mod_4 where {
-  a == b = equal_finite_mod_4 a b;
-};
-
-class (Countable a) => Finite a where {
-};
-
-instance Countable Finite_mod_4 where {
-};
-
-instance Finite Finite_mod_4 where {
-};
-
 newtype Linorder_list a = LinorderList [a];
 
 equal_linorder_list ::
@@ -371,6 +336,9 @@ minus_nat m n = Nat (max (0 :: Integer) (integer_of_nat m - integer_of_nat n));
 nth :: forall a. [a] -> Nat -> a;
 nth (x : xs) n =
   (if equal_nat n zero_nat then x else nth xs (minus_nat n one_nat));
+
+upt :: Nat -> Nat -> [Nat];
+upt i j = (if less_nat i j then i : upt (suc i) j else []);
 
 len ::
   forall a.
@@ -743,19 +711,29 @@ insert :: forall a. (Eq a) => a -> Set a -> Set a;
 insert x (Coset xs) = Coset (removeAll x xs);
 insert x (Set xs) = Set (inserta x xs);
 
-sc_threshold_2_3 :: Set (Set Finite_mod_4);
+sc_threshold_2_3 :: Set (Set Nat);
 sc_threshold_2_3 =
   insert bot_set
-    (insert (insert A_0 bot_set)
-      (insert (insert A_1 bot_set)
-        (insert (insert A_2 bot_set)
-          (insert (insert A_3 bot_set)
-            (insert (insert A_0 (insert A_1 bot_set))
-              (insert (insert A_0 (insert A_2 bot_set))
-                (insert (insert A_0 (insert A_3 bot_set))
-                  (insert (insert A_1 (insert A_2 bot_set))
-                    (insert (insert A_1 (insert A_3 bot_set))
-                      (insert (insert A_2 (insert A_3 bot_set))
+    (insert (insert zero_nat bot_set)
+      (insert (insert one_nat bot_set)
+        (insert (insert (nat_of_integer (2 :: Integer)) bot_set)
+          (insert (insert (nat_of_integer (3 :: Integer)) bot_set)
+            (insert (insert zero_nat (insert one_nat bot_set))
+              (insert
+                (insert zero_nat
+                  (insert (nat_of_integer (2 :: Integer)) bot_set))
+                (insert
+                  (insert zero_nat
+                    (insert (nat_of_integer (3 :: Integer)) bot_set))
+                  (insert
+                    (insert one_nat
+                      (insert (nat_of_integer (2 :: Integer)) bot_set))
+                    (insert
+                      (insert one_nat
+                        (insert (nat_of_integer (3 :: Integer)) bot_set))
+                      (insert
+                        (insert (nat_of_integer (2 :: Integer))
+                          (insert (nat_of_integer (3 :: Integer)) bot_set))
                         bot_set))))))))));
 
 gen_length :: forall a. Nat -> [a] -> Nat;
@@ -805,19 +783,11 @@ sorted_list_of_list_set :: forall a. (Eq a, Linorder a) => Set [a] -> [[a]];
 sorted_list_of_list_set l =
   map linorder_list_unwrap (sorted_list_of_set (image LinorderList l));
 
-nat_list_from_vertex :: forall a. (Finite a) => (a -> Nat) -> Set a -> [Nat];
-nat_list_from_vertex f v = sorted_list_of_set (image f v);
+nat_list_from_vertex :: forall a. (Eq a, Linorder a) => Set a -> [a];
+nat_list_from_vertex v = sorted_list_of_set v;
 
-nat_list_from_sc ::
-  forall a. (Finite a) => (a -> Nat) -> Set (Set a) -> [[Nat]];
-nat_list_from_sc f k =
-  sorted_list_of_list_set (image (nat_list_from_vertex f) k);
-
-nat_from_finite4 :: Finite_mod_4 -> Nat;
-nat_from_finite4 A_0 = zero_nat;
-nat_from_finite4 A_1 = one_nat;
-nat_from_finite4 A_2 = nat_of_integer (2 :: Integer);
-nat_from_finite4 A_3 = nat_of_integer (3 :: Integer);
+nat_list_from_sc :: forall a. (Eq a, Linorder a) => Set (Set a) -> [[a]];
+nat_list_from_sc k = sorted_list_of_list_set (image nat_list_from_vertex k);
 
 getentryi :: forall a b. Pointermap_impl_ext a b -> Hashtable a Nat;
 getentryi (Pointermap_impl_ext entriesi getentryi more) = getentryi;
@@ -1239,7 +1209,7 @@ ex_2_3 =
       bdd_from_sc_list
         [zero_nat, one_nat, nat_of_integer (2 :: Integer),
           nat_of_integer (3 :: Integer)]
-        (nat_list_from_sc nat_from_finite4 sc_threshold_2_3) s;
+        (nat_list_from_sc sc_threshold_2_3) s;
     graphifyci
       [Char False False True False True True True False,
         Char False False False True False True True False,
@@ -1271,29 +1241,52 @@ ex_true =
       bdd_from_sc_list
         [zero_nat, one_nat, nat_of_integer (2 :: Integer),
           nat_of_integer (3 :: Integer)]
-        (nat_list_from_sc nat_from_finite4
+        (nat_list_from_sc
           (insert bot_set
-            (insert (insert A_0 bot_set)
-              (insert (insert A_1 bot_set)
-                (insert (insert A_2 bot_set)
-                  (insert (insert A_3 bot_set)
-                    (insert (insert A_0 (insert A_1 bot_set))
-                      (insert (insert A_0 (insert A_2 bot_set))
-                        (insert (insert A_0 (insert A_3 bot_set))
-                          (insert (insert A_1 (insert A_2 bot_set))
-                            (insert (insert A_1 (insert A_3 bot_set))
-                              (insert (insert A_2 (insert A_3 bot_set))
+            (insert (insert zero_nat bot_set)
+              (insert (insert one_nat bot_set)
+                (insert (insert (nat_of_integer (2 :: Integer)) bot_set)
+                  (insert (insert (nat_of_integer (3 :: Integer)) bot_set)
+                    (insert (insert zero_nat (insert one_nat bot_set))
+                      (insert
+                        (insert zero_nat
+                          (insert (nat_of_integer (2 :: Integer)) bot_set))
+                        (insert
+                          (insert zero_nat
+                            (insert (nat_of_integer (3 :: Integer)) bot_set))
+                          (insert
+                            (insert one_nat
+                              (insert (nat_of_integer (2 :: Integer)) bot_set))
+                            (insert
+                              (insert one_nat
+                                (insert (nat_of_integer (3 :: Integer))
+                                  bot_set))
+                              (insert
+                                (insert (nat_of_integer (2 :: Integer))
+                                  (insert (nat_of_integer (3 :: Integer))
+                                    bot_set))
                                 (insert
-                                  (insert A_0 (insert A_1 (insert A_2 bot_set)))
+                                  (insert zero_nat
+                                    (insert one_nat
+                                      (insert (nat_of_integer (2 :: Integer))
+bot_set)))
                                   (insert
-                                    (insert A_0
-                                      (insert A_1 (insert A_3 bot_set)))
+                                    (insert zero_nat
+                                      (insert one_nat
+(insert (nat_of_integer (3 :: Integer)) bot_set)))
                                     (insert
-                                      (insert A_0
-(insert A_2 (insert A_3 bot_set)))
+                                      (insert zero_nat
+(insert (nat_of_integer (2 :: Integer))
+  (insert (nat_of_integer (3 :: Integer)) bot_set)))
                                       (insert
-(insert A_1 (insert A_2 (insert A_3 bot_set)))
-(insert (insert A_0 (insert A_1 (insert A_2 (insert A_3 bot_set))))
+(insert one_nat
+  (insert (nat_of_integer (2 :: Integer))
+    (insert (nat_of_integer (3 :: Integer)) bot_set)))
+(insert
+  (insert zero_nat
+    (insert one_nat
+      (insert (nat_of_integer (2 :: Integer))
+        (insert (nat_of_integer (3 :: Integer)) bot_set))))
   bot_set)))))))))))))))))
         s;
     graphifyci
@@ -1312,7 +1305,7 @@ ex_false =
       bdd_from_sc_list
         [zero_nat, one_nat, nat_of_integer (2 :: Integer),
           nat_of_integer (3 :: Integer)]
-        (nat_list_from_sc nat_from_finite4 bot_set) s;
+        (nat_list_from_sc bot_set) s;
     graphifyci
       [Char False True True False False True True False,
         Char True False False False False True True False,
@@ -1330,28 +1323,48 @@ another_ex =
       bdd_from_sc_list
         [zero_nat, one_nat, nat_of_integer (2 :: Integer),
           nat_of_integer (3 :: Integer)]
-        (nat_list_from_sc nat_from_finite4
+        (nat_list_from_sc
           (insert bot_set
-            (insert (insert A_0 bot_set)
-              (insert (insert A_1 bot_set)
-                (insert (insert A_2 bot_set)
-                  (insert (insert A_3 bot_set)
-                    (insert (insert A_0 (insert A_1 bot_set))
-                      (insert (insert A_0 (insert A_2 bot_set))
-                        (insert (insert A_0 (insert A_3 bot_set))
-                          (insert (insert A_1 (insert A_2 bot_set))
-                            (insert (insert A_1 (insert A_3 bot_set))
-                              (insert (insert A_2 (insert A_3 bot_set))
+            (insert (insert zero_nat bot_set)
+              (insert (insert one_nat bot_set)
+                (insert (insert (nat_of_integer (2 :: Integer)) bot_set)
+                  (insert (insert (nat_of_integer (3 :: Integer)) bot_set)
+                    (insert (insert zero_nat (insert one_nat bot_set))
+                      (insert
+                        (insert zero_nat
+                          (insert (nat_of_integer (2 :: Integer)) bot_set))
+                        (insert
+                          (insert zero_nat
+                            (insert (nat_of_integer (3 :: Integer)) bot_set))
+                          (insert
+                            (insert one_nat
+                              (insert (nat_of_integer (2 :: Integer)) bot_set))
+                            (insert
+                              (insert one_nat
+                                (insert (nat_of_integer (3 :: Integer))
+                                  bot_set))
+                              (insert
+                                (insert (nat_of_integer (2 :: Integer))
+                                  (insert (nat_of_integer (3 :: Integer))
+                                    bot_set))
                                 (insert
-                                  (insert A_0 (insert A_1 (insert A_2 bot_set)))
+                                  (insert zero_nat
+                                    (insert one_nat
+                                      (insert (nat_of_integer (2 :: Integer))
+bot_set)))
                                   (insert
-                                    (insert A_0
-                                      (insert A_1 (insert A_3 bot_set)))
+                                    (insert zero_nat
+                                      (insert one_nat
+(insert (nat_of_integer (3 :: Integer)) bot_set)))
                                     (insert
-                                      (insert A_0
-(insert A_2 (insert A_3 bot_set)))
+                                      (insert zero_nat
+(insert (nat_of_integer (2 :: Integer))
+  (insert (nat_of_integer (3 :: Integer)) bot_set)))
                                       (insert
-(insert A_1 (insert A_2 (insert A_3 bot_set))) bot_set))))))))))))))))
+(insert one_nat
+  (insert (nat_of_integer (2 :: Integer))
+    (insert (nat_of_integer (3 :: Integer)) bot_set)))
+bot_set))))))))))))))))
         s;
     graphifyci
       [Char True False False False False True True False,
@@ -1367,16 +1380,12 @@ another_ex =
       a b
    };
 
-top_set :: forall a. Set a;
-top_set = Coset [];
-
 bdd_from_sc ::
-  forall a.
-    (Finite a) => (a -> Nat) ->
-                    Set (Set a) ->
-                      Bddi_ext () -> Heap.ST Heap.RealWorld (Nat, Bddi_ext ());
-bdd_from_sc m k =
-  bdd_from_sc_list (nat_list_from_vertex m top_set) (nat_list_from_sc m k);
+  Set (Set Nat) ->
+    Nat -> Bddi_ext () -> Heap.ST Heap.RealWorld (Nat, Bddi_ext ());
+bdd_from_sc k n =
+  bdd_from_sc_list (nat_list_from_vertex (Set (upt zero_nat n)))
+    (nat_list_from_sc k);
 
 one_another_ex :: Heap.ST Heap.RealWorld [Char];
 one_another_ex =
@@ -1386,26 +1395,43 @@ one_another_ex =
       bdd_from_sc_list
         [zero_nat, one_nat, nat_of_integer (2 :: Integer),
           nat_of_integer (3 :: Integer)]
-        (nat_list_from_sc nat_from_finite4
+        (nat_list_from_sc
           (insert bot_set
-            (insert (insert A_0 bot_set)
-              (insert (insert A_1 bot_set)
-                (insert (insert A_2 bot_set)
-                  (insert (insert A_3 bot_set)
-                    (insert (insert A_0 (insert A_1 bot_set))
-                      (insert (insert A_0 (insert A_2 bot_set))
-                        (insert (insert A_0 (insert A_3 bot_set))
-                          (insert (insert A_1 (insert A_2 bot_set))
-                            (insert (insert A_1 (insert A_3 bot_set))
-                              (insert (insert A_2 (insert A_3 bot_set))
+            (insert (insert zero_nat bot_set)
+              (insert (insert one_nat bot_set)
+                (insert (insert (nat_of_integer (2 :: Integer)) bot_set)
+                  (insert (insert (nat_of_integer (3 :: Integer)) bot_set)
+                    (insert (insert zero_nat (insert one_nat bot_set))
+                      (insert
+                        (insert zero_nat
+                          (insert (nat_of_integer (2 :: Integer)) bot_set))
+                        (insert
+                          (insert zero_nat
+                            (insert (nat_of_integer (3 :: Integer)) bot_set))
+                          (insert
+                            (insert one_nat
+                              (insert (nat_of_integer (2 :: Integer)) bot_set))
+                            (insert
+                              (insert one_nat
+                                (insert (nat_of_integer (3 :: Integer))
+                                  bot_set))
+                              (insert
+                                (insert (nat_of_integer (2 :: Integer))
+                                  (insert (nat_of_integer (3 :: Integer))
+                                    bot_set))
                                 (insert
-                                  (insert A_0 (insert A_1 (insert A_2 bot_set)))
+                                  (insert zero_nat
+                                    (insert one_nat
+                                      (insert (nat_of_integer (2 :: Integer))
+bot_set)))
                                   (insert
-                                    (insert A_0
-                                      (insert A_1 (insert A_3 bot_set)))
+                                    (insert zero_nat
+                                      (insert one_nat
+(insert (nat_of_integer (3 :: Integer)) bot_set)))
                                     (insert
-                                      (insert A_1
-(insert A_2 (insert A_3 bot_set)))
+                                      (insert one_nat
+(insert (nat_of_integer (2 :: Integer))
+  (insert (nat_of_integer (3 :: Integer)) bot_set)))
                                       bot_set)))))))))))))))
         s;
     graphifyci

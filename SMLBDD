@@ -77,14 +77,10 @@ structure IBDD : sig
   type num
   type 'a set
   type char
-  type finite_mod_4
-  type 'a finite
   type 'a bddi_ext
   val ex_2_3 : (unit -> (char list))
   val bdd_from_sc :
-    'a finite ->
-      ('a -> nat) ->
-        'a set set -> unit bddi_ext -> (unit -> (nat * unit bddi_ext))
+    nat set set -> nat -> unit bddi_ext -> (unit -> (nat * unit bddi_ext))
 end = struct
 
 datatype nat = Nat of IntInf.int;
@@ -296,35 +292,6 @@ fun hashable_prod A_ B_ =
     def_hashmap_size = def_hashmap_size_prod A_ B_}
   : ('a * 'b) hashable;
 
-datatype finite_mod_4 = A_0 | A_1 | A_2 | A_3;
-
-fun equal_finite_mod_4a A_2 A_3 = false
-  | equal_finite_mod_4a A_3 A_2 = false
-  | equal_finite_mod_4a A_1 A_3 = false
-  | equal_finite_mod_4a A_3 A_1 = false
-  | equal_finite_mod_4a A_1 A_2 = false
-  | equal_finite_mod_4a A_2 A_1 = false
-  | equal_finite_mod_4a A_0 A_3 = false
-  | equal_finite_mod_4a A_3 A_0 = false
-  | equal_finite_mod_4a A_0 A_2 = false
-  | equal_finite_mod_4a A_2 A_0 = false
-  | equal_finite_mod_4a A_0 A_1 = false
-  | equal_finite_mod_4a A_1 A_0 = false
-  | equal_finite_mod_4a A_3 A_3 = true
-  | equal_finite_mod_4a A_2 A_2 = true
-  | equal_finite_mod_4a A_1 A_1 = true
-  | equal_finite_mod_4a A_0 A_0 = true;
-
-val equal_finite_mod_4 = {equal = equal_finite_mod_4a} : finite_mod_4 equal;
-
-type 'a finite = {countable_finite : 'a countable};
-val countable_finite = #countable_finite : 'a finite -> 'a countable;
-
-val countable_finite_mod_4 = {} : finite_mod_4 countable;
-
-val finite_finite_mod_4 = {countable_finite = countable_finite_mod_4} :
-  finite_mod_4 finite;
-
 datatype 'a linorder_list = LinorderList of 'a list;
 
 fun equal_linorder_lista (A1_, A2_) (LinorderList x) (LinorderList ya) =
@@ -396,6 +363,8 @@ fun fold f (x :: xs) s = fold f xs (f x s)
   | fold f [] s = s;
 
 fun rev xs = fold (fn a => fn b => a :: b) xs [];
+
+fun upt i j = (if less_nat i j then i :: upt (suc i) j else []);
 
 fun len A_ a =
   (fn f_ => fn () => f_ (((fn () => IntInf.fromInt (Array.length a))) ()) ())
@@ -772,34 +741,35 @@ fun inserta A_ x xs = (if membera A_ xs x then xs else x :: xs);
 fun insert A_ x (Coset xs) = Coset (removeAll A_ x xs)
   | insert A_ x (Set xs) = Set (inserta A_ x xs);
 
-val sc_threshold_2_3 : finite_mod_4 set set =
-  insert (equal_set equal_finite_mod_4) bot_set
-    (insert (equal_set equal_finite_mod_4)
-      (insert equal_finite_mod_4 A_0 bot_set)
-      (insert (equal_set equal_finite_mod_4)
-        (insert equal_finite_mod_4 A_1 bot_set)
-        (insert (equal_set equal_finite_mod_4)
-          (insert equal_finite_mod_4 A_2 bot_set)
-          (insert (equal_set equal_finite_mod_4)
-            (insert equal_finite_mod_4 A_3 bot_set)
-            (insert (equal_set equal_finite_mod_4)
-              (insert equal_finite_mod_4 A_0
-                (insert equal_finite_mod_4 A_1 bot_set))
-              (insert (equal_set equal_finite_mod_4)
-                (insert equal_finite_mod_4 A_0
-                  (insert equal_finite_mod_4 A_2 bot_set))
-                (insert (equal_set equal_finite_mod_4)
-                  (insert equal_finite_mod_4 A_0
-                    (insert equal_finite_mod_4 A_3 bot_set))
-                  (insert (equal_set equal_finite_mod_4)
-                    (insert equal_finite_mod_4 A_1
-                      (insert equal_finite_mod_4 A_2 bot_set))
-                    (insert (equal_set equal_finite_mod_4)
-                      (insert equal_finite_mod_4 A_1
-                        (insert equal_finite_mod_4 A_3 bot_set))
-                      (insert (equal_set equal_finite_mod_4)
-                        (insert equal_finite_mod_4 A_2
-                          (insert equal_finite_mod_4 A_3 bot_set))
+val sc_threshold_2_3 : nat set set =
+  insert (equal_set equal_nat) bot_set
+    (insert (equal_set equal_nat) (insert equal_nat zero_nata bot_set)
+      (insert (equal_set equal_nat) (insert equal_nat one_nat bot_set)
+        (insert (equal_set equal_nat)
+          (insert equal_nat (nat_of_integer (2 : IntInf.int)) bot_set)
+          (insert (equal_set equal_nat)
+            (insert equal_nat (nat_of_integer (3 : IntInf.int)) bot_set)
+            (insert (equal_set equal_nat)
+              (insert equal_nat zero_nata (insert equal_nat one_nat bot_set))
+              (insert (equal_set equal_nat)
+                (insert equal_nat zero_nata
+                  (insert equal_nat (nat_of_integer (2 : IntInf.int)) bot_set))
+                (insert (equal_set equal_nat)
+                  (insert equal_nat zero_nata
+                    (insert equal_nat (nat_of_integer (3 : IntInf.int))
+                      bot_set))
+                  (insert (equal_set equal_nat)
+                    (insert equal_nat one_nat
+                      (insert equal_nat (nat_of_integer (2 : IntInf.int))
+                        bot_set))
+                    (insert (equal_set equal_nat)
+                      (insert equal_nat one_nat
+                        (insert equal_nat (nat_of_integer (3 : IntInf.int))
+                          bot_set))
+                      (insert (equal_set equal_nat)
+                        (insert equal_nat (nat_of_integer (2 : IntInf.int))
+                          (insert equal_nat (nat_of_integer (3 : IntInf.int))
+                            bot_set))
                         bot_set))))))))));
 
 fun gen_length n (x :: xs) = gen_length (suc n) xs
@@ -852,17 +822,11 @@ fun sorted_list_of_list_set (A1_, A2_) l =
       (equal_linorder_list (A1_, A2_), linorder_linorder_list (A1_, A2_))
       (image LinorderList l));
 
-fun nat_list_from_vertex A_ f v =
-  sorted_list_of_set (equal_nat, linorder_nat) (image f v);
+fun nat_list_from_vertex (A1_, A2_) v = sorted_list_of_set (A1_, A2_) v;
 
-fun nat_list_from_sc A_ f k =
-  sorted_list_of_list_set (equal_nat, linorder_nat)
-    (image (nat_list_from_vertex A_ f) k);
-
-fun nat_from_finite4 A_0 = zero_nata
-  | nat_from_finite4 A_1 = one_nat
-  | nat_from_finite4 A_2 = nat_of_integer (2 : IntInf.int)
-  | nat_from_finite4 A_3 = nat_of_integer (3 : IntInf.int);
+fun nat_list_from_sc (A1_, A2_) k =
+  sorted_list_of_list_set (A1_, A2_)
+    (image (nat_list_from_vertex (A1_, A2_)) k);
 
 fun getentryi (Pointermap_impl_ext (entriesi, getentryi, more)) = getentryi;
 
@@ -1240,9 +1204,7 @@ val ex_2_3 : (unit -> (char list)) =
         ((bdd_from_sc_list
            [zero_nata, one_nat, nat_of_integer (2 : IntInf.int),
              nat_of_integer (3 : IntInf.int)]
-           (nat_list_from_sc finite_finite_mod_4 nat_from_finite4
-             sc_threshold_2_3)
-           s)
+           (nat_list_from_sc (equal_nat, linorder_nat) sc_threshold_2_3) s)
         ()) ())
         (fn (a, b) =>
           graphifyci
@@ -1267,10 +1229,9 @@ val ex_2_3 : (unit -> (char list)) =
               Chara (true, false, true, false, false, true, true, false)]
             a b));
 
-val top_set : 'a set = Coset [];
-
-fun bdd_from_sc A_ m k =
-  bdd_from_sc_list (nat_list_from_vertex A_ m top_set)
-    (nat_list_from_sc A_ m k);
+fun bdd_from_sc k n =
+  bdd_from_sc_list
+    (nat_list_from_vertex (equal_nat, linorder_nat) (Set (upt zero_nata n)))
+    (nat_list_from_sc (equal_nat, linorder_nat) k);
 
 end; (*struct IBDD*)

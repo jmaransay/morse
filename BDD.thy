@@ -32,21 +32,26 @@ definition boolfunc_from_sc :: "nat => nat set set \<Rightarrow> nat boolfunc"
 
 definition "sc_threshold_2_3 \<equiv> {{},{0::nat},{1},{2},{3},{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}}"
 
-lemma "bf_from_sc sc_threshold_2_3 = bool_fun_threshold_2_3"
+(*lemma "bf_from_sc sc_threshold_2_3 = bool_fun_threshold_2_3"
   unfolding sc_threshold_2_3_def
+  using simplicial_complex.simplicial_complex_induced_by_monotone_boolean_function_4_bool_fun_threshold_2_3
   unfolding bf_from_sc_def
-  unfolding bool_fun_threshold_2_3_def 
-  unfolding count_true_def
+  unfolding bool_fun_threshold_2_3_def
+  unfolding count_true_def 
+  unfolding simplicial_complex_induced_by_monotone_boolean_function_def try
   apply auto
+  apply (rule ext)
+  using card_boolean_function
+  try apply auto
   oops (* nyeah, not gonna repeat that one *)
-
+*)
 lemma hlp1: "{i. i < 4 \<and> \<not> (f(0 := a0, 1 := a1, 2 := a2, 3 := a3)) i} =
   (if a0 then {} else {0::nat})
 \<union> (if a1 then {} else {1})
 \<union> (if a2 then {} else {2})
-\<union> (if a3 then {} else {3})
-" by auto
-  
+\<union> (if a3 then {} else {3})" 
+  by auto
+
 lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a (0:=False, 1:=False, 2:=False, 3:=False)) = False"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def
   apply simp
@@ -102,7 +107,7 @@ lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=False, 3:=T
 lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=True , 3:=False)) = True " 
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=True , 3:=True )) = True " 
+lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=True , 3:=True )) = True "
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
 lemma "boolfunc_from_sc n UNIV = bf_True"
@@ -128,9 +133,9 @@ lemma boolfunc_from_vertex_list_Empty:
   "boolfunc_from_vertex_list [] lUNIV = Ball (set lUNIV)"
   by(induction lUNIV) (auto simp add: bf_lit_def)
 
-lemma "set lUNIV = UNIV \<Longrightarrow> boolfunc_from_vertex_list a lUNIV = (\<lambda>p. {i. \<not> p i} \<subseteq> set a)"
+(*lemma "set lUNIV = UNIV \<Longrightarrow> boolfunc_from_vertex_list a lUNIV = (\<lambda>p. {i. \<not> p i} \<subseteq> set a)"
   apply(induction "card (set lUNIV - set a)" arbitrary: a lUNIV)
-  oops
+  oops*)
   (* There is probably some neat way of proving this through an opposite-direction induction, but I'm not able to find an induction rule for it *)
 (* so I just prove it through straightforward induction and some helper lemmas *)
 
@@ -363,23 +368,6 @@ definition "one_another_ex \<equiv> do {
   graphifyci ''one_another_ex'' ex s
 }"
 
-definition nat_boolfunc :: "('a \<Rightarrow> nat) \<Rightarrow> 'a boolfunc \<Rightarrow> nat boolfunc" where
-  "nat_boolfunc m f \<equiv> (\<lambda>v. f (\<lambda>a. v (m a)))"
-
-lemma nat_boolfunc_id: "nat_boolfunc id f = f" by(simp add: nat_boolfunc_def)
-
-lemma nat_boolfunc_ite: "nat_boolfunc m (bf_ite i t e) = bf_ite (nat_boolfunc m i) (nat_boolfunc m t) (nat_boolfunc m e)"
-  by(simp add: nat_boolfunc_def)
-
-lemma nat_boolfunc_consts[simp]: "nat_boolfunc m bf_True = bf_True" "nat_boolfunc m bf_False = bf_False"
-  unfolding nat_boolfunc_def by argo+
-
-lemma nat_boolfunc_misc:
-  "nat_boolfunc m (bf_and a b) = bf_and (nat_boolfunc m a) (nat_boolfunc m b)"
-  "nat_boolfunc m (bf_or a b) = bf_or (nat_boolfunc m a) (nat_boolfunc m b)"
-  by(simp_all only: nat_boolfunc_ite bf_or_def bf_and_def nat_boolfunc_consts) (* guess my simp setup is bad... *)
-
-lemma nat_boolfunc_lit: "nat_boolfunc m (bf_lit i) = bf_lit (m i)" unfolding nat_boolfunc_def bf_lit_def ..
 
 lemma bf_ite_direct[simp]: "bf_ite i bf_True bf_False = i" by simp
 
@@ -392,7 +380,7 @@ lemma bdd_from_vertex_list[sep_heap_rules]:
     bdd_from_vertex_list n l s
   <\<lambda>(r,s'). bdd_relator (insert (boolfunc_from_vertex_list n l, r) rp) s'>"
 proof(induction l arbitrary: rp s)
-  case Nil then show ?case by(sep_auto simp add: nat_boolfunc_def)
+  case Nil then show ?case by (sep_auto)
 next
   case (Cons a l)
   show ?case proof(cases "a \<in> set n")
@@ -410,7 +398,7 @@ next
       apply(simp only: bdd_from_vertex_list.simps list.map boolfunc_from_vertex_list.simps False if_False)
       apply(sep_auto simp only:)
        apply(rule Cons.IH)
-      apply(sep_auto simp del: bf_ite_def bf_and_def simp add: nat_boolfunc_lit nat_boolfunc_misc)
+      apply(sep_auto simp del: bf_ite_def bf_and_def)
     done
   qed
 qed
@@ -424,7 +412,7 @@ proof(induction K arbitrary: rp s)
   then show ?case by sep_auto
 next
   case (Cons a K)
-  show ?case by(sep_auto heap add: Cons.IH simp del: bf_ite_def bf_or_def simp add: nat_boolfunc_misc)
+  show ?case by(sep_auto heap add: Cons.IH simp del: bf_ite_def bf_or_def)
 qed
 
 lemma map_map_idI: "(\<And>x. x \<in> \<Union>(set ` set l) \<Longrightarrow> f x = x) \<Longrightarrow> map (map f) l = l"

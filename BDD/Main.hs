@@ -11,6 +11,7 @@ main = do
  putStr =<< (liftM (liftM charTo) . stToIO $ ex_true)
  putStr =<< (liftM (liftM charTo) . stToIO $ ex_2_3)
  putStr =<< (liftM (liftM charTo) . stToIO $ another_ex)
- putStr =<< (liftM (liftM charTo) . stToIO $ one_another_ex)
- {- writeFile "ex_2_3" (liftM (liftM charTo) . stToIO $ ex_2_3) -}
- return ()
+ putStr =<< (liftM (liftM charTo) . stToIO $ one_another_ex) 
+{-return()
+main=writeFile "ex_2_3" (liftM (liftM charTo) . ex_2_3)
+main=writeFile "ex_2_3" (liftM (liftM charTo) . stToIO $ ex_2_3)-}
