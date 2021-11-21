@@ -29,6 +29,20 @@ notation finite_mod_4.a\<^sub>1  ("a\<^sub>1")
 notation finite_mod_4.a\<^sub>2  ("a\<^sub>2")
 notation finite_mod_4.a\<^sub>3  ("a\<^sub>3")
 
+primrec nat_from_finite4 :: "finite_mod_4 \<Rightarrow> nat" where
+"nat_from_finite4 a\<^sub>0 = 0" |
+"nat_from_finite4 a\<^sub>1 = 1" |
+"nat_from_finite4 a\<^sub>2 = 2" |
+"nat_from_finite4 a\<^sub>3 = 3"
+
+lemma inj_nat_from_finite4: "inj nat_from_finite4"
+  apply(rule injI)
+  subgoal for x y
+    apply(cases x; cases y)
+                   apply simp_all
+    done
+  done
+
 definition "Rep = (\<lambda>i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> 0
                                                 | a\<^sub>1 \<Rightarrow> 1
                                                 | a\<^sub>2 \<Rightarrow> 2

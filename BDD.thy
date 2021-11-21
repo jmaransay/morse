@@ -8,7 +8,6 @@ begin
 
 section\<open>Relation between boolean functions over vectors and boolfunc as in ROBDD\<close>
 
-
 definition vec_to_boolfunc :: "nat => (bool vec => bool) => nat boolfunc"
   where "vec_to_boolfunc n f = (\<lambda>p. f (vec n p))"
 
@@ -32,19 +31,6 @@ definition boolfunc_from_sc :: "nat => nat set set \<Rightarrow> nat boolfunc"
 
 definition "sc_threshold_2_3 \<equiv> {{},{0::nat},{1},{2},{3},{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}}"
 
-(*lemma "bf_from_sc sc_threshold_2_3 = bool_fun_threshold_2_3"
-  unfolding sc_threshold_2_3_def
-  using simplicial_complex.simplicial_complex_induced_by_monotone_boolean_function_4_bool_fun_threshold_2_3
-  unfolding bf_from_sc_def
-  unfolding bool_fun_threshold_2_3_def
-  unfolding count_true_def 
-  unfolding simplicial_complex_induced_by_monotone_boolean_function_def try
-  apply auto
-  apply (rule ext)
-  using card_boolean_function
-  try apply auto
-  oops (* nyeah, not gonna repeat that one *)
-*)
 lemma hlp1: "{i. i < 4 \<and> \<not> (f(0 := a0, 1 := a1, 2 := a2, 3 := a3)) i} =
   (if a0 then {} else {0::nat})
 \<union> (if a1 then {} else {1})
@@ -52,63 +38,74 @@ lemma hlp1: "{i. i < 4 \<and> \<not> (f(0 := a0, 1 := a1, 2 := a2, 3 := a3)) i} 
 \<union> (if a3 then {} else {3})" 
   by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a (0:=False, 1:=False, 2:=False, 3:=False)) = False"
+lemma sc_threshold_2_3_ffff: "boolfunc_from_sc 4 sc_threshold_2_3 (a (0:=False,1:=False,2:=False,3:=False)) = False"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def
-  apply simp
-  by (smt (z3) Suc_eq_numeral insert_absorb insert_commute insert_ident insert_not_empty numeral_2_eq_2 singleton_inject zero_neq_numeral)
+  by simp (smt (z3) Suc_eq_numeral insert_absorb insert_commute insert_ident insert_not_empty numeral_2_eq_2 singleton_inject zero_neq_numeral)
   
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=False, 2:=False, 3:=True )) = False"
-  unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def
-  apply simp  
-  by (smt (z3) Suc_eq_numeral insertI1 insert_absorb insert_commute insert_ident insert_not_empty numeral_2_eq_2 singleton_inject zero_neq_numeral)
+lemma sc_threshold_2_3_ffft: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False,1:=False,2:=False,3:=True)) = False"
+  unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def  
+  by simp (smt (z3) Suc_eq_numeral insertI1 insert_absorb insert_commute insert_ident insert_not_empty numeral_2_eq_2 singleton_inject zero_neq_numeral)
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=False, 2:=True, 3:=False)) = False"
+lemma sc_threshold_2_3_fftf: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False,1:=False,2:=True,3:=False)) = False"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def
-  apply simp
-  by (smt (z3) insertI1 insert_iff numeral_1_eq_Suc_0 numeral_2_eq_2 numeral_eq_iff semiring_norm(86) singleton_iff zero_neq_numeral)
+  by simp (smt (z3) insertI1 insert_iff numeral_1_eq_Suc_0 numeral_2_eq_2 numeral_eq_iff semiring_norm(86) singleton_iff zero_neq_numeral)
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=True , 2:=False, 3:=False)) = False" 
-  unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def 
-  apply simp
-  by (smt (verit, ccfv_SIG) insert_absorb insert_iff insert_not_empty numeral_eq_iff semiring_norm(89) zero_neq_numeral)
+lemma sc_threshold_2_3_ftff: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False,1:=True,2:=False,3:=False)) = False"
+  unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def
+  by simp (smt (verit, ccfv_SIG) insert_absorb insert_iff insert_not_empty numeral_eq_iff semiring_norm(89) zero_neq_numeral)
  
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=False, 2:=False, 3:=False)) = False"
+lemma sc_threshold_2_3_tfff: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=False, 2:=False, 3:=False)) = False"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def
-  apply simp
-  by (smt (z3) eval_nat_numeral(3) insertI1 insert_commute insert_iff n_not_Suc_n numeral_1_eq_Suc_0 numeral_2_eq_2 numeral_eq_iff singletonD verit_eq_simplify(12))
+  by simp (smt (z3) eval_nat_numeral(3) insertI1 insert_commute insert_iff n_not_Suc_n numeral_1_eq_Suc_0 numeral_2_eq_2 numeral_eq_iff singletonD verit_eq_simplify(12))
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=False, 2:=True, 3:=True )) = True"
+lemma sc_threshold_2_3_fftt: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=False, 2:=True, 3:=True )) = True"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=True , 2:=False, 3:=True )) = True "
+lemma sc_threshold_2_3_ftft: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=True , 2:=False, 3:=True )) = True"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=True , 2:=True , 3:=False)) = True "
+lemma sc_threshold_2_3_fttf: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=True , 2:=True , 3:=False)) = True"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=True , 2:=True , 3:=True )) = True "
+lemma sc_threshold_2_3_fttt: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False, 1:=True , 2:=True , 3:=True )) = True"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=False, 2:=False, 3:=True )) = True "
+lemma sc_threshold_2_3_tfft: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=False, 2:=False, 3:=True )) = True"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=False, 2:=True , 3:=False)) = True " 
+lemma sc_threshold_2_3_tftf: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=False, 2:=True , 3:=False)) = True" 
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=False, 2:=True , 3:=True )) = True " 
+lemma sc_threshold_2_3_tftt: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=False, 2:=True , 3:=True )) = True"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=False, 3:=False)) = True " 
+lemma sc_threshold_2_3_ttff: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=False, 3:=False)) = True" 
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=False, 3:=True )) = True " 
+lemma sc_threshold_2_3_ttft: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=False, 3:=True )) = True" 
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=True , 3:=False)) = True " 
+lemma sc_threshold_2_3_tttf: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=True , 3:=False)) = True "
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
 
-lemma "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=True , 3:=True )) = True "
+lemma sc_threshold_2_3_tttt: "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True , 1:=True , 2:=True , 3:=True )) = True "
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def by auto
+
+(*lemma "bf_from_sc sc_threshold_2_3 = bool_fun_threshold_2_3"
+  unfolding sc_threshold_2_3_def
+  unfolding bool_fun_threshold_2_3_def
+  unfolding bf_from_sc_def
+  apply auto apply (rule ext)
+  unfolding count_true_def
+  using simplicial_complex.simplicial_complex_induced_by_monotone_boolean_function_4_bool_fun_threshold_2_3
+  using sc_threshold_2_3_ttft  
+  unfolding simplicial_complex_induced_by_monotone_boolean_function_def try
+  apply auto
+  apply (rule ext)
+  using card_boolean_function
+  try apply auto
+  oops (* nyeah, not gonna repeat that one *)
+*)
 
 lemma "boolfunc_from_sc n UNIV = bf_True"
   unfolding boolfunc_from_sc_def by simp
@@ -287,25 +284,9 @@ primrec bdd_from_sc_list :: "nat list \<Rightarrow> nat list list \<Rightarrow> 
   orci L l s
 }"
 
-primrec nat_from_finite4 :: "finite_mod_4 \<Rightarrow> nat" where
-"nat_from_finite4 a\<^sub>0 = 0" |
-"nat_from_finite4 a\<^sub>1 = 1" |
-"nat_from_finite4 a\<^sub>2 = 2" |
-"nat_from_finite4 a\<^sub>3 = 3"
-
-lemma inj_nat_from_finite4: "inj nat_from_finite4"
-  apply(rule injI)
-  subgoal for x y
-    apply(cases x; cases y)
-                   apply simp_all
-    done
-  done
-
 definition "nat_list_from_vertex v \<equiv> sorted_list_of_set (v)"
-definition "nat_list_from_sc K \<equiv> sorted_list_of_list_set (nat_list_from_vertex ` K)"
 
-(*definition "nat_list_from_vertex (f :: ('a :: finite) \<Rightarrow> nat) v \<equiv> sorted_list_of_set (f ` v)"
-definition "nat_list_from_sc (f :: ('a :: finite) \<Rightarrow> nat) K \<equiv> sorted_list_of_list_set (nat_list_from_vertex f ` K)"*)
+definition "nat_list_from_sc K \<equiv> sorted_list_of_list_set (nat_list_from_vertex ` K)"
 
 definition "ex_2_3 \<equiv> do {
   s \<leftarrow> emptyci;
@@ -418,7 +399,6 @@ qed
 lemma map_map_idI: "(\<And>x. x \<in> \<Union>(set ` set l) \<Longrightarrow> f x = x) \<Longrightarrow> map (map f) l = l"
   by(induct l; simp; meson map_idI)
 
-
 definition "bdd_from_sc K n \<equiv> bdd_from_sc_list (nat_list_from_vertex {..<n}) (nat_list_from_sc K)"
 
 theorem bdd_from_sc:
@@ -451,9 +431,6 @@ proof -
     unfolding Klist_set
     unfolding boolfunc_from_sc_alt by simp
 qed
-
-(*code_printing 
-  constant blit' \<rightharpoonup> (Haskell) "map Heap.writeArray "*)
 
 code_identifier
   code_module Product_Type \<rightharpoonup> (SML) IBDD 

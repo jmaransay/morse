@@ -2,7 +2,7 @@
 theory Simplicial_complex
   imports 
     Boolean_functions
-    Finite_mod_type
+    (*Finite_mod_type*)
 begin
 
 section\<open>Simplicial Complex\<close>
@@ -145,21 +145,21 @@ proof (intro subsetI, unfold ceros_of_boolean_input_def, intro CollectI, rule co
   assume "x \<in> {x. x < dim_vec s \<and> vec_index s x = False}" 
   hence xl: "x < dim_vec s" and nr: "vec_index s x = False" by simp_all
   show "vec_index r x = False"
-    using r_le_s nr xl unfolding Matrix.less_eq_vec_def
+    using r_le_s nr xl unfolding less_eq_vec_def
     by auto
   show "x < dim_vec r"
-  using r_le_s xl unfolding Matrix.less_eq_vec_def
+  using r_le_s xl unfolding less_eq_vec_def
     by auto
 qed
 
 text\<open>The indexes of Boolean inputs demand the underlying type to be a @{term mod_type},
 that indeed should be a finite type, but it is not proven in the library\<close>
 
-definition ceros_of_boolean_input_int :: "(bool Matrix.vec) => int set"
+definition ceros_of_boolean_input_int :: "(bool vec) => int set"
   where "ceros_of_boolean_input_int v = image int (ceros_of_boolean_input v)"
 
 lemma ceros_of_boolean_input_int_subset:
-  "ceros_of_boolean_input_int (v::(bool Matrix.vec)) \<subseteq> {0 ..< int (dim_vec v)}"
+  "ceros_of_boolean_input_int (v::(bool vec)) \<subseteq> {0 ..< int (dim_vec v)}"
   unfolding ceros_of_boolean_input_int_def
   unfolding ceros_of_boolean_input_def
   by auto
@@ -191,7 +191,7 @@ definition
   simplicial_complex_induced_by_monotone_boolean_function_int
     :: "(bool vec => bool) => int set set"
   where "simplicial_complex_induced_by_monotone_boolean_function_int f = 
-        {y. \<exists>x. x \<noteq> Matrix.vec (dim_vec x) (\<lambda>x. True) \<and> f x = True \<and> ceros_of_boolean_input_int x = y}"
+        {y. \<exists>x. x \<noteq> vec (dim_vec x) (\<lambda>x. True) \<and> f x = True \<and> ceros_of_boolean_input_int x = y}"
 
 (*definition
   simplicial_complex_induced_by_monotone_boolean_function 
@@ -217,7 +217,7 @@ lemma
   by force
 
 corollary
-  "simplicial_complex_induced_by_monotone_boolean_function n (v::bool Matrix.vec => bool)
+  "simplicial_complex_induced_by_monotone_boolean_function n (v::bool vec => bool)
     \<subseteq> Pow ((UNIV::nat set))" by simp
 
 (*lemma empty_set_not_in_simplicial_complex_induced: 
@@ -252,7 +252,7 @@ lemma
   shows "simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function n f)"
   unfolding simplicial_complex_def
 proof (rule, unfold simplicial_complex_induced_by_monotone_boolean_function_def, safe)
-    fix \<sigma> :: "nat set" and x :: "bool Matrix.vec"
+    fix \<sigma> :: "nat set" and x :: "bool vec"
     assume fx: "f x" and dim_vec_x: "n = dim_vec x"
     show "ceros_of_boolean_input x \<in> simplicial_complex.simplices (dim_vec x)"
       using ceros_of_boolean_input_def dim_vec_x simplices_def by force
@@ -260,7 +260,7 @@ proof (rule, unfold simplicial_complex_induced_by_monotone_boolean_function_def,
     fix \<sigma> :: "nat set" and x :: "bool vec" and \<tau> :: "nat set"
     assume fx: "f x" and dim_vec_x: "n = dim_vec x" and tau_def: "\<tau> \<subseteq> ceros_of_boolean_input x"
     show "\<exists>xb. dim_vec xb = dim_vec x \<and> f xb \<and> ceros_of_boolean_input xb = \<tau>"
-    proof (rule exI [of _ "Matrix.vec n (\<lambda>i. if i \<in> \<tau> then False else True)"], intro conjI)
+    proof (rule exI [of _ "vec n (\<lambda>i. if i \<in> \<tau> then False else True)"], intro conjI)
      show "dim_vec (vec n (\<lambda>i. if i \<in> \<tau> then False else True)) = dim_vec x"
       unfolding dim_vec using dim_vec_x .
      from mon have mono: "mono_on f (carrier_vec n)" 
@@ -324,8 +324,7 @@ lemma foo1:
   and foo3: "2 \<in> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
   and foo4: "3 \<in> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
   unfolding ceros_of_boolean_input_int_def
-  unfolding ceros_of_boolean_input_def
-  unfolding Rep_finite_mod_4_def by simp_all
+  unfolding ceros_of_boolean_input_def by simp_all
 
 (*lemma foo1:
   "a\<^sub>0 \<notin> ceros_of_boolean_input (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
@@ -346,7 +345,7 @@ lemma foo1:
 *)
 
 lemma "{2,3} \<subseteq> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
-  using foo1 foo2 foo3 foo4 UNIV_finite_mod_4 by simp
+  using foo1 foo2 foo3 foo4 by simp
 
 lemma "bool_fun_threshold_2_3 (vec 4 (\<lambda>i. if i = 3 then True else False)) = False"
   unfolding bool_fun_threshold_2_3_def 
@@ -359,7 +358,7 @@ lemma "bool_fun_threshold_2_3 (vec 4 (\<lambda>i. if i = 3 then True else False)
   unfolding comp_fun_commute.fold_set_fold_remdups [OF comp_fun_commute_lambda]
   by simp
 
-lemma "bool_fun_threshold_2_3 (Matrix.vec 4 (\<lambda>i. if i = 0 then False else True))"
+lemma "bool_fun_threshold_2_3 (vec 4 (\<lambda>i. if i = 0 then False else True))"
   unfolding bool_fun_threshold_2_3_def 
   unfolding count_true_def
   unfolding dim_vec
@@ -378,7 +377,7 @@ lemma
   unfolding simplicial_complex_induced_by_monotone_boolean_function_def
   unfolding bool_fun_threshold_2_3_def
   apply rule
-  apply (rule exI [of _ "Matrix.vec 4 (\<lambda>x. True)"])
+  apply (rule exI [of _ "vec 4 (\<lambda>x. True)"])
   unfolding count_true_def ceros_of_boolean_input_def by auto
 
 lemma singleton_in_simplicial_complex_induced:
@@ -386,10 +385,10 @@ lemma singleton_in_simplicial_complex_induced:
   shows "{x} \<in> simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3"
   (is "?A \<in> simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3")
 proof (unfold simplicial_complex_induced_by_monotone_boolean_function_def, rule,
-      rule exI [of _ "Matrix.vec 4 (\<lambda>i. if i \<in> ?A then False else True)"], 
+      rule exI [of _ "vec 4 (\<lambda>i. if i \<in> ?A then False else True)"], 
       intro conjI)
-  show "dim_vec (Matrix.vec 4 (\<lambda>i. if i \<in> {x} then False else True)) = 4" by simp
-  show "bool_fun_threshold_2_3 (Matrix.vec 4 (\<lambda>i. if i \<in> ?A then False else True))"
+  show "dim_vec (vec 4 (\<lambda>i. if i \<in> {x} then False else True)) = 4" by simp
+  show "bool_fun_threshold_2_3 (vec 4 (\<lambda>i. if i \<in> ?A then False else True))"
     unfolding bool_fun_threshold_2_3_def 
     unfolding count_true_def
     unfolding dim_vec
@@ -399,7 +398,7 @@ proof (unfold simplicial_complex_induced_by_monotone_boolean_function_def, rule,
     unfolding set_list_four
     unfolding comp_fun_commute.fold_set_fold_remdups [OF comp_fun_commute_lambda]
     by simp
-  show "ceros_of_boolean_input (Matrix.vec 4 (\<lambda>i. if i \<in> ?A then False else True)) = ?A"
+  show "ceros_of_boolean_input (vec 4 (\<lambda>i. if i \<in> ?A then False else True)) = ?A"
     unfolding ceros_of_boolean_input_def using x by auto
 qed
 
@@ -408,10 +407,10 @@ lemma pair_in_simplicial_complex_induced:
   shows "{x,y} \<in> simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3"
   (is "?A \<in> simplicial_complex_induced_by_monotone_boolean_function 4 bool_fun_threshold_2_3")
 proof (unfold simplicial_complex_induced_by_monotone_boolean_function_def, rule,
-      rule exI [of _ "Matrix.vec 4 (\<lambda>i. if i \<in> ?A then False else True)"], 
+      rule exI [of _ "vec 4 (\<lambda>i. if i \<in> ?A then False else True)"], 
       intro conjI)
-  show "dim_vec (Matrix.vec 4 (\<lambda>i. if i \<in> {x, y} then False else True)) = 4" by simp
-  show "bool_fun_threshold_2_3 (Matrix.vec 4 (\<lambda>i. if i \<in> ?A then False else True))"
+  show "dim_vec (vec 4 (\<lambda>i. if i \<in> {x, y} then False else True)) = 4" by simp
+  show "bool_fun_threshold_2_3 (vec 4 (\<lambda>i. if i \<in> ?A then False else True))"
     unfolding bool_fun_threshold_2_3_def 
     unfolding count_true_def
     unfolding dim_vec

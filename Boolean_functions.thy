@@ -3,7 +3,7 @@ theory Boolean_functions
   imports 
     Main
     "Jordan_Normal_Form.Matrix"
-    Finite_mod_type
+    (*Finite_mod_type*)
 begin
 
 text\<open>Boolean functions\<close>

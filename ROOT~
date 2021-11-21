@@ -9,12 +9,12 @@ session Morse (AFP) = Sepref_Prereq +
     Bij_betw_simplicial_complex_bool_func
     Binary_operations
     Boolean_functions
-    (*Enum_mod*)
-    Evasive
-    (*Finite_mod_type*)
+    Enum_mod
+    (*Evasive*)
+    Finite_mod_type
     ListLexorder
     MkIfex
-    (*Mod_type*)
+    Mod_type
     Simplicial_complex
   document_files
     "root.tex"

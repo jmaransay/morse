@@ -102,12 +102,12 @@ proof (unfold boolean_functions.monotone_bool_fun_def)
     proof (unfold boolean_function_from_simplicial_complex_def bool_vec_set_from_simplice_set_def,
         rule, rule conjI)
       show "dim_vec s = n"
-        by (metis Matrix.less_eq_vec_def dim_vec r_def r_le_s)
+        by (metis less_eq_vec_def dim_vec r_def r_le_s)
       show "\<exists>k\<in>K. s = bool_vec_from_simplice k"
         proof (rule bexI [of _ "ceros_of_boolean_input s"], unfold bool_vec_from_simplice_def)
           show "ceros_of_boolean_input s \<in> K"
             using simplicial_complex_monotone [OF mon r_in_K ce] .
-          show "s = Matrix.vec n (\<lambda>i. if i \<in> ceros_of_boolean_input s then False else True)"
+          show "s = vec n (\<lambda>i. if i \<in> ceros_of_boolean_input s then False else True)"
             using ce unfolding ceros_of_boolean_input_def  
             using r_le_s
             unfolding less_eq_vec_def
@@ -123,7 +123,7 @@ qed
 lemma shows "(simplicial_complex_induced_by_monotone_boolean_function n) \<in> 
           boolean_functions.monotone_bool_fun_set n \<rightarrow> (simplicial_complex_set::nat set set set)"
 proof
-  fix x::"bool Matrix.vec \<Rightarrow> bool"
+  fix x::"bool vec \<Rightarrow> bool"
   assume x: "x \<in> boolean_functions.monotone_bool_fun_set n"
   show "simplicial_complex_induced_by_monotone_boolean_function n x \<in> simplicial_complex_set"
     using monotone_bool_fun_induces_simplicial_complex [of x] x
@@ -160,7 +160,7 @@ lemma
   shows "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function n f) v = f v"
 proof (intro iffI)
   assume xb: "f v"
-  show "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function n f) v"
+  show bf: "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function n f) v"
   proof -
    have "f v \<and> v = bool_vec_from_simplice (ceros_of_boolean_input v)"
     unfolding ceros_of_boolean_input_def
@@ -180,16 +180,9 @@ next
     unfolding boolean_function_from_simplicial_complex_def
     unfolding bool_vec_set_from_simplice_set_def
     unfolding mem_Collect_eq
-    proof (simp)
-      assume "dim_vec v = n 
-        \<and> (\<exists>k. (\<exists>xa. dim_vec xa = n \<and> f xa \<and> ceros_of_boolean_input xa = k) \<and> v = bool_vec_from_simplice k)"
-      then obtain k and xa where  x: "f xa" and k: "k = ceros_of_boolean_input xa"
-        and v: "v = bool_vec_from_simplice k" and "dim_vec xa = n" by blast
-      then have "xa = v"
-        unfolding ceros_of_boolean_input_def bool_vec_from_simplice_def
-        unfolding dim by auto
-      with x show ?thesis by fast
-  qed
+    using \<open>boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function n f) v\<close> 
+      boolean_function_from_simplicial_complex_def simplicial_complex.bool_vec_set_from_simplice_set_def 
+      simplicial_complex_implies_true by fastforce
 qed
 
 lemma
@@ -209,8 +202,8 @@ proof (intro equalityI)
       unfolding simplicial_complex_induced_by_monotone_boolean_function_def
       unfolding bool_vec_from_simplice_def bool_vec_set_from_simplice_set_def
       using K
-      unfolding simplicial_complex_def simplices_def apply auto
-      by (metis assms bool_vec_from_simplice_def ceros_of_boolean_input_in_set  simplicial_complex_def)
+      unfolding simplicial_complex_def simplices_def
+      by auto (metis assms bool_vec_from_simplice_def ceros_of_boolean_input_in_set  simplicial_complex_def)
   qed
 next
  show "K \<subseteq> simplicial_complex_induced_by_monotone_boolean_function n (boolean_function_from_simplicial_complex K)"

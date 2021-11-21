@@ -27,7 +27,7 @@ lemma
   using ris .
 
 text\<open>Given any Boolean function over an enumerable and linearly ordered type,
-  its ifex representation is ifex_ordered and ifex_minimal.\<close>
+  its ifex representation is @{const ifex_ordered} and @{const ifex_minimal}.\<close>
 
 lemma mk_ifex_boolean_function: 
   fixes f :: "bool vec => bool"
@@ -46,8 +46,8 @@ lemma
   by (smt (verit, best) dim_vec eq_vecI index_vec lessThan_iff)
 
 text\<open>Any Boolean function of a finite dimension 
-  is equal to its ifex representation 
-  by means of mk_ifex.\<close>
+  is equal to its ifex representation
+  by means of @{const mk_ifex}.\<close>
 
 lemma
   mk_ifex_equivalence:
@@ -62,66 +62,65 @@ lemma
 definition bcount_true :: "nat => (nat=> bool) => nat"
   where "bcount_true n f =  (\<Sum>i = 0..<n. if f i then 1 else (0::nat))"
 
-(*definition bcount_true :: "('a => bool) => nat"
-  where "bcount_true f = card {i. f i}"*)
-
 definition boolfunc_threshold_2_3 :: "(nat => bool) => bool"
   where "boolfunc_threshold_2_3 = (\<lambda>v. if 2 \<le> bcount_true 4 v then True else False)"
 
-definition proj_2 :: "(finite_mod_4 => bool) => bool"
-  where "proj_2 = (\<lambda>v. v a\<^sub>2)"
+definition proj_2 :: "(nat => bool) => bool"
+  where "proj_2 = (\<lambda>v. v 2)"
 
-definition proj_2_n3 :: "(finite_mod_4 => bool) => bool"
-  where "proj_2_n3 = (\<lambda>v. v a\<^sub>2 \<and> \<not> v a\<^sub>3)"
+definition proj_2_n3 :: "(nat => bool) => bool"
+  where "proj_2_n3 = (\<lambda>v. v 2 \<and> \<not> v 3)"
 
 fun height :: "'a ifex => nat"
   where "height Trueif = 0"
   | "height Falseif = 0"
   | "height (IF v va vb) = 1 + max (height va) (height vb)"  
 
-value "mk_ifex (boolfunc_threshold_2_3) [0,1,2,3]"
+lemma "height (mk_ifex (boolfunc_threshold_2_3) [0,1,2,3]) = 4"
+  by eval
 
-value "height (mk_ifex (boolfunc_threshold_2_3) [0,1,2,3])"
+lemma "height (mk_ifex (proj_2) [0,1,2,3]) = 1"
+  by eval
 
-value "(mk_ifex (proj_2) [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3])"
+lemma "mk_ifex (proj_2) [0] = Falseif" by eval
 
-value "(mk_ifex (proj_2) [a\<^sub>0])"
+lemma "height (mk_ifex (proj_2) [0]) = 0" by eval
 
-value "(mk_ifex (proj_2) [a\<^sub>3, a\<^sub>2, a\<^sub>1, a\<^sub>0])"
+lemma "mk_ifex (proj_2) [3,2,1,0] = IF 2 Trueif Falseif"
+  by eval
 
-value "(mk_ifex (proj_2) [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3]) = (mk_ifex (proj_2) [a\<^sub>3, a\<^sub>2, a\<^sub>1, a\<^sub>0])"
+lemma "mk_ifex (proj_2) [0,1,2,3] = IF 2 Trueif Falseif"
+  by eval
 
-value "height (mk_ifex (proj_2) [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3])"
+lemma "height (mk_ifex (proj_2) [0,1,2,3]) = 1" by eval
 
-value "(mk_ifex (proj_2_n3) [a\<^sub>3, a\<^sub>2, a\<^sub>1, a\<^sub>0])"
+lemma "mk_ifex (proj_2_n3) [0,1,2,3] = IF 2 (IF 3 Falseif Trueif) Falseif" by eval
 
-value "(mk_ifex (proj_2_n3) enum_class.enum)"
+lemma "mk_ifex (bf_False::nat boolfunc) [0,1,2,3] = Falseif" by eval
 
-value "(mk_ifex (proj_2_n3) [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3]) = (mk_ifex (proj_2_n3) [a\<^sub>3, a\<^sub>2, a\<^sub>1, a\<^sub>0])"
+lemma "height (mk_ifex (bf_False::nat boolfunc) [0,1,2,3]) = 0" by eval
 
-value "height (mk_ifex (proj_2_n3) enum_class.enum)"
+lemma "mk_ifex (bf_True::nat boolfunc) [0,1,2,3] = Trueif" by eval
 
-value "mk_ifex (bf_False) [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3]"
-
-value "height (mk_ifex (bf_False) [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3])"
-
-value "mk_ifex (bf_True) [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3]"
-
-value "height (mk_ifex (bf_True) [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3])"
+lemma "height (mk_ifex (bf_True::nat boolfunc) [0,1,2,3]) = 0" by eval
 
 text\<open>Now we introduce the definition of evasive boolean function. 
-  It is based on the height of the ifex expression of the function\<close>
+  It is based on the height of the ifex expression of the given function\<close>
 
 definition evasive :: "nat => ((nat => bool) => bool) => bool"
   where "evasive n f \<equiv> (height (mk_ifex f [0..n])) = n"
 
-lemma "height (mk_ifex (boolfunc_threshold_2_3) [a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub>3]) = 4"
-  sorry
+lemma "height (mk_ifex (boolfunc_threshold_2_3) [0,1,2,3]) = 4"
+  by eval
 
-lemma "evasive boolfunc_threshold_2_3"
-  sorry
+corollary "evasive 4 boolfunc_threshold_2_3" by eval
 
-lemma "\<not> evasive proj_2"
-  sorry 
+lemma "\<not> evasive 4 proj_2" by eval
+
+lemma "\<not> evasive 4 proj_2_n3" by eval
+
+lemma "\<not> evasive 4 bf_True" by eval
+
+lemma "\<not> evasive 4 bf_False" by eval
 
 end

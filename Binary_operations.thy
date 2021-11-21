@@ -141,13 +141,8 @@ lemma snd_es_simplice:
 definition set_ast :: "(nat set) set \<Rightarrow> (nat set) set \<Rightarrow> ((nat set*nat set) set)"
   where "set_ast A B \<equiv> {c. \<exists>a\<in>A. \<exists>b\<in>B. c = (a,b)}"
 
-(*definition set_ast :: "(nat set) \<Rightarrow> (nat set) \<Rightarrow> ((nat*nat) set)"
-  where "set_ast A B \<equiv> {c. \<exists>a\<in>A. \<exists>b\<in>B. c = (a,b)}"*)
-
 definition set_fst :: "(nat*nat) set \<Rightarrow> nat set"
   where "set_fst AB = {a. \<exists>ab\<in>AB. a = fst ab}"
-
-value "set_fst {a, b}"
 
 lemma set_fst_simp [simp]:
   assumes "y \<noteq> {}"
@@ -192,8 +187,7 @@ lemma
   unfolding simplicial_complex_induced_by_monotone_boolean_function_ast_def
   unfolding bool_fun_ast_def
   unfolding ceros_of_boolean_input_def
-  apply auto
-  by (smt (verit, ccfv_threshold) bool_fun_ast_def case_prod_conv dim_vec index_vec vec_eq_iff)
+  by auto (smt (verit, ccfv_threshold) bool_fun_ast_def case_prod_conv dim_vec index_vec vec_eq_iff)
 
 lemma eq_ast:
 "simplicial_complex_induced_by_monotone_boolean_function_ast (n, m) (bool_fun_ast (n, m) f)
