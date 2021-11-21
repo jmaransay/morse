@@ -7,7 +7,7 @@ begin
 
 subsection \<open>Small finite types as arithmetic modulo its cardinal\<close>
 
-text \<open>Similar types are defined as finite_1 up to finite_5 in Enum.thy
+text \<open>Similar types are defined as @{term finite_1} up to @{term finite_5} in Enum.thy
   in the Isabelle distribution, but they define the binary minus 
   (see Enum.thy in the HOL folder of the Isabelle distribution) 
   not modulo the cardinal of the Universe set, but as in a lattice. 

@@ -84,8 +84,8 @@ lemma "count_true (vec (5::nat) (\<lambda>i. True)) = 5"
 definition bool_fun_threshold :: "nat => (bool vec => bool)"
   where "bool_fun_threshold i = (\<lambda>v. if i \<le> count_true v then True else False)"
 
-text\<open>definition bool_fun_threshold_dim_n :: "(bool^'n => bool) set"
-  where "bool_fun_threshold_dim_n = {f. bool_fun_threshold i }"\<close>
+(*definition bool_fun_threshold_dim_n :: "(bool^'n => bool) set"
+  where "bool_fun_threshold_dim_n = {f. bool_fun_threshold i }"*)
 
 context boolean_functions
 begin

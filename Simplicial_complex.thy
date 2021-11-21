@@ -152,7 +152,7 @@ proof (intro subsetI, unfold ceros_of_boolean_input_def, intro CollectI, rule co
     by auto
 qed
 
-text\<open>The indexes of Boolean inputs demand the underlying type to be a "mod_type",
+text\<open>The indexes of Boolean inputs demand the underlying type to be a @{term mod_type},
 that indeed should be a finite type, but it is not proven in the library\<close>
 
 definition ceros_of_boolean_input_int :: "(bool Matrix.vec) => int set"
@@ -573,7 +573,7 @@ lemma card_ceros_count_UNIV:
   unfolding ceros_of_boolean_input_def
   unfolding count_true_def by simp
 
-text\<open>We calculate the carrier set of the ceros_of_boolean_input function for dimensions
+text\<open>We calculate the carrier set of the @{const ceros_of_boolean_input} function for dimensions
     2, 3 and 4.\<close>
 
 

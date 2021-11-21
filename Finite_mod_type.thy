@@ -178,7 +178,7 @@ lemma list_powerset_finite_mod_4: "Pow {a\<^sub>0, a\<^sub>1, a\<^sub>2, a\<^sub
 
 end
 
-text\<open>TODO: prove that the bit0 type constructor is an instance of class_mod_type\<close>
+text\<open>TODO: prove that the bit0 type constructor is an instance of @{term class_mod_type}\<close>
 
 instantiation bit0:: (finite) class_mod_type
 begin
@@ -243,7 +243,7 @@ qed
 
 end
 
-text\<open>TODO: prove that the bit1 type constructor is an instance of class_mod_type\<close>
+text\<open>TODO: prove that the bit1 type constructor is an instance of @{term class_mod_type}\<close>
 
 instantiation bit1:: (finite) class_mod_type
 begin
