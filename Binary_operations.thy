@@ -9,19 +9,6 @@ definition bool_fun_or :: "nat \<Rightarrow> (bool vec \<Rightarrow> bool) \<Rig
 definition bool_fun_and :: "nat \<Rightarrow> (bool vec \<Rightarrow> bool) \<Rightarrow> (bool vec \<Rightarrow> bool) \<Rightarrow> (bool vec \<Rightarrow> bool)"
   where "(bool_fun_and n f g) \<equiv> (\<lambda>x. f x \<and> g x)"
 
-
-(*definition bool_fun_or :: "(bool^'n \<Rightarrow> bool) \<Rightarrow> (bool^'n \<Rightarrow> bool) \<Rightarrow> (bool^'n \<Rightarrow> bool)"
-  where "(bool_fun_or f g) x \<equiv> (f x) \<or> (g x)"
-
-definition bool_fun_and :: "(bool^'n \<Rightarrow> bool) \<Rightarrow> (bool^'n \<Rightarrow> bool) \<Rightarrow> (bool^'n \<Rightarrow> bool)"
-  where "(bool_fun_and f g) x \<equiv> (f x) \<and> (g x)"
-
-definition bool_fun_ast :: "(bool^'n \<Rightarrow> bool) \<Rightarrow> (bool^'m \<Rightarrow> bool) \<Rightarrow> (bool^('n+'m) \<Rightarrow> bool)"
-  where "(bool_fun_ast f g) x y \<equiv> (f x) \<and> (g y)"
-
-definition set_ast :: "('a set) \<Rightarrow> ('a set) \<Rightarrow> ('a set)"
-  where "set_ast A B = {}"*)
-
 lemma eq_union_or: 
   "simplicial_complex_induced_by_monotone_boolean_function n (bool_fun_or n f g)
   = simplicial_complex_induced_by_monotone_boolean_function n f \<union> simplicial_complex_induced_by_monotone_boolean_function n g"

@@ -2,30 +2,19 @@
 theory Simplicial_complex
   imports 
     Boolean_functions
-    (*Finite_mod_type*)
 begin
 
 section\<open>Simplicial Complex\<close>
 
-(*definition Pow_ne :: "'a set => 'a set set"
-  where "Pow_ne A = {B. B \<noteq> {} \<and> B \<subseteq> A}"
-
-lemma Pow_ne_singleton: "Pow_ne {a} = {{a}}"
-  unfolding Pow_ne_def by auto*)
-
 lemma Pow_singleton: "Pow {a} = {{},{a}}" by auto
 
-(*lemma Pow_ne_pair: "Pow_ne {a,b} = {{a},{b},{a,b}}"
-  unfolding Pow_ne_def by auto*)
-
 lemma Pow_pair: "Pow {a,b} = {{},{a},{b},{a,b}}" by auto
-
-(*definition simplicial_complex :: "('n::finite) set set => bool"
-  where "simplicial_complex K \<equiv>  ({} \<notin> K) \<and> (\<forall>\<sigma>\<in>K. (Pow_ne \<sigma>) \<subseteq> K)"*)
 
 locale simplicial_complex 
   = fixes n::"nat"
 begin
+
+text\<open>A simplex (in $n$ vertexes) is any set of vertexes.\<close>
 
 definition simplices :: "nat set set"
   where "simplices = Pow {0..<n}"
@@ -41,12 +30,12 @@ lemma finite_simplex:
   shows "finite \<sigma>"
   by (metis Pow_iff assms finite_atLeastLessThan finite_subset simplices_def)
 
+text\<open>A simplicial complex (in $n$ vertexes) is a collection of 
+  sets of vertexes such that every subset of 
+  a set of vertexes also belongs to the simplicial complex.\<close>
+
 definition simplicial_complex :: "nat set set => bool"
   where "simplicial_complex K \<equiv>  (\<forall>\<sigma>\<in>K. (\<sigma> \<in> simplices) \<and> (Pow \<sigma>) \<subseteq> K)"
-
-(*definition simplicial_complex :: "('n::finite) set set => bool"
-  where "simplicial_complex K \<equiv>  (\<forall>\<sigma>\<in>K. (Pow \<sigma>) \<subseteq> K)"
-*)
 
 lemma 
   finite_simplicial_complex:
@@ -72,13 +61,12 @@ lemma simplicial_complex_empty_set:
 lemma
   simplicial_complex_monotone:
   fixes K::"nat set set"
-  assumes k: "simplicial_complex K" and s: "s \<in> K" and rs: "r \<subseteq> s" (*and rne: "r \<noteq> {}"*)
+  assumes k: "simplicial_complex K" and s: "s \<in> K" and rs: "r \<subseteq> s"
   shows "r \<in> K"
   using k rs s
   unfolding simplicial_complex_def Pow_def by auto
-  (*by (smt (verit, del_insts) Diff_insert_absorb mem_Collect_eq s subset_Diff_insert)*)
 
-text\<open>One example of simplicial complex with four points\<close>
+text\<open>One example of simplicial complex with four simplices.\<close>
 
 lemma 
   assumes three: "(3::nat) < n"
@@ -89,7 +77,7 @@ lemma
 lemma "\<not> simplicial_complex {{0,1},{1}}"
   by (simp add: Pow_pair simplicial_complex_def)
 
-text\<open>Another example of simplicial complex with four points\<close>
+text\<open>Another example of simplicial complex with five simplices.\<close>
 
 lemma 
   assumes three: "(3::nat) < n"
@@ -97,7 +85,7 @@ lemma
   apply (simp add: Pow_pair Pow_singleton simplicial_complex_def simplices_def)
   using Suc_lessD three by presburger
 
-text\<open>Another example of simplicial complex with four points\<close>
+text\<open>Another example of simplicial complex with ten simplices.\<close>
 
 lemma 
   assumes three: "(3::nat) < n"
@@ -108,19 +96,22 @@ lemma
 
 end
 
-text\<open>Simplicial complex induced by a monotone Boolean function\<close>
+section\<open>Simplicial complex induced by a monotone Boolean function\<close>
 
-text\<open>The simplicial complex induced by a monotone Boolean function, Definition 6.9 in Scoville\<close>
+text\<open>In this section we introduce the definition of the 
+  simplicial complex induced by a monotone Boolean function, 
+  following the definition in Scoville~\cite[Def. 6.9]{SC19}.\<close>
 
-text\<open>First we introduce the tuples that make cero a Boolean input\<close>
+text\<open>First we introduce the set of tuples for which 
+  a Boolean function is @{term False}.\<close>
 
-definition ceros_of_boolean_input :: "(bool vec) => nat set"
+definition ceros_of_boolean_input :: "bool vec => nat set"
   where "ceros_of_boolean_input v = {x. x < dim_vec v \<and> vec_index v x = False}"
 
 lemma
   ceros_of_boolean_input_l_dim:
-  assumes a: "a \<in> ceros_of_boolean_input x"
-  shows "a < dim_vec x"
+  assumes a: "a \<in> ceros_of_boolean_input v"
+  shows "a < dim_vec v"
   using a unfolding ceros_of_boolean_input_def by simp
 
 lemma "ceros_of_boolean_input v = {x. x < dim_vec v \<and> \<not> vec_index v x}"
@@ -131,10 +122,8 @@ lemma
   shows "ceros_of_boolean_input v = {x. x < dim_vec v} - {x. vec_index v x}"
   unfolding ceros_of_boolean_input_def by auto
 
-text\<open>In fact, the following result is trivial\<close>
-
-lemma ceros_in_UNIV: "ceros_of_boolean_input f \<subseteq> (UNIV::nat set)"
-  using subset_UNIV .
+(*lemma ceros_in_UNIV: "ceros_of_boolean_input f \<subseteq> (UNIV::nat set)"
+  using subset_UNIV .*)
 
 lemma monotone_ceros_of_boolean_input:
   fixes r and s::"bool vec"
@@ -152,10 +141,12 @@ proof (intro subsetI, unfold ceros_of_boolean_input_def, intro CollectI, rule co
     by auto
 qed
 
-text\<open>The indexes of Boolean inputs demand the underlying type to be a @{term mod_type},
-that indeed should be a finite type, but it is not proven in the library\<close>
+(*text\<open>The indexes of Boolean inputs demand the 
+  underlying type to be a @{term mod_type},
+  that indeed should be a finite type, 
+  but it is not proven in the library\<close>
 
-definition ceros_of_boolean_input_int :: "(bool vec) => int set"
+definition ceros_of_boolean_input_int :: "bool vec => int set"
   where "ceros_of_boolean_input_int v = image int (ceros_of_boolean_input v)"
 
 lemma ceros_of_boolean_input_int_subset:
@@ -163,12 +154,17 @@ lemma ceros_of_boolean_input_int_subset:
   unfolding ceros_of_boolean_input_int_def
   unfolding ceros_of_boolean_input_def
   by auto
+*)
 
-text\<open>We introduce here two instantiations of the Boolean type for the type classes 0 and one
+text\<open>We introduce here instantiations of the typ\<open>bool\<close> 
+  type for the type classes class\<open>zero\<close> and class\<open>one\<close>
   that will simplify notation at some points:\<close>
 
-instantiation bool :: one
+instantiation bool :: "{zero,one}"
 begin
+
+definition
+ zero_bool_def: "0 == False"
 
 definition
  one_bool_def: "1 == True"
@@ -177,21 +173,11 @@ instance  proof  qed
 
 end
 
-instantiation bool :: zero
-begin
-
-definition
- zero_bool_def: "0 == False"
-
-instance  proof  qed
-
-end
-
-definition
+(*definition
   simplicial_complex_induced_by_monotone_boolean_function_int
     :: "(bool vec => bool) => int set set"
   where "simplicial_complex_induced_by_monotone_boolean_function_int f = 
-        {y. \<exists>x. x \<noteq> vec (dim_vec x) (\<lambda>x. True) \<and> f x = True \<and> ceros_of_boolean_input_int x = y}"
+        {y. \<exists>x. x \<noteq> vec (dim_vec x) (\<lambda>x. True) \<and> f x = True \<and> ceros_of_boolean_input_int x = y}"*)
 
 (*definition
   simplicial_complex_induced_by_monotone_boolean_function 
@@ -199,14 +185,17 @@ definition
   where "simplicial_complex_induced_by_monotone_boolean_function f = 
         {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"*)
 
+text\<open>Definition of the simplicial complex induced 
+  by a Boolean function \<open>f\<close> in dimension \<open>n\<close>.\<close>
+
 definition
   simplicial_complex_induced_by_monotone_boolean_function
     :: "nat => (bool vec => bool) => nat set set"
-  where "simplicial_complex_induced_by_monotone_boolean_function n f = 
+  where "simplicial_complex_induced_by_monotone_boolean_function n f =
         {y. \<exists>x. dim_vec x = n \<and> f x \<and> ceros_of_boolean_input x = y}"
 
-text\<open>The simplicial complex induced by a Boolean function is a subset of the
-  powerset of the indexes\<close>
+text\<open>The simplicial complex induced by a Boolean function 
+  is a subset of the powerset of the set of vertexes.\<close>
 
 lemma
   simplicial_complex_induced_by_monotone_boolean_function_subset:
@@ -220,28 +209,10 @@ corollary
   "simplicial_complex_induced_by_monotone_boolean_function n (v::bool vec => bool)
     \<subseteq> Pow ((UNIV::nat set))" by simp
 
-(*lemma empty_set_not_in_simplicial_complex_induced: 
-  "{} \<notin> simplicial_complex_induced_by_monotone_boolean_function (f::bool^'n::class_mod_type => bool)"
-proof (rule ccontr, simp)
-  assume y: "{} \<in> simplicial_complex_induced_by_monotone_boolean_function f"
-  then obtain x::"bool^'n::class_mod_type" where x: "x \<noteq> 1" and c: "ceros_of_boolean_input x = {}"
-      unfolding simplicial_complex_induced_by_monotone_boolean_function_def by auto
-  thus False unfolding ceros_of_boolean_input_def using x
-    by (metis (full_types) Collect_empty_eq_bot empty_def one_bool_def one_index vec_eq_iff)
-qed*)
-
-(*lemma
-  boolean_vec_not_one:
-  assumes A: "A \<subseteq> (UNIV::'n::class_mod_type set)" and ANE: "A \<noteq> {}"
-  shows "(\<chi> i. if i \<in> A then False else True) \<noteq> 1"
-proof -
-  from A and ANE obtain x where x: "x \<in> A" by auto
-  have "(\<chi> i. if i \<in> A then False else True) $ x = False" using x by simp
-  thus ?thesis unfolding one_vec_def one_bool_def by fastforce
-qed*)
-
-text\<open>The simplicial complex induced by a monotone Boolean function is a simplicial complex.
-  This result is proven in Scoville as part of the proof of Proposition 6.16.\<close>
+text\<open>The simplicial complex induced by a 
+  monotone Boolean function is a simplicial complex.
+  This result is proven in Scoville as part of the 
+  proof of Proposition 6.16~\cite[Prop. 6.16]{SC19}.\<close>
 
 context simplicial_complex
 begin
@@ -284,9 +255,10 @@ qed
 
 end
 
-text\<open>Example 6.10 in Scoville\<close>
+text\<open>Example 6.10 in Scoville, the threshold function 
+  for $2$ in dimension $4$ (with vertexes $0$,$1$,$2$,$3$)\<close>
 
-definition bool_fun_threshold_2_3 :: "(bool vec => bool)"
+definition bool_fun_threshold_2_3 :: "bool vec => bool"
   where "bool_fun_threshold_2_3 = (\<lambda>v. if 2 \<le> count_true v then True else False)"
 
 lemma set_list_four: shows "{0..<4} = set [0,1,2,3::nat]" by auto
@@ -308,44 +280,13 @@ lemma "bool_fun_threshold_2_3
   unfolding comp_fun_commute.fold_set_fold_remdups [OF comp_fun_commute_lambda]
   by simp
 
-(*lemma "bool_fun_threshold_2_3
-          (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
-                                        | a\<^sub>1 \<Rightarrow> True
-                                        | (_) \<Rightarrow> False) = True"
-  unfolding bool_fun_threshold_2_3_def 
-  unfolding count_true_def
-  unfolding Collect_code
-  unfolding enum_finite_mod_4_def by simp
-*)
-
-lemma foo1:
+lemma
   "0 \<notin> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
-  and foo2: "1 \<notin> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
-  and foo3: "2 \<in> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
-  and foo4: "3 \<in> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
-  unfolding ceros_of_boolean_input_int_def
+  and "1 \<notin> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
+  and "2 \<in> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
+  and "3 \<in> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
+  and "{2,3} \<subseteq> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
   unfolding ceros_of_boolean_input_def by simp_all
-
-(*lemma foo1:
-  "a\<^sub>0 \<notin> ceros_of_boolean_input (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
-                                        | a\<^sub>1 \<Rightarrow> True 
-                                        | (_) \<Rightarrow> False)"
-  and foo2: "a\<^sub>1 \<notin> ceros_of_boolean_input (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
-                                        | a\<^sub>1 \<Rightarrow> True 
-                                        | (_) \<Rightarrow> False)"
-  and foo3: "a\<^sub>2 \<in> ceros_of_boolean_input (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
-                                        | a\<^sub>1 \<Rightarrow> True 
-                                        | (_) \<Rightarrow> False)"
-  and foo4: "a\<^sub>3 \<in> ceros_of_boolean_input (\<chi> i::finite_mod_4. case (i) of a\<^sub>0 \<Rightarrow> True 
-                                        | a\<^sub>1 \<Rightarrow> True 
-                                        | (_) \<Rightarrow> False)"
-  unfolding ceros_of_boolean_input_int_def
-  unfolding ceros_of_boolean_input_def
-  unfolding Rep_finite_mod_4_def by simp_all
-*)
-
-lemma "{2,3} \<subseteq> ceros_of_boolean_input (vec 4 (\<lambda>i. if i = 0 \<or> i = 1 then True else False))"
-  using foo1 foo2 foo3 foo4 by simp
 
 lemma "bool_fun_threshold_2_3 (vec 4 (\<lambda>i. if i = 3 then True else False)) = False"
   unfolding bool_fun_threshold_2_3_def 
@@ -369,7 +310,7 @@ lemma "bool_fun_threshold_2_3 (vec 4 (\<lambda>i. if i = 0 then False else True)
   unfolding comp_fun_commute.fold_set_fold_remdups [OF comp_fun_commute_lambda]
   by simp
 
-section\<open>A particular case of problem 6.17 in Scoville, with some previous results\<close>
+section\<open>The simplicial complex induced by the threshold function.\<close>
 
 lemma
   empty_set_in_simplicial_complex_induced:
@@ -572,11 +513,11 @@ lemma card_ceros_count_UNIV:
   unfolding ceros_of_boolean_input_def
   unfolding count_true_def by simp
 
-text\<open>We calculate the carrier set of the @{const ceros_of_boolean_input} function for dimensions
-    2, 3 and 4.\<close>
+text\<open>We calculate the carrier set of the @{const ceros_of_boolean_input} 
+  function for dimensions $2$, $3$ and $4$.\<close>
 
 
-section\<open>Vectors of dimension 2\<close>
+section\<open>Vectors of dimension $2$.\<close>
 
 lemma
   dim_vec_2_cases:
@@ -612,7 +553,7 @@ lemma
   using tt_2 [OF dx] tf_2 [OF dx] ft_2 [OF dx] ff_2 [OF dx]
   by (metis insertCI)
 
-section\<open>Vectors of dimension 3\<close>
+section\<open>Vectors of dimension $3$.\<close>
 
 lemma less_3_cases:
   assumes n: "n < 3" shows "n = 0 \<or> n = 1 \<or> n = (2::nat)" 
@@ -684,7 +625,7 @@ lemma
   using tff_3 [OF dx] tft_3 [OF dx] ttf_3 [OF dx] ttt_3 [OF dx]
   by (smt (z3) insertCI)
 
-section\<open>Vectors of dimension 4\<close>
+section\<open>Vectors of dimension $4$.\<close>
 
 lemma less_4_cases:
   assumes n: "n < 4"
@@ -831,7 +772,9 @@ lemma
 context simplicial_complex
 begin
 
-section\<open>A particular case of problem 6.17 in Scoville, with some previous results\<close>
+text\<open>The simplicial complex induced by the Boolean function
+  @{const bool_fun_threshold_2_3} is a simplicial complex (indeed, 
+  this is a particular instance of problem 6.17 in Scoville).\<close>
 
 lemma
   simplicial_complex_induced_by_monotone_boolean_function_4_bool_fun_threshold_2_3:
