@@ -12,9 +12,6 @@ text \<open>Each vertex in a simplicial complex corresponds to one @{term True} 
 definition bf_from_sc :: "nat set set => (bool vec \<Rightarrow> bool)" 
   where "bf_from_sc K \<equiv> (\<lambda>v. {i. i < dim_vec v \<and> \<not> (vec_index v i)} \<in> K)"
 
-(*definition bf_from_sc :: "nat set set => (bool vec \<Rightarrow> bool)" 
-  where "bf_from_sc K \<equiv> (\<lambda>v. {i. i < dim_vec v \<and> vec_index v i = False} \<in> K)"*)
-
 lemma bf_from_sc: 
   assumes sc: "simplicial_complex.simplicial_complex n K"
   shows "simplicial_complex_induced_by_monotone_boolean_function n (bf_from_sc K) = K"
