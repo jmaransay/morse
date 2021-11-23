@@ -46,7 +46,7 @@
   simplicial complexes of dimension $n$ and 
   monotone boolean functions in $n$ variables, 
   mainly following the definitions and results
-  as introduced by N. A. Scoville~\cite[Ch. 6]{SC19}.
+  as introduced by N. A. Scoville~\cite[Ch. 6]{SC2019}.
   We also take advantage of the AFP representation
   of ROBDD (Reduced Ordered Binary Decision 
     Diagrams)~\cite{ROBDD-AFP}

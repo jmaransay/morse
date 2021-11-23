@@ -18,9 +18,3 @@
             Formal proof development},
   ISSN    = {2150-914x},
 }
-
-@unpublished{CHSC,
- author = {Chastain, Erick J. and Scoville, Nicholas A.},
- title = {Homology of {B}oolean functions and the complexity of simplicial homology},
- note={\newline\url{https://nanopdf.com/download/homology-of-boolean-functions-and-the-complexity-of-simplicial-homology_pdf}}
-}

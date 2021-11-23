@@ -84,7 +84,8 @@ proof (unfold boolean_functions.monotone_bool_fun_def)
   proof (intro mono_onI)
   fix r and s::"bool vec"
   assume r_le_s: "r \<le> s"
-  show "boolean_function_from_simplicial_complex K r \<le> boolean_function_from_simplicial_complex K s"
+  show "boolean_function_from_simplicial_complex K r 
+        \<le> boolean_function_from_simplicial_complex K s"
   proof (cases "boolean_function_from_simplicial_complex K r")
     case False then show ?thesis by simp
   next
@@ -103,8 +104,8 @@ proof (unfold boolean_functions.monotone_bool_fun_def)
       unfolding dim_vec
       using simplicial_complex_def [of K] by fastforce
     have "boolean_function_from_simplicial_complex K s"
-    proof (unfold boolean_function_from_simplicial_complex_def bool_vec_set_from_simplice_set_def,
-        rule, rule conjI)
+    proof (unfold boolean_function_from_simplicial_complex_def 
+        bool_vec_set_from_simplice_set_def, rule, rule conjI)
       show "dim_vec s = n"
         by (metis less_eq_vec_def dim_vec r_def r_le_s)
       show "\<exists>k\<in>K. s = bool_vec_from_simplice k"
@@ -125,7 +126,8 @@ proof (unfold boolean_functions.monotone_bool_fun_def)
 qed
 
 lemma shows "(simplicial_complex_induced_by_monotone_boolean_function n) \<in> 
-          boolean_functions.monotone_bool_fun_set n \<rightarrow> (simplicial_complex_set::nat set set set)"
+          boolean_functions.monotone_bool_fun_set n 
+          \<rightarrow> (simplicial_complex_set::nat set set set)"
 proof
   fix x::"bool vec \<Rightarrow> bool"
   assume x: "x \<in> boolean_functions.monotone_bool_fun_set n"
@@ -157,13 +159,15 @@ text\<open>Given a Boolean function @{term f}, if we build its associated
   (the premise on @{term f} being monotone can be omitted).\<close>
 
 lemma
-  boolean_function_from_simplicial_complex_simplicial_complex_induced_by_monotone_boolean_function_id:
+  boolean_function_from_simplicial_complex_simplicial_complex_induced_by_monotone_boolean_function:
   fixes f :: "bool vec \<Rightarrow> bool"
   assumes dim: "v \<in> carrier_vec n"
-  shows "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function n f) v = f v"
+  shows "boolean_function_from_simplicial_complex 
+    (simplicial_complex_induced_by_monotone_boolean_function n f) v = f v"
 proof (intro iffI)
   assume xb: "f v"
-  show bf: "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function n f) v"
+  show bf: "boolean_function_from_simplicial_complex 
+      (simplicial_complex_induced_by_monotone_boolean_function n f) v"
   proof -
    have "f v \<and> v = bool_vec_from_simplice (ceros_of_boolean_input v)"
     unfolding ceros_of_boolean_input_def
@@ -177,14 +181,17 @@ proof (intro iffI)
     using dim unfolding carrier_vec_def by blast
    qed
 next
-  assume "boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function n f) v"
+  assume "boolean_function_from_simplicial_complex 
+      (simplicial_complex_induced_by_monotone_boolean_function n f) v"
   then show "f v"
     unfolding simplicial_complex_induced_by_monotone_boolean_function_def
     unfolding boolean_function_from_simplicial_complex_def
     unfolding bool_vec_set_from_simplice_set_def
     unfolding mem_Collect_eq
-    using \<open>boolean_function_from_simplicial_complex (simplicial_complex_induced_by_monotone_boolean_function n f) v\<close> 
-      boolean_function_from_simplicial_complex_def simplicial_complex.bool_vec_set_from_simplice_set_def 
+    using \<open>boolean_function_from_simplicial_complex 
+      (simplicial_complex_induced_by_monotone_boolean_function n f) v\<close> 
+      boolean_function_from_simplicial_complex_def 
+      simplicial_complex.bool_vec_set_from_simplice_set_def 
       simplicial_complex_implies_true by fastforce
 qed
 
@@ -193,12 +200,14 @@ text\<open>Given a simplicial complex @{term K}, if we build its associated
   we obtain @{term K}.\<close>
 
 lemma
-  simplicial_complex_induced_by_monotone_boolean_function_boolean_function_from_simplicial_complex_id:
+  simplicial_complex_induced_by_monotone_boolean_function_boolean_function_from_simplicial_complex:
   fixes K :: "nat set set"
   assumes K: "simplicial_complex K"
-  shows "simplicial_complex_induced_by_monotone_boolean_function n (boolean_function_from_simplicial_complex K) = K"
+  shows "simplicial_complex_induced_by_monotone_boolean_function n 
+    (boolean_function_from_simplicial_complex K) = K"
 proof (intro equalityI)
-  show "simplicial_complex_induced_by_monotone_boolean_function n (boolean_function_from_simplicial_complex K) \<subseteq> K"
+  show "simplicial_complex_induced_by_monotone_boolean_function n 
+    (boolean_function_from_simplicial_complex K) \<subseteq> K"
   proof
     fix x :: "nat set"
     assume x: "x \<in> simplicial_complex_induced_by_monotone_boolean_function
@@ -210,10 +219,12 @@ proof (intro equalityI)
       unfolding bool_vec_from_simplice_def bool_vec_set_from_simplice_set_def
       using K
       unfolding simplicial_complex_def simplices_def
-      by auto (metis assms bool_vec_from_simplice_def ceros_of_boolean_input_in_set  simplicial_complex_def)
+      by auto (metis assms bool_vec_from_simplice_def 
+          ceros_of_boolean_input_in_set simplicial_complex_def)
   qed
 next
- show "K \<subseteq> simplicial_complex_induced_by_monotone_boolean_function n (boolean_function_from_simplicial_complex K)"
+  show "K \<subseteq> simplicial_complex_induced_by_monotone_boolean_function n 
+            (boolean_function_from_simplicial_complex K)"
  proof
    fix x :: "nat set"
    assume "x \<in> K" 
@@ -222,7 +233,8 @@ next
      unfolding one_bool_def
      unfolding bool_vec_from_simplice_def
      using ceros_of_boolean_input_in_set [OF x] .
-   show "x \<in> simplicial_complex_induced_by_monotone_boolean_function n (boolean_function_from_simplicial_complex K)"
+   show "x \<in> simplicial_complex_induced_by_monotone_boolean_function n 
+          (boolean_function_from_simplicial_complex K)"
      unfolding boolean_function_from_simplicial_complex_def
      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
      unfolding bool_vec_from_simplice_def bool_vec_set_from_simplice_set_def

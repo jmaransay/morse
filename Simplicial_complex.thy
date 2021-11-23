@@ -141,20 +141,6 @@ proof (intro subsetI, unfold ceros_of_boolean_input_def, intro CollectI, rule co
     by auto
 qed
 
-(*text\<open>The indexes of Boolean inputs demand the 
-  underlying type to be a @{term mod_type},
-  that indeed should be a finite type, 
-  but it is not proven in the library\<close>
-
-definition ceros_of_boolean_input_int :: "bool vec => int set"
-  where "ceros_of_boolean_input_int v = image int (ceros_of_boolean_input v)"
-
-lemma ceros_of_boolean_input_int_subset:
-  "ceros_of_boolean_input_int (v::(bool vec)) \<subseteq> {0 ..< int (dim_vec v)}"
-  unfolding ceros_of_boolean_input_int_def
-  unfolding ceros_of_boolean_input_def
-  by auto
-*)
 
 text\<open>We introduce here instantiations of the typ\<open>bool\<close> 
   type for the type classes class\<open>zero\<close> and class\<open>one\<close>
@@ -172,18 +158,6 @@ definition
 instance  proof  qed
 
 end
-
-(*definition
-  simplicial_complex_induced_by_monotone_boolean_function_int
-    :: "(bool vec => bool) => int set set"
-  where "simplicial_complex_induced_by_monotone_boolean_function_int f = 
-        {y. \<exists>x. x \<noteq> vec (dim_vec x) (\<lambda>x. True) \<and> f x = True \<and> ceros_of_boolean_input_int x = y}"*)
-
-(*definition
-  simplicial_complex_induced_by_monotone_boolean_function 
-    :: "(bool^'n::class_mod_type => bool) => 'n set set"
-  where "simplicial_complex_induced_by_monotone_boolean_function f = 
-        {y. \<exists>x. x \<noteq> 1 \<and> f x \<and> ceros_of_boolean_input x = y}"*)
 
 text\<open>Definition of the simplicial complex induced 
   by a Boolean function \<open>f\<close> in dimension \<open>n\<close>.\<close>
@@ -517,7 +491,7 @@ text\<open>We calculate the carrier set of the @{const ceros_of_boolean_input}
   function for dimensions $2$, $3$ and $4$.\<close>
 
 
-section\<open>Vectors of dimension $2$.\<close>
+text\<open>Vectors of dimension $2$.\<close>
 
 lemma
   dim_vec_2_cases:
@@ -553,7 +527,7 @@ lemma
   using tt_2 [OF dx] tf_2 [OF dx] ft_2 [OF dx] ff_2 [OF dx]
   by (metis insertCI)
 
-section\<open>Vectors of dimension $3$.\<close>
+text\<open>Vectors of dimension $3$.\<close>
 
 lemma less_3_cases:
   assumes n: "n < 3" shows "n = 0 \<or> n = 1 \<or> n = (2::nat)" 
@@ -625,7 +599,7 @@ lemma
   using tff_3 [OF dx] tft_3 [OF dx] ttf_3 [OF dx] ttt_3 [OF dx]
   by (smt (z3) insertCI)
 
-section\<open>Vectors of dimension $4$.\<close>
+text\<open>Vectors of dimension $4$.\<close>
 
 lemma less_4_cases:
   assumes n: "n < 4"
