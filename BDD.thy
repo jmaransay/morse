@@ -6,8 +6,8 @@ theory BDD
     ListLexorder
 begin
 
-text \<open>Each vertex in a simplicial complex corresponds to one @{term True} line 
-  in the truth table of the inducing Boolean function.\<close>
+text \<open>Each vertex in a simplicial complex corresponds to one 
+  @{term True} line in the truth table of the inducing Boolean function.\<close>
 
 definition bf_from_sc :: "nat set set => (bool vec \<Rightarrow> bool)" 
   where "bf_from_sc K \<equiv> (\<lambda>v. {i. i < dim_vec v \<and> \<not> (vec_index v i)} \<in> K)"
@@ -63,7 +63,8 @@ lemma sc_threshold_2_3_tfff:
   "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=True,1:=False,2:=False,3:=False)) = False"
   unfolding hlp1 boolfunc_from_sc_def sc_threshold_2_3_def
   by simp (smt (z3) eval_nat_numeral(3) insertI1 insert_commute insert_iff 
-      n_not_Suc_n numeral_1_eq_Suc_0 numeral_2_eq_2 numeral_eq_iff singletonD verit_eq_simplify(12))
+      n_not_Suc_n numeral_1_eq_Suc_0 numeral_2_eq_2 
+      numeral_eq_iff singletonD verit_eq_simplify(12))
 
 lemma sc_threshold_2_3_fftt: 
   "boolfunc_from_sc 4 sc_threshold_2_3 (a(0:=False,1:=False,2:=True,3:=True)) = True"
@@ -228,7 +229,9 @@ proof -
   assume sc: "simplicial_complex.simplicial_complex n (set ` set L)"
   define sorted where "sorted \<equiv> sorted_wrt (\<lambda>a b :: nat list. card (set b) \<le> card (set a))"
   (* wlog, assume L is sorted. the price for that was paid in boolfunc_from_sc_list_reorder *)
-  have i: "sorted L \<Longrightarrow> simplicial_complex.simplicial_complex n (set ` set L) \<Longrightarrow> boolfunc_from_sc_list lUNIV L = boolfunc_from_sc n (set ` set L)" for L
+  have i: "sorted L 
+            \<Longrightarrow> simplicial_complex.simplicial_complex n (set ` set L) 
+            \<Longrightarrow> boolfunc_from_sc_list lUNIV L = boolfunc_from_sc n (set ` set L)" for L
   proof(induction L)
     case Nil
     show ?case by (simp add: boolfunc_from_sc_def)
@@ -243,7 +246,8 @@ proof -
     have bfSing: "boolfunc_from_sc_list lUNIV [a] = boolfunc_from_sc n (Pow (set a))"
       unfolding boolfunc_from_sc_lazy [OF sp]
       by (simp add: Pow_subset_Pow boolfunc_from_vertex_list [OF lUNIV])
-    have bflCons: "boolfunc_from_sc_list lUNIV (a # L) = bf_or (boolfunc_from_sc_list lUNIV [a]) (boolfunc_from_sc_list lUNIV L)"
+    have bflCons: "boolfunc_from_sc_list lUNIV (a # L) = 
+      bf_or (boolfunc_from_sc_list lUNIV [a]) (boolfunc_from_sc_list lUNIV L)"
       unfolding boolfunc_from_sc_list.simps(2) [of _ a L] by auto
     from Cons.prems have "simplicial_complex.simplicial_complex n (set ` set L)"
       unfolding simplicial_complex.simplicial_complex_def sorted_def  

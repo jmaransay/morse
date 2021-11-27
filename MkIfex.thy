@@ -7,14 +7,29 @@ theory MkIfex
   imports "ROBDD.BDT"
 begin
 
+text\<open>The following function builds an @{typ "'a ifex"} tree
+  from a boolean function and its list of variables 
+  (note that in this development we will be using 
+  boolean functions over sets of the natural numbers
+  of the form @{term "{..<n::nat}"}).\<close>
+
 fun mk_ifex :: "('a :: linorder) boolfunc \<Rightarrow> 'a list \<Rightarrow> 'a ifex" where
 "mk_ifex f [] = (if f (const False) then Trueif else Falseif)" |
-"mk_ifex f (v#vs) = ifex_ite (IF v Trueif Falseif) (mk_ifex (bf_restrict v True f) vs) (mk_ifex (bf_restrict v False f) vs)"
+"mk_ifex f (v#vs) = ifex_ite 
+                      (IF v Trueif Falseif) 
+                      (mk_ifex (bf_restrict v True f) vs) 
+                      (mk_ifex (bf_restrict v False f) vs)"
+
+text\<open>The result of @{term "mk_ifex"} is @{const ifex_ordered} 
+  and @{const ifex_minimal}.\<close>
 
 lemma mk_ifex_ro: "ro_ifex (mk_ifex f vs)"
-  by(induction vs arbitrary: f; fastforce intro: order_ifex_ite_invar minimal_ifex_ite_invar simp del: ifex_ite.simps)
+  by(induction vs arbitrary: f; fastforce 
+      intro: order_ifex_ite_invar minimal_ifex_ite_invar 
+      simp del: ifex_ite.simps)
 
-definition "reads_inside_set f x \<equiv> (\<forall>assmt1 assmt2. (\<forall>p. p \<in> x \<longrightarrow> assmt1 p = assmt2 p) \<longrightarrow> f assmt1 = f assmt2)"
+definition "reads_inside_set f x \<equiv> 
+  (\<forall>assmt1 assmt2. (\<forall>p. p \<in> x \<longrightarrow> assmt1 p = assmt2 p) \<longrightarrow> f assmt1 = f assmt2)"
 
 lemma reads_inside_set_subset: "reads_inside_set f a \<Longrightarrow> a \<subseteq> b \<Longrightarrow> reads_inside_set f b"
   unfolding reads_inside_set_def by blast

@@ -233,7 +233,8 @@ next
      unfolding one_bool_def
      unfolding bool_vec_from_simplice_def
      using ceros_of_boolean_input_in_set [OF x] .
-   show "x \<in> simplicial_complex_induced_by_monotone_boolean_function n (boolean_function_from_simplicial_complex K)"
+   show "x \<in> simplicial_complex_induced_by_monotone_boolean_function n 
+          (boolean_function_from_simplicial_complex K)"
      unfolding boolean_function_from_simplicial_complex_def
      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
      unfolding bool_vec_from_simplice_def bool_vec_set_from_simplice_set_def
