@@ -6,7 +6,7 @@ theory Evasive
 begin
 
 section\<open>Relation between type @{typ "bool vec => bool"} 
-    and type @{typ "'a boolfunc"}.\<close>
+    and type @{typ "'a boolfunc"}\<close>
 
 definition vec_to_boolfunc :: "nat \<Rightarrow> (bool vec => bool) => (nat boolfunc)"
   where "vec_to_boolfunc n f = (\<lambda>i. f (vec n i))"
@@ -112,15 +112,14 @@ lemma "mk_ifex (bf_True::nat boolfunc) [0,1,2,3] = Trueif" by eval
 
 lemma "height (mk_ifex (bf_True::nat boolfunc) [0,1,2,3]) = 0" by eval
 
+section\<open>Definition of \emph{evasive} Boolean function\<close>
+
 text\<open>Now we introduce the definition of evasive Boolean function. 
   It is based on the height of the ifex expression of the given function.
   The definition is inspired by the one by Scoville~\cite[Ex. 6.19]{SC19}.\<close>
 
 definition evasive :: "nat => ((nat => bool) => bool) => bool"
   where "evasive n f \<equiv> (height (mk_ifex f [0..n])) = n"
-
-lemma "height (mk_ifex (boolfunc_threshold_2_3) [0,1,2,3]) = 4"
-  by eval
 
 corollary "evasive 4 boolfunc_threshold_2_3" by eval
 

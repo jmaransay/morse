@@ -4,7 +4,7 @@ theory Simplicial_complex
     Boolean_functions
 begin
 
-section\<open>Simplicial Complex\<close>
+section\<open>Simplicial Complexes\<close>
 
 lemma Pow_singleton: "Pow {a} = {{},{a}}" by auto
 
@@ -14,7 +14,8 @@ locale simplicial_complex
   = fixes n::"nat"
 begin
 
-text\<open>A simplex (in $n$ vertexes) is any set of vertexes.\<close>
+text\<open>A simplex (in $n$ vertexes) is any set of vertexes, 
+  including the empty set.\<close>
 
 definition simplices :: "nat set set"
   where "simplices = Pow {0..<n}"
@@ -284,7 +285,7 @@ lemma "bool_fun_threshold_2_3 (vec 4 (\<lambda>i. if i = 0 then False else True)
   unfolding comp_fun_commute.fold_set_fold_remdups [OF comp_fun_commute_lambda]
   by simp
 
-section\<open>The simplicial complex induced by the threshold function.\<close>
+section\<open>The simplicial complex induced by the threshold function\<close>
 
 lemma
   empty_set_in_simplicial_complex_induced:
@@ -374,11 +375,6 @@ corollary
   card_ceros_of_boolean_input:
   shows "card (ceros_of_boolean_input a) \<le> dim_vec a"
  using card_complementary [of a] by simp
-  
-
-lemma 
-  assumes "dim_vec v = n"
-  shows "v \<in> carrier_vec n" using carrier_vecI [OF assms] .
 
 lemma
   vec_fun:
@@ -746,9 +742,8 @@ lemma
 context simplicial_complex
 begin
 
-text\<open>The simplicial complex induced by the Boolean function
-  @{const bool_fun_threshold_2_3} is a simplicial complex (indeed, 
-  this is a particular instance of problem 6.17 in Scoville).\<close>
+text\<open>The simplicial complex induced by the monotone Boolean function
+  @{const bool_fun_threshold_2_3} has the following explicit expression.\<close>
 
 lemma
   simplicial_complex_induced_by_monotone_boolean_function_4_bool_fun_threshold_2_3:

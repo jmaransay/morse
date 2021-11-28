@@ -11,7 +11,7 @@ text\<open>Definition of monotonicity\<close>
 
 text\<open>We consider (monotone) Boolean 
   functions over vectors of length $n$, so that we can later 
-  prove that those  are isomorphic to 
+  prove that those are isomorphic to 
   simplicial complexes of dimension $n$ (in $n$ vertexes).\<close>
 
 locale boolean_functions

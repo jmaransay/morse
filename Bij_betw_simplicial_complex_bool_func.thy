@@ -4,8 +4,7 @@ theory Bij_betw_simplicial_complex_bool_func
     Simplicial_complex
 begin
 
-section\<open>Bijection between simplicial complexes and monotone Boolean functions.\<close>
-
+section\<open>Bijection between simplicial complexes and monotone Boolean functions\<close>
 
 context simplicial_complex
 begin

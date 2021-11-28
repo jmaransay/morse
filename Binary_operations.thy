@@ -3,6 +3,8 @@ theory Binary_operations
  imports Bij_betw_simplicial_complex_bool_func
 begin
 
+section\<open>Binary operations over Boolean functions and simplicial complexes\<close>
+
 text\<open>In this theory some results on binary operations over Boolean functions and
   their relationship to operations over the induced simplicial complexes are
   presented. We follow the presentation by Chastain and Scoville~\cite[Sect. 1.1]{CHSC}.\<close>
