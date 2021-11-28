@@ -3,6 +3,12 @@ theory ListLexorder
 imports Main
 begin
 
+section\<open>Detour: Lexicographic ordering for lists\<close>
+text\<open>Simplicial complexes are defined as sets of sets.
+To conveniently run computations on them, we convert those sets to lists via @{const sorted_list_of_set}.
+This requires providing an arbitrary linear order for lists.
+We pick a lexicographic order.\<close>
+
 (* There's probably an easier way to get a sorted list of lists from a set of lists. Some lexicographic ordering does have to exist. No idea... *)
 
 datatype 'a :: linorder linorder_list = LinorderList "'a list"
@@ -22,29 +28,44 @@ definition "less_linorder_list x y \<equiv>
               (less_eq_linorder_list_pre x y \<and> \<not> less_eq_linorder_list_pre y x)"
 definition "less_eq_linorder_list x y \<equiv> less_eq_linorder_list_pre x y"
 instance
-  apply standard
-  apply(unfold less_eq_linorder_list_def less_linorder_list_def)
-  subgoal by simp
-  subgoal
-    apply(induction)
-    subgoal for x
-      apply(induction x; simp)
-      done
-    done
-  subgoal for x y z
-    apply(induction x z arbitrary: y rule: less_eq_linorder_list_pre.induct; simp)
-     apply (metis less_eq_linorder_list_pre.simps(3) linorder_list.exhaust neq_Nil_conv)
-    apply (smt (verit, ccfv_threshold) 
-            less_eq_linorder_list_pre.elims(2) less_eq_linorder_list_pre.simps(4) 
-            less_trans not_less_iff_gr_or_eq)
-    done
-  subgoal for x y 
+proof (standard; unfold less_eq_linorder_list_def less_linorder_list_def)
+  fix x y z
+  show "less_eq_linorder_list_pre x x"
+  proof(induction x)
+    case (LinorderList xa)
+    then show ?case by(induction xa; simp)
+  qed
+  show "less_eq_linorder_list_pre x y \<Longrightarrow> less_eq_linorder_list_pre y x \<Longrightarrow> x = y"
     by(induction x y rule: less_eq_linorder_list_pre.induct; simp split: if_splits)
-  subgoal for x y 
+  show "less_eq_linorder_list_pre x y \<or> less_eq_linorder_list_pre y x"
     by(induction x y rule: less_eq_linorder_list_pre.induct; auto)
-  done
+  show "less_eq_linorder_list_pre x y \<Longrightarrow> less_eq_linorder_list_pre y z \<Longrightarrow> less_eq_linorder_list_pre x z"
+  proof(induction x z arbitrary: y rule: less_eq_linorder_list_pre.induct)
+    case (3 va vb)
+    then show ?case 
+      using less_eq_linorder_list_pre.elims(2) by blast
+  next
+    case (4 a1 as b1 bs)
+    obtain y1 ys where y: "y = LinorderList (y1 # ys)"
+      using "4.prems"(1) less_eq_linorder_list_pre.elims(2) by blast
+    then show ?case proof(cases "a1 = b1")
+      case True
+      have prems: "less_eq_linorder_list_pre (LinorderList as) (LinorderList ys)" "less_eq_linorder_list_pre (LinorderList ys) (LinorderList bs)"
+        by (metis "4.prems" True y less_eq_linorder_list_pre.simps(4) not_less_iff_gr_or_eq)+
+      note IH = "4.IH"[OF _ this]
+      then show ?thesis 
+        using True by simp
+
+    next
+      case False
+        then show ?thesis using "4.prems" less_trans y by (simp  split: if_splits)
+      qed
+  qed simp_all
+qed simp
+
 end
 
+text\<open>The main product of this theory file:\<close>
 definition "sorted_list_of_list_set L \<equiv> 
   map linorder_list_unwrap (sorted_list_of_set (LinorderList ` L))"
 
