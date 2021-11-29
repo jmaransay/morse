@@ -22,6 +22,8 @@
   %for \<onequarter>, \<onehalf>, \<threequarters>, \<degree>, \<cent>,
   %\<currency>
 
+%\PassOptionsToPackage{hyphens}{url}\usepackage{hyperref}
+
 % this should be the last package used
 \usepackage{pdfsetup}
 
@@ -52,8 +54,8 @@
     Diagrams)~\cite{ROBDD-AFP}
   to compute the ROBDD representation 
   of a given simplicial complex (by means of the isomorphism
-  to boolean funcions). Some examples of boolean
-  functions and simplicial complexes are also given.
+  to boolean funcions). Some examples of simplicial complexes 
+  and associated boolean functions are also given.
 \end{abstract}
 
 \tableofcontents
