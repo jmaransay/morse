@@ -6,8 +6,7 @@ theory Evasive
     Alexander
 begin
 
-section\<open>Relation between type @{typ "bool vec => bool"} 
-    and type @{typ "'a boolfunc"}\<close>
+section\<open>Relation between type @{typ "bool vec => bool"} and type @{typ "'a boolfunc"}\<close>
 
 definition vec_to_boolfunc :: "nat \<Rightarrow> (bool vec => bool) => (nat boolfunc)"
   where "vec_to_boolfunc n f = (\<lambda>i. f (vec n i))"
@@ -61,7 +60,7 @@ lemma
   using reads_inside_set_boolean_function [of n f]
   unfolding reads_inside_set_def by auto
 
-definition bcount_true :: "nat => (nat=> bool) => nat"
+(*definition bcount_true :: "nat => (nat=> bool) => nat"
   where "bcount_true n f =  (\<Sum>i = 0..<n. if f i then 1 else (0::nat))"
 
 definition boolfunc_threshold_2_3 :: "(nat => bool) => bool"
@@ -71,7 +70,7 @@ definition proj_2 :: "(nat => bool) => bool"
   where "proj_2 = (\<lambda>v. v 2)"
 
 definition proj_2_n3 :: "(nat => bool) => bool"
-  where "proj_2_n3 = (\<lambda>v. v 2 \<and> \<not> v 3)"
+  where "proj_2_n3 = (\<lambda>v. v 2 \<and> \<not> v 3)"*)
 
 definition proj_2_bool :: "bool vec \<Rightarrow> bool"
   where "proj_2_bool v = v $ 2"
@@ -79,7 +78,7 @@ definition proj_2_bool :: "bool vec \<Rightarrow> bool"
 definition proj_2_n3_bool :: "bool vec \<Rightarrow> bool"
   where "proj_2_n3_bool v = (v $ 2 \<and> \<not> v $ 3)"
 
-text\<open>The following definition computes the height of a @{typ "'a ifex"} expression.\<close>
+text\<open>The following definition computes the height of an @{typ "'a ifex"} expression.\<close>
 
 fun height :: "'a ifex => nat"
   where "height Trueif = 0"
@@ -91,41 +90,45 @@ text\<open>Both @{term mk_ifex} and @{term height} can be used in computations.\
 lemma "height (mk_ifex (vec_to_boolfunc 4 bool_fun_threshold_2_3) [0..4]) = 4"
   by eval
 
-lemma "height (mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual bool_fun_threshold_2_3)) [0..4]) = 4"
+lemma "height (mk_ifex (vec_to_boolfunc 4 
+        (boolean_functions.Alexander_dual bool_fun_threshold_2_3)) [0..4]) = 4"
   by eval
 
 lemma "height (mk_ifex (vec_to_boolfunc 4 bool_fun_threshold_2_3) [0..4]) = 
   height (mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual bool_fun_threshold_2_3)) [0..4])"
   by eval
 
-lemma "height (mk_ifex (boolfunc_threshold_2_3) [0,1,2,3]) = 4"
+(*lemma "height (mk_ifex (boolfunc_threshold_2_3) [0,1,2,3]) = 4"
   by eval
 
 lemma "height (mk_ifex (proj_2) [0,1,2,3]) = 1"
-  by eval
+  by eval*)
 
 lemma "height (mk_ifex (vec_to_boolfunc 4 proj_2_bool) [0,1,2,3]) = 1"
   by eval
 
-lemma "height (mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual proj_2_bool)) [0,1,2,3]) = 1"
+lemma "height (mk_ifex (vec_to_boolfunc 4 
+  (boolean_functions.Alexander_dual proj_2_bool)) [0,1,2,3]) = 1"
   by eval
 
-lemma "mk_ifex (proj_2) [0] = Falseif" by eval
+(*lemma "mk_ifex (proj_2) [0] = Falseif" by eval*)
 
 lemma "mk_ifex (vec_to_boolfunc 4 proj_2_bool) [0] = Falseif" by eval
 
-lemma "mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual proj_2_bool)) [0] = Falseif" 
+lemma "mk_ifex (vec_to_boolfunc 4 
+        (boolean_functions.Alexander_dual proj_2_bool)) [0] = Falseif" 
   by eval
 
-lemma "height (mk_ifex (proj_2) [0]) = 0" by eval
+(*lemma "height (mk_ifex (proj_2) [0]) = 0" by eval*)
 
 lemma "height (mk_ifex (vec_to_boolfunc 4 proj_2_bool) [0]) = 0" by eval
 
-lemma "height (mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual proj_2_bool)) [0]) = 0" 
+lemma "height (mk_ifex (vec_to_boolfunc 4 
+      (boolean_functions.Alexander_dual proj_2_bool)) [0]) = 0" 
   by eval
 
-lemma "mk_ifex (proj_2) [3,2,1,0] = IF 2 Trueif Falseif"
-  by eval
+(*lemma "mk_ifex (proj_2) [3,2,1,0] = IF 2 Trueif Falseif"
+  by eval*)
 
 lemma "mk_ifex (vec_to_boolfunc 4 proj_2_bool) [3,2,1,0] = IF 2 Trueif Falseif"
   by eval
@@ -134,8 +137,8 @@ lemma "mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual proj_2_bool)
   = IF 2 Trueif Falseif"
   by eval
 
-lemma "mk_ifex (proj_2) [0,1,2,3] = IF 2 Trueif Falseif"
-  by eval
+(*lemma "mk_ifex (proj_2) [0,1,2,3] = IF 2 Trueif Falseif"
+  by eval*)
 
 lemma "mk_ifex (vec_to_boolfunc 4 proj_2_bool) [0,1,2,3] = IF 2 Trueif Falseif"
   by eval
@@ -144,27 +147,28 @@ lemma "mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual proj_2_bool)
   = IF 2 Trueif Falseif"
   by eval
 
-lemma "height (mk_ifex (proj_2) [0,1,2,3]) = 1" by eval
+(*lemma "height (mk_ifex (proj_2) [0,1,2,3]) = 1" by eval*)
 
 lemma "height (mk_ifex (vec_to_boolfunc 4 proj_2_bool) [0,1,2,3]) = 1" by eval
 
 lemma "height (mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual proj_2_bool)) 
         [0,1,2,3]) = 1" by eval
 
-lemma "mk_ifex (proj_2_n3) [0,1,2,3] = IF 2 (IF 3 Falseif Trueif) Falseif" by eval
+(*lemma "mk_ifex (proj_2_n3) [0,1,2,3] = IF 2 (IF 3 Falseif Trueif) Falseif" by eval*)
 
 text\<open>Here the @{typ "nat ifex"} obtained is different for 
   @{term "boolean_functions.Alexander_dual proj_2_n3_bool"}
   and @{term "proj_2_n3_bool"}. In some sense, they are "dual"\<close>
 
-lemma "mk_ifex (vec_to_boolfunc 4 proj_2_n3_bool) [0,1,2,3] = IF 2 (IF 3 Falseif Trueif) Falseif" 
+lemma "mk_ifex (vec_to_boolfunc 4 proj_2_n3_bool) [0,1,2,3] 
+    = IF 2 (IF 3 Falseif Trueif) Falseif"
    by eval
 
 lemma "mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual proj_2_n3_bool)) [0,1,2,3]
-  = IF 2 Trueif (IF 3 Falseif Trueif)"
+    = IF 2 Trueif (IF 3 Falseif Trueif)"
    by eval
 
-lemma "mk_ifex (bf_False::nat boolfunc) [0,1,2,3] = Falseif" by eval
+(*lemma "mk_ifex (bf_False::nat boolfunc) [0,1,2,3] = Falseif" by eval*)
 
 text\<open>Here the @{typ "nat ifex"} obtained is different for 
   @{term "boolean_functions.Alexander_dual (\<lambda>x. False)"}
@@ -176,7 +180,7 @@ lemma "mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual (\<lambda>x.
   [0,1,2,3] = Trueif" 
   by eval
 
-lemma "height (mk_ifex (bf_False::nat boolfunc) [0,1,2,3]) = 0" by eval
+(*lemma "height (mk_ifex (bf_False::nat boolfunc) [0,1,2,3]) = 0" by eval*)
 
 lemma "height (mk_ifex (vec_to_boolfunc 4 (\<lambda>x. False)) [0,1,2,3]) = 0" by eval
 
@@ -184,7 +188,7 @@ lemma "height (mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual (\<l
   [0,1,2,3]) = 0"
   by eval
 
-lemma "mk_ifex (bf_True::nat boolfunc) [0,1,2,3] = Trueif" by eval
+(*lemma "mk_ifex (bf_True::nat boolfunc) [0,1,2,3] = Trueif" by eval*)
 
 text\<open>Here the @{typ "nat ifex"} obtained is different for 
   @{term "boolean_functions.Alexander_dual (\<lambda>x. False)"}
@@ -196,7 +200,7 @@ lemma "mk_ifex (vec_to_boolfunc 4 (boolean_functions.Alexander_dual (\<lambda>x.
   [0,1,2,3] = Falseif"
   by eval
 
-lemma "height (mk_ifex (bf_True::nat boolfunc) [0,1,2,3]) = 0" by eval
+(*lemma "height (mk_ifex (bf_True::nat boolfunc) [0,1,2,3]) = 0" by eval*)
 
 lemma "height (mk_ifex (vec_to_boolfunc 4 (\<lambda>x. True)) [0,1,2,3]) = 0" by eval
 
@@ -210,25 +214,44 @@ text\<open>Now we introduce the definition of evasive Boolean function.
   It is based on the height of the ifex expression of the given function.
   The definition is inspired by the one by Scoville~\cite[Ex. 6.19]{SC19}.\<close>
 
-definition evasive :: "nat => ((nat => bool) => bool) => bool"
-  where "evasive n f \<equiv> (height (mk_ifex f [0..n])) = n"
+definition evasive :: "nat => (bool vec => bool) => bool"
+  where "evasive n f \<equiv> (height (mk_ifex (vec_to_boolfunc n f) [0..n])) = n"
 
-corollary "evasive 4 boolfunc_threshold_2_3" by eval
 
-lemma "evasive 4 (vec_to_boolfunc 4 bool_fun_threshold_2_3)"
+(*definition evasive :: "nat => ((nat => bool) => bool) => bool"
+  where "evasive n f \<equiv> (height (mk_ifex f [0..n])) = n"*)
+
+(*corollary "evasive 4 boolfunc_threshold_2_3" by eval*)
+
+lemma "evasive 4 (bool_fun_threshold_2_3)"
   by eval
 
-lemma "evasive 4 (vec_to_boolfunc 4 (boolean_functions.Alexander_dual bool_fun_threshold_2_3))"
+lemma "evasive 4 (boolean_functions.Alexander_dual bool_fun_threshold_2_3)"
   by eval
 
-lemma "\<not> evasive 4 proj_2" by eval
+(*lemma "\<not> evasive 4 proj_2" by eval*)
 
-lemma "\<not> evasive 4 (vec_to_boolfunc 4 proj_2_bool)" by eval
+lemma "\<not> evasive 4 proj_2_bool" by eval
 
-lemma "\<not> evasive 4 proj_2_n3" by eval
+(*lemma "\<not> evasive 4 proj_2_n3" by eval*)
+
+lemma "\<not> evasive 4 proj_2_n3_bool" by eval
 
 lemma "\<not> evasive 4 bf_True" by eval
 
 lemma "\<not> evasive 4 bf_False" by eval
+
+section\<open>The @{term boolean_functions.Alexander_dual} and @{typ "'a ifex"}\<close>
+
+context boolean_functions
+begin
+
+lemma 
+  assumes "monotone_bool_fun f"
+  shows "mk_ifex (vec_to_boolfunc n f) [0..n] 
+        ... mk_ifex (vec_to_boolfunc n (Alexander_dual f)) [0..n]"
+  sorry
+
+end
 
 end

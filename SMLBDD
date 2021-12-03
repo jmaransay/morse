@@ -832,14 +832,10 @@ fun getentryi (Pointermap_impl_ext (entriesi, getentryi, more)) = getentryi;
 
 fun times_nat m n = Nat (IntInf.* (integer_of_nat m, integer_of_nat n));
 
-fun blit A_ uu uv uw ux l =
-  (if equal_nata l zero_nata then (fn () => ())
-    else (fn f_ => fn () => f_ ((ntha A_ uu uv) ()) ())
-           (fn x =>
-             (fn f_ => fn () => f_ ((upd A_ ux x uw) ()) ())
-               (fn _ =>
-                 blit A_ uu (plus_nat uv one_nat) uw (plus_nat ux one_nat)
-                   (minus_nat l one_nat))));
+fun blit A_ src si dst di len =
+  (fn () => 
+    array_blit src (integer_of_nat
+                     si) dst (integer_of_nat di) (integer_of_nat len));
 
 fun array_grow A_ a s x =
   (fn f_ => fn () => f_ ((len A_ a) ()) ())

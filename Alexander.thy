@@ -61,8 +61,8 @@ proof -
 qed
 
 text\<open>We define the complement or the ``no faces'' of a simplicial complex
-  as the set of simplices that is not in the simplicial complex.
-  Note that the set obtained is not a simplicial complex (except 
+  as the simplices in @{term "{..n::nat}"} that are not in the simplicial 
+  complex. Note that the set obtained is not a simplicial complex (except 
   for particular cases such as the empty set or the total set).\<close>
 
 definition nofaces_simplicial_complex

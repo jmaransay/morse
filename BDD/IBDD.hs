@@ -20,7 +20,7 @@ module
         bot_set, removeAll, inserta, insert, sc_threshold_2_3, gen_length,
         size_list, part, sort_key, sorted_list_of_set, linorder_list_unwrap,
         sorted_list_of_list_set, nat_list_from_vertex, nat_list_from_sc,
-        getentryi, times_nat, blit, array_grow, arl_append, load_factor,
+        getentryi, times_nat, blita, blit, array_grow, arl_append, load_factor,
         the_array, replicate, ht_new_sz, nat_of_uint32, nat_of_hashcode,
         bounded_hashcode_nat, ls_update, the_size, ht_upd, ht_insls, ht_copy,
         ht_rehash, ht_update, ls_lookup, ht_lookup, pointermap_getmki,
@@ -795,20 +795,22 @@ getentryi (Pointermap_impl_ext entriesi getentryi more) = getentryi;
 times_nat :: Nat -> Nat -> Nat;
 times_nat m n = Nat (integer_of_nat m * integer_of_nat n);
 
+blita ::
+  forall a.
+    Heap.STArray Heap.RealWorld a ->
+      Integer ->
+        Heap.STArray Heap.RealWorld a ->
+          Integer -> Integer -> Heap.ST Heap.RealWorld ();
+blita _ _ _ _ _ = error "Array_Blit.blit\'";
+
 blit ::
   forall a.
     (Heapa a) => Heap.STArray Heap.RealWorld a ->
                    Nat ->
                      Heap.STArray Heap.RealWorld a ->
                        Nat -> Nat -> Heap.ST Heap.RealWorld ();
-blit uu uv uw ux l =
-  (if equal_nat l zero_nat then return ()
-    else do { 
-           x <- ntha uu uv;
-           _ <- upd ux x uw;
-           blit uu (plus_nat uv one_nat) uw (plus_nat ux one_nat)
-             (minus_nat l one_nat)
-          });
+blit src si dst di len =
+  blita src (integer_of_nat si) dst (integer_of_nat di) (integer_of_nat len);
 
 array_grow ::
   forall a.
