@@ -131,6 +131,12 @@ lemma
   shows "ceros_of_boolean_input v = {x. x < dim_vec v} - {x. vec_index v x}"
   unfolding ceros_of_boolean_input_def by auto
 
+lemma (in simplicial_complex) vec_in_simplices:
+  assumes "v \<in> carrier_vec n"
+  shows "ceros_of_boolean_input v \<in> simplices"
+  using assms unfolding carrier_vec_def simplices_def ceros_of_boolean_input_def
+  by auto
+
 (*lemma ceros_in_UNIV: "ceros_of_boolean_input f \<subseteq> (UNIV::nat set)"
   using subset_UNIV .*)
 

@@ -343,6 +343,20 @@ lemma
 qed
 
 lemma
+  not_bool_vec_impl_not_simpl_compl:
+  assumes v: "v \<in> carrier_vec n"
+    and v_notin: "boolean_functions.not v \<notin> bool_vec_set_from_simplice_set s"
+  shows "simplex_complement (ceros_of_boolean_input v) \<notin> s"
+  using v v_notin
+  unfolding bool_vec_set_from_simplice_set_def
+  unfolding bool_vec_from_simplice_def
+  unfolding ceros_of_boolean_input_def
+  apply auto
+  using boolean_functions.dim_vec_not carrier_vecD apply blast
+  unfolding simplex_complement_def 
+  using boolean_functions.not_def by fastforce
+
+lemma
   boolean_function_Alexander_dual_equals:
   assumes s: "simplicial_complex s" and s_nempty: "s \<noteq> {}"
   and v: "v \<in> carrier_vec n"
@@ -350,31 +364,65 @@ lemma
     = boolean_function_from_simplicial_complex (Alexander_dual s) v"
 proof
   assume A: "boolean_functions.Alexander_dual (boolean_function_from_simplicial_complex s) v"
+  from A have v_nin_s: "boolean_functions.not v \<notin> bool_vec_set_from_simplice_set s"
+    unfolding boolean_functions.Alexander_dual_def
+    unfolding boolean_function_from_simplicial_complex_def .
+  from v_nin_s have simp_compl_v_notin: "simplex_complement (ceros_of_boolean_input v) \<notin> s"
+    using not_bool_vec_impl_not_simpl_compl [OF v, of s] by fast
+  from A and v and s_nempty obtain k 
+    where ks: "k \<in> s" and v_ne_k: "(\<lambda>n. \<not> v $ n) \<noteq> (\<lambda>i. i \<notin> k)"
+     unfolding boolean_functions.Alexander_dual_def
+     unfolding boolean_functions.not_def
+     unfolding boolean_function_from_simplicial_complex_def
+     unfolding bool_vec_set_from_simplice_set_def
+     unfolding bool_vec_from_simplice_def
+     unfolding ceros_of_boolean_input_def
+     by fastforce
   show "boolean_function_from_simplicial_complex (Alexander_dual s) v"
-  proof -
-    from A and v and s_nempty obtain k where ks: "k \<in> s" 
-      and v_ne_k: "(\<lambda>n. \<not> v $ n) \<noteq> (\<lambda>i. i \<notin> k)"
-      unfolding boolean_functions.Alexander_dual_def
-      unfolding boolean_functions.not_def
-      unfolding boolean_function_from_simplicial_complex_def
-      unfolding bool_vec_set_from_simplice_set_def
-      unfolding bool_vec_from_simplice_def by fastforce
-    (*have "simplex_complement k \<in> nofaces_simplicial_complex s"
-      using ks unfolding nofaces_simplicial_complex_def 
-      unfolding simplex_complement_def try*)
-    show ?thesis
-      unfolding boolean_function_from_simplicial_complex_def
-      unfolding bool_vec_set_from_simplice_set_def
-      unfolding bool_vec_from_simplice_def
-      unfolding Alexander_dual_def
-
-    unfolding boolean_functions.not_def
+    unfolding boolean_function_from_simplicial_complex_def
+    unfolding bool_vec_set_from_simplice_set_def
+    unfolding bool_vec_from_simplice_def
     unfolding Alexander_dual_def
-    unfolding simplicial_complex.simplex_complement_def
-    unfolding nofaces_simplicial_complex_def
-    apply auto
-        apply (simp_all add: v)
-    prefer 2
-    try
+   proof (rule CollectI, rule conjI)
+    show "dim_vec v = n" using v by simp
+    show "\<exists>k\<in>{simplex_complement x |x. x \<in> nofaces_simplicial_complex s}. 
+               v = vec n (\<lambda>i. i \<notin> k)"
+    proof (rule bexI [of _ "(ceros_of_boolean_input v)"])
+     show "v = vec n (\<lambda>i. i \<notin> (ceros_of_boolean_input v))"
+     proof (intro eq_vecI)
+      show "dim_vec v = dim_vec (vec n (\<lambda>i. i \<notin> (ceros_of_boolean_input v)))"
+       using v by simp
+       fix i
+       assume "i < dim_vec (vec n (\<lambda>i. i \<notin> (ceros_of_boolean_input v)))"
+       hence iln: "i < n" using v by simp
+       have "(vec_index v) i = (\<lambda>i. i \<notin> (ceros_of_boolean_input v)) i"
+        unfolding ceros_of_boolean_input_def
+        using iln v by auto
+       then show "v $ i = vec n (\<lambda>i. i \<notin> (ceros_of_boolean_input v)) $ i"
+        by (metis iln index_vec)
+       qed
+       show "ceros_of_boolean_input v 
+            \<in> {simplex_complement x |x. x \<in> nofaces_simplicial_complex s}"
+       proof (rule CollectI, 
+              rule exI [of _ "simplex_complement (ceros_of_boolean_input v)"], rule conjI)
+       show "ceros_of_boolean_input v =
+         simplex_complement (simplex_complement (ceros_of_boolean_input v))"
+         using simplex_complement_idempotent [
+             OF simplicial_complex.vec_in_simplices [OF v]] .
+        show "simplex_complement (ceros_of_boolean_input v) \<in> nofaces_simplicial_complex s"
+         unfolding simplex_complement_def
+         unfolding ceros_of_boolean_input_def
+         unfolding nofaces_simplicial_complex_def 
+         using ks v_ne_k apply auto
+         apply (simp add: atLeast0LessThan simplices_def)
+         by (metis ceros_of_boolean_input_def simp_compl_v_notin simplex_complement_def)
+        qed
+      qed
+    qed
+  next
+  assume A: "boolean_function_from_simplicial_complex (Alexander_dual s) v"
+  show "boolean_functions.Alexander_dual (boolean_function_from_simplicial_complex s) v"
+
+end
     
 end

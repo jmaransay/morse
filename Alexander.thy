@@ -47,6 +47,7 @@ lemma
   using s c unfolding simplices_def by simp
 
 lemma
+  simplex_complement_idempotent:
   assumes "x \<in> simplices"
   shows "x = simplex_complement (simplex_complement x)"
   using assms atLeast0LessThan simplex_complement_def simplices_def by auto
