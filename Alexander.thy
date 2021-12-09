@@ -4,6 +4,8 @@ theory Alexander
     Simplicial_complex
 begin
 
+section\<open>Definition of the Alexander dual of a simplicial complex\<close>
+
 context simplicial_complex
 begin
 
@@ -82,6 +84,15 @@ definition Alexander_dual
   where "Alexander_dual s = 
             {v. \<exists>x. v = simplex_complement x \<and> x \<in> nofaces_simplicial_complex s}"
 
+lemma Alexander_dual_empty: "Alexander_dual {} = Pow {..<n}"
+  unfolding Alexander_dual_def
+  unfolding nofaces_simplicial_complex_def
+  unfolding simplex_complement_def
+  unfolding simplices_def
+  by auto
+
+subsection\<open>The Alexander dual of a simplicial complex is a simplicial complex\<close>
+
 lemma
   simplicial_complex_Alexander_dual:
   assumes "simplicial_complex s"
@@ -132,6 +143,8 @@ proof (unfold simplicial_complex_def, standard, intro conjI)
 qed
 
 end
+
+section\<open>Definition of the Alexander dual of a Boolean function\<close>
 
 context boolean_functions
 begin
@@ -215,6 +228,15 @@ text\<open>The definition of the Alexander dual now for a Boolean function @{ter
   becomes just the negation of @{term f} over the ``complement'' of every vector.\<close>
 
 definition "Alexander_dual f = (\<lambda>x. \<not> f (not x))"
+
+lemma Alexander_dual_False: 
+  "boolean_functions.Alexander_dual (\<lambda>x. False) =
+   (\<lambda>x. True)"
+  unfolding Alexander_dual_def 
+  by simp
+
+subsection\<open>The Alexander dual of a \emph{monotone} Boolean function 
+  is a \emph{monotone} Boolean function\<close>
 
 lemma
   monotone_boolean_function_Alexander_dual:

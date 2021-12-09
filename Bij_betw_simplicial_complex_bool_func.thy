@@ -2,6 +2,7 @@
 theory Bij_betw_simplicial_complex_bool_func
   imports 
     Simplicial_complex
+    Alexander
 begin
 
 section\<open>Bijection between simplicial complexes and monotone Boolean functions\<close>
@@ -244,4 +245,136 @@ qed
 
 end
 
+section\<open>Equivalence of the Alexander dual definition for Boolean functions 
+  and simplicial complexes\<close>
+
+context simplicial_complex
+begin
+
+lemma conjI3: "A \<Longrightarrow> B \<Longrightarrow> C \<Longrightarrow> A \<and> B \<and> C"
+  by simp
+
+lemma
+  simplicial_complex_Alexander_dual_equals:
+  shows "simplicial_complex_induced_by_monotone_boolean_function n (boolean_functions.Alexander_dual f)
+    = Alexander_dual (simplicial_complex_induced_by_monotone_boolean_function n f)"
+  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+  unfolding Alexander_dual_def
+  unfolding boolean_functions.Alexander_dual_def
+  unfolding boolean_functions.not_def
+  unfolding ceros_of_boolean_input_def
+  unfolding simplex_complement_def
+  unfolding nofaces_simplicial_complex_def
+  unfolding simplices_def proof standard
+  show "{y. \<exists>x. dim_vec x = n \<and>
+            \<not> f (vec (dim_vec x) (\<lambda>n. \<not> x $ n)) \<and> {xa. xa < dim_vec x \<and> x $ xa = False} = y}
+    \<subseteq> {univ_n - x |x.
+        x \<in> {v \<in> Pow {0..<n}.
+              v \<notin> {y. \<exists>x. dim_vec x = n \<and> f x \<and> {xa. xa < dim_vec x \<and> x $ xa = False} = y}}}"
+  proof (rule subsetI)
+    fix x :: "nat set"
+    assume x: "x \<in> {y. \<exists>x. dim_vec x = n \<and> \<not> f (vec (dim_vec x) (\<lambda>n. \<not> x $ n)) \<and>
+                     {xa. xa < dim_vec x \<and> x $ xa = False} = y} "
+    from x obtain x':: "bool vec" where dx': "dim_vec x' = n" 
+          and notfx': "\<not> f (vec (dim_vec x') (\<lambda>n. \<not> x' $ n))"
+          and x_n_x': "{xa. xa < dim_vec x' \<and> x' $ xa = False} = x" by auto
+    show "x \<in> {univ_n - x |x. x \<in> {v \<in> Pow {0..<n}.
+        v \<notin> {y. \<exists>x. dim_vec x = n \<and> f x \<and> {xa. xa < dim_vec x \<and> x $ xa = False} = y}}}"
+    proof (rule CollectI,
+            rule exI [of _ "(ceros_of_boolean_input (boolean_functions.not x'))"],
+              rule conjI)
+        show "x = univ_n - (ceros_of_boolean_input (boolean_functions.not x'))"
+          using x_n_x' dx'
+          unfolding boolean_functions.not_def
+          unfolding ceros_of_boolean_input_def by auto
+        show "(ceros_of_boolean_input (boolean_functions.not x')) \<in> {v \<in> Pow {0..<n}.
+                v \<notin> {y. \<exists>x. dim_vec x = n \<and> f x \<and> {xa. xa < dim_vec x \<and> x $ xa = False} = y}}"
+          using x_n_x' dx'
+          unfolding boolean_functions.not_def
+          unfolding ceros_of_boolean_input_def apply simp apply (intro conjI)
+           apply auto[1]
+          by (smt (verit) dim_vec eq_vecI mem_Collect_eq notfx')
+      qed
+    qed
+  next
+    show "{univ_n - x |x.
+            x \<in> {v \<in> Pow {0..<n}.
+           v \<notin> {y. \<exists>x. dim_vec x = n \<and> f x \<and> {xa. xa < dim_vec x \<and> x $ xa = False} = y}}}
+        \<subseteq> {y. \<exists>x. dim_vec x = n \<and>
+               \<not> f (vec (dim_vec x) (\<lambda>n. \<not> x $ n)) \<and> {xa. xa < dim_vec x \<and> x $ xa = False} = y}"
+    proof (rule subsetI)
+      fix x :: "nat set"
+      assume x: "x \<in> {univ_n - x |x.
+              x \<in> {v \<in> Pow {0..<n}.
+                    v \<notin> {y. \<exists>x. dim_vec x = n \<and>
+                                 f x \<and> {xa. xa < dim_vec x \<and> x $ xa = False} = y}}}"
+      then obtain x' where x'_def: "x = univ_n - x'"
+                      and x'_complement: "simplex_complement x' = x"
+                      and x'_simplice: "x' \<in> Pow {0..<n}" 
+                      and x'_compliment: "x' \<notin> {y. \<exists>x. dim_vec x = n \<and>
+                                 f x \<and> {xa. xa < dim_vec x \<and> x $ xa = False} = y}" 
+            unfolding simplex_complement_def
+        by auto
+      show "x \<in> {y. \<exists>x. dim_vec x = n \<and>
+                      \<not> f (vec (dim_vec x) (\<lambda>n. \<not> x $ n)) \<and>
+                      {xa. xa < dim_vec x \<and> x $ xa = False} = y}"
+      proof (rule CollectI,
+              rule exI [of _ "(bool_vec_from_simplice (simplex_complement x'))"],
+                rule conjI3)
+        show "dim_vec (bool_vec_from_simplice (simplex_complement x')) = n"
+          by (metis dim_vec simplicial_complex.bool_vec_from_simplice_def)
+        show "\<not> f (vec (dim_vec (bool_vec_from_simplice (simplex_complement x')))
+           (\<lambda>n. \<not> bool_vec_from_simplice (simplex_complement x') $ n))"
+          (*TODO: try to simplify this proof; maybe some previous results
+            on bool_vec_from_simplice may help*)
+          by (smt (verit, ccfv_SIG) Collect_cong bool_vec_from_simplice_def 
+                ceros_of_boolean_input_def dim_vec index_vec mem_Collect_eq 
+                simplex_Compl_iff simplices_def simplicial_complex.ceros_of_boolean_input_in_set 
+                x'_compliment x'_simplice)
+        show "{xa. xa < dim_vec (bool_vec_from_simplice (simplex_complement x')) \<and>
+                bool_vec_from_simplice (simplex_complement x') $ xa = False} = x"
+          (*TODO: Try to simplify this proof*)
+          by (metis \<open>\<And>thesis. (\<And>x'. \<lbrakk>x = univ_n - x'; simplex_complement x' = x;
+          x' \<in> Pow {0..<n}; x' \<notin> {y. \<exists>x. dim_vec x = n \<and> f x \<and> {xa. xa < dim_vec x \<and> x $ xa = False} = y}\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> 
+                bool_vec_from_simplice_def ceros_of_boolean_input_def ceros_of_boolean_input_in_set 
+                  simplex_complement_simplex simplices_def x'_complement)
+     qed
+  qed
+qed
+
+lemma
+  boolean_function_Alexander_dual_equals:
+  assumes s: "simplicial_complex s" and s_nempty: "s \<noteq> {}"
+  and v: "v \<in> carrier_vec n"
+  shows "boolean_functions.Alexander_dual (boolean_function_from_simplicial_complex s) v
+    = boolean_function_from_simplicial_complex (Alexander_dual s) v"
+proof
+  assume A: "boolean_functions.Alexander_dual (boolean_function_from_simplicial_complex s) v"
+  show "boolean_function_from_simplicial_complex (Alexander_dual s) v"
+  proof -
+    from A and v and s_nempty obtain k where ks: "k \<in> s" 
+      and v_ne_k: "(\<lambda>n. \<not> v $ n) \<noteq> (\<lambda>i. i \<notin> k)"
+      unfolding boolean_functions.Alexander_dual_def
+      unfolding boolean_functions.not_def
+      unfolding boolean_function_from_simplicial_complex_def
+      unfolding bool_vec_set_from_simplice_set_def
+      unfolding bool_vec_from_simplice_def by fastforce
+    (*have "simplex_complement k \<in> nofaces_simplicial_complex s"
+      using ks unfolding nofaces_simplicial_complex_def 
+      unfolding simplex_complement_def try*)
+    show ?thesis
+      unfolding boolean_function_from_simplicial_complex_def
+      unfolding bool_vec_set_from_simplice_set_def
+      unfolding bool_vec_from_simplice_def
+      unfolding Alexander_dual_def
+
+    unfolding boolean_functions.not_def
+    unfolding Alexander_dual_def
+    unfolding simplicial_complex.simplex_complement_def
+    unfolding nofaces_simplicial_complex_def
+    apply auto
+        apply (simp_all add: v)
+    prefer 2
+    try
+    
 end

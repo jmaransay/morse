@@ -38,6 +38,19 @@ text\<open>A simplicial complex (in $n$ vertexes) is a collection of
 definition simplicial_complex :: "nat set set => bool"
   where "simplicial_complex K \<equiv>  (\<forall>\<sigma>\<in>K. (\<sigma> \<in> simplices) \<and> (Pow \<sigma>) \<subseteq> K)"
 
+lemma simplicial_complex_empty_set: "simplicial_complex {}"
+  unfolding simplicial_complex_def 
+  unfolding simplices_def by simp
+
+lemma simplicial_complex_contains_empty_set: "simplicial_complex {{}}"
+  unfolding simplicial_complex_def 
+  unfolding simplices_def by simp
+
+lemma simplicial_complex_either_empty_or_contains_empty:
+  fixes K::"nat set set"
+  assumes k: "simplicial_complex K"
+  shows "K = {} \<or> {} \<in> K" using k unfolding simplicial_complex_def Pow_def by auto
+
 lemma 
   finite_simplicial_complex:
   assumes "simplicial_complex K"
@@ -53,11 +66,6 @@ shows "finite v"
 
 definition simplicial_complex_set :: "nat set set set"
   where "simplicial_complex_set = (Collect simplicial_complex)"
-
-lemma simplicial_complex_empty_set:
-  fixes K::"nat set set"
-  assumes k: "simplicial_complex K"
-  shows "K = {} \<or> {} \<in> K" using k unfolding simplicial_complex_def Pow_def by auto
 
 lemma
   simplicial_complex_monotone:
