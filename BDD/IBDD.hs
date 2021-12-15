@@ -187,11 +187,7 @@ member x (Coset xs) = not (membera xs x);
 member x (Set xs) = membera xs x;
 
 less_eq_set :: forall a. (Eq a) => Set a -> Set a -> Bool;
-less_eq_set (Coset xs) (Set ys) =
-  (if null xs && null ys then False
-    else (error :: forall a. String -> (() -> a) -> a)
-           "subset_eq (List.coset _) (List.set _) requires type class instance card_UNIV"
-           (\ _ -> less_eq_set (Coset xs) (Set ys)));
+less_eq_set (Coset []) (Set []) = False;
 less_eq_set a (Coset ys) = all (\ y -> not (member y a)) ys;
 less_eq_set (Set xs) b = all (\ x -> member x b) xs;
 

@@ -249,7 +249,7 @@ begin
 lemma 
   assumes "monotone_bool_fun f"
   shows "mk_ifex (vec_to_boolfunc n f) [0..n] 
-        ... mk_ifex (vec_to_boolfunc n (Alexander_dual f)) [0..n]"
+        = mk_ifex (vec_to_boolfunc n (Alexander_dual f)) [0..n]"
   sorry
 
 end

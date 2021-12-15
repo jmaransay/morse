@@ -325,19 +325,17 @@ lemma
           by (metis dim_vec simplicial_complex.bool_vec_from_simplice_def)
         show "\<not> f (vec (dim_vec (bool_vec_from_simplice (simplex_complement x')))
            (\<lambda>n. \<not> bool_vec_from_simplice (simplex_complement x') $ n))"
-          (*TODO: try to simplify this proof; maybe some previous results
-            on bool_vec_from_simplice may help*)
-          by (smt (verit, ccfv_SIG) Collect_cong bool_vec_from_simplice_def 
-                ceros_of_boolean_input_def dim_vec index_vec mem_Collect_eq 
-                simplex_Compl_iff simplices_def simplicial_complex.ceros_of_boolean_input_in_set 
-                x'_compliment x'_simplice)
+          unfolding x'_complement using x
+          unfolding bool_vec_from_simplice_def
+          unfolding dim_vec by fastforce
         show "{xa. xa < dim_vec (bool_vec_from_simplice (simplex_complement x')) \<and>
                 bool_vec_from_simplice (simplex_complement x') $ xa = False} = x"
-          (*TODO: Try to simplify this proof*)
-          by (metis \<open>\<And>thesis. (\<And>x'. \<lbrakk>x = univ_n - x'; simplex_complement x' = x;
-          x' \<in> Pow {0..<n}; x' \<notin> {y. \<exists>x. dim_vec x = n \<and> f x \<and> {xa. xa < dim_vec x \<and> x $ xa = False} = y}\<rbrakk> \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> 
-                bool_vec_from_simplice_def ceros_of_boolean_input_def ceros_of_boolean_input_in_set 
-                  simplex_complement_simplex simplices_def x'_complement)
+          using x'_complement x'_simplice
+          unfolding bool_vec_from_simplice_def
+          unfolding ceros_of_boolean_input_def 
+          unfolding simplex_complement_def
+          using simplex_complement_simplex
+          using ceros_of_boolean_input_in_set by auto
      qed
   qed
 qed
@@ -355,20 +353,6 @@ lemma
   using boolean_functions.dim_vec_not [OF carrier_vecD [OF v]] carrier_vecD [OF v]
   using boolean_functions.not_def [of v] 
   by auto (fastforce)
-
-lemma
-  not_bool_vec_impl_not_simpl_compl:
-  assumes v: "v \<in> carrier_vec n"
-    and v_notin: "boolean_functions.not v \<notin> bool_vec_set_from_simplice_set s"
-  shows "simplex_complement (ceros_of_boolean_input v) \<notin> s"
-  using v v_notin
-  unfolding bool_vec_set_from_simplice_set_def
-  unfolding bool_vec_from_simplice_def
-  unfolding ceros_of_boolean_input_def
-  apply auto
-  using boolean_functions.dim_vec_not carrier_vecD apply blast
-  unfolding simplex_complement_def 
-  using boolean_functions.not_def by fastforce
 
 lemma
   boolean_function_Alexander_dual_equals:

@@ -223,7 +223,7 @@ lemma
   and x: "x \<in> carrier_vec n" and y: "y \<in> carrier_vec n"
   and xy: "x \<le> y"
   shows "(\<not> f y) \<le> (\<not> f x)"
-  by (metis (mono_tags, hide_lams) le_boolE le_boolI' m mono_on_def monotone_bool_fun_def x xy y)
+  by (metis (mono_tags, opaque_lifting) le_boolE le_boolI' m mono_on_def monotone_bool_fun_def x xy y)
 
 text\<open>The definition of the Alexander dual now for a Boolean function @{term f}
   becomes just the negation of @{term f} over the ``complement'' of every vector.\<close>

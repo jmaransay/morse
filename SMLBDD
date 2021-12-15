@@ -200,14 +200,7 @@ fun membera A_ [] y = false
 fun member A_ x (Coset xs) = not (membera A_ xs x)
   | member A_ x (Set xs) = membera A_ xs x;
 
-fun null [] = true
-  | null (x :: xs) = false;
-
-fun less_eq_set A_ (Coset xs) (Set ys) =
-  (if null xs andalso null ys then false
-    else (raise Fail
-           "subset_eq (List.coset _) (List.set _) requires type class instance card_UNIV")
-           (fn _ => less_eq_set A_ (Coset xs) (Set ys)))
+fun less_eq_set A_ (Coset []) (Set []) = false
   | less_eq_set A_ a (Coset ys) = list_all (fn y => not (member A_ y a)) ys
   | less_eq_set A_ (Set xs) b = list_all (fn x => member A_ x b) xs;
 
