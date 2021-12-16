@@ -46,25 +46,80 @@ lemma
 definition nat_to_bool_vec :: "nat \<Rightarrow> nat \<Rightarrow> bool vec"
   where "nat_to_bool_vec n k = vec n (\<lambda>i. bit k i)"
 
-value "nat_to_bool_vec 8 5 $ 0 = True"
+text\<open>The following function behaves similarly to the previous one, but
+  it generates a list. In principle, we will use it just for testing.
+  Do note that the elements in the list are placed in ``reverse order''
+  with respect to the usual representation of binary strings 
+  (is this Big Endian?), but in the same indexes as in @{term nat_to_bool_vec}}.\<close>
 
-value "nat_to_bool_vec 8 4 $ 0 = False"
+definition nat_to_bool_list :: "nat \<Rightarrow> nat \<Rightarrow> bool list"
+  where "nat_to_bool_list n k = map (\<lambda>i. bit k i) [0..<n]"
+
+value "nat_to_bool_vec 8 5 $ 0 = True"
 
 value "nat_to_bool_vec 8 5 $ 1 = False"
 
+value "nat_to_bool_vec 8 5 $ 2 = True"
+
+value "nat_to_bool_vec 8 5 $ 3 = False"
+
+value "nat_to_bool_list 8 5"
+
 value "nat_to_bool_vec 8 1 $ 0 = False"
 
-value "nat_to_bool_vec 8 5 $ 2 = True"
+value "nat_to_bool_vec 8 4 $ 0 = False"
 
 value "nat_to_bool_vec 8 2 $ 0 = False"
 
-definition bead_of_boolean_function 
+definition boolean_function_to_bool_vec 
   :: "nat \<Rightarrow> (bool vec \<Rightarrow> bool) \<Rightarrow> bool vec"
-  where "bead_of_boolean_function n f = 
+  where "boolean_function_to_bool_vec n f = 
       vec n (\<lambda>i. f (nat_to_bool_vec n i))"
 
-lemma "bead_of_boolean_function 8 (\<lambda>x. True) = vec 8 (\<lambda>i. True)"
-  unfolding bead_of_boolean_function_def ..
+text\<open>The following function is similar to the previous one but it
+  produces a list. For the moment just being used for testing purposes.\<close>
+
+definition boolean_function_to_bool_list
+  :: "nat \<Rightarrow> (bool vec \<Rightarrow> bool) \<Rightarrow> bool list"
+  where "boolean_function_to_bool_list n f = 
+      map (\<lambda>i. f (nat_to_bool_vec n i)) [0..<n]"
+
+text\<open>The following computation now produces the truth table for
+  the threshold function of order @{term 1} in size @{term 8}, 
+  \emph{i.e.}, a Boolean function in @{term 3} variables. 
+  The Boolean function is true whenever one or more variables are true.\<close>
+
+value "boolean_function_to_bool_list 8 (bool_fun_threshold 1)"
+
+text\<open>The following computation now produces the truth table for
+  the threshold function of order @{term 2} in size @{term 8}, 
+  \emph{i.e.}, a Boolean function in @{term 3} variables. 
+  The Boolean function is true whenever two or more variables are true.\<close>
+
+value "boolean_function_to_bool_list 8 (bool_fun_threshold 2)"
+
+text\<open>The following computation now produces the truth table for
+  the threshold function of order @{term 3} in size @{term 8}, 
+  \emph{i.e.}, a Boolean function in @{term 3} variables.
+  The Boolean function is true iff the three variables are true.\<close>
+
+value "boolean_function_to_bool_list 8 (bool_fun_threshold 3)"
+
+text\<open>The following computation now produces the truth table for
+  the threshold function of order @{term 2} in size @{term 16}, 
+  \emph{i.e.}, a Boolean function in @{term 4} variables. 
+  The Boolean function is true whenever two or more variables are true.\<close>
+
+value "boolean_function_to_bool_list 16 (bool_fun_threshold 2)"
+
+lemma "boolean_function_to_bool_vec 8 (\<lambda>x. True) = vec 8 (\<lambda>i. True)"
+  unfolding boolean_function_to_bool_vec_def ..
+
+text\<open>How to generate all the beads (size 1 to size n) of a boolean function???\<close>
+
+definition beads_of_a_boolean_function :: "nat \<Rightarrow> (bool vec \<Rightarrow> bool) \<Rightarrow> (bool vec) set"
+  where "beads_of_a_boolean_function n f = (boolean_function_to_bool_vec n f)
+
 
 context boolean_functions
 begin
