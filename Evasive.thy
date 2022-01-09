@@ -87,6 +87,14 @@ fun height :: "'a ifex => nat"
 
 text\<open>Both @{term mk_ifex} and @{term height} can be used in computations.\<close>
 
+definition example :: "bool vec \<Rightarrow> bool"
+  where "example v = ((v $ 1 \<and> v $ 2) \<or> (\<not> (v $ 1) \<and> v $ 3))"
+
+value "height (mk_ifex (vec_to_boolfunc 4 example) [0..3])"
+
+value "(mk_ifex (vec_to_boolfunc 4 example) [0..3])"
+
+
 lemma "height (mk_ifex (vec_to_boolfunc 4 bool_fun_threshold_2_3) [0..4]) = 4"
   by eval
 
@@ -246,11 +254,11 @@ section\<open>The @{term boolean_functions.Alexander_dual} and @{typ "'a ifex"}\
 context boolean_functions
 begin
 
-lemma 
+(*lemma 
   assumes "monotone_bool_fun f"
   shows "mk_ifex (vec_to_boolfunc n f) [0..n] 
         = mk_ifex (vec_to_boolfunc n (Alexander_dual f)) [0..n]"
-  sorry
+  sorry*)
 
 end
 

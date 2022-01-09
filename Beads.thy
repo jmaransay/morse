@@ -71,49 +71,130 @@ value "nat_to_bool_vec 8 4 $ 0 = False"
 
 value "nat_to_bool_vec 8 2 $ 0 = False"
 
+text\<open>The following function produces the output of a Boolean 
+  function of dimension @{term "n::nat"}.\<close>
+
 definition boolean_function_to_bool_vec 
   :: "nat \<Rightarrow> (bool vec \<Rightarrow> bool) \<Rightarrow> bool vec"
   where "boolean_function_to_bool_vec n f = 
       vec n (\<lambda>i. f (nat_to_bool_vec n i))"
 
-text\<open>The following function is similar to the previous one but it
+(*text\<open>The following function is similar to the previous one but it
   produces a list. For the moment just being used for testing purposes.\<close>
 
 definition boolean_function_to_bool_list
   :: "nat \<Rightarrow> (bool vec \<Rightarrow> bool) \<Rightarrow> bool list"
   where "boolean_function_to_bool_list n f = 
-      map (\<lambda>i. f (nat_to_bool_vec n i)) [0..<n]"
+      map (\<lambda>i. f (nat_to_bool_vec n i)) [0..<n]"*)
 
 text\<open>The following computation now produces the truth table for
   the threshold function of order @{term 1} in size @{term 8}, 
   \emph{i.e.}, a Boolean function in @{term 3} variables. 
   The Boolean function is true whenever one or more variables are true.\<close>
 
-value "boolean_function_to_bool_list 8 (bool_fun_threshold 1)"
+value "list_of_vec (boolean_function_to_bool_vec 8 (bool_fun_threshold 1))"
 
 text\<open>The following computation now produces the truth table for
   the threshold function of order @{term 2} in size @{term 8}, 
   \emph{i.e.}, a Boolean function in @{term 3} variables. 
   The Boolean function is true whenever two or more variables are true.\<close>
 
-value "boolean_function_to_bool_list 8 (bool_fun_threshold 2)"
+value "list_of_vec (boolean_function_to_bool_vec 8 (bool_fun_threshold 2))"
 
 text\<open>The following computation now produces the truth table for
   the threshold function of order @{term 3} in size @{term 8}, 
   \emph{i.e.}, a Boolean function in @{term 3} variables.
   The Boolean function is true iff the three variables are true.\<close>
 
-value "boolean_function_to_bool_list 8 (bool_fun_threshold 3)"
+value "list_of_vec (boolean_function_to_bool_vec 8 (bool_fun_threshold 3))"
 
 text\<open>The following computation now produces the truth table for
   the threshold function of order @{term 2} in size @{term 16}, 
   \emph{i.e.}, a Boolean function in @{term 4} variables. 
   The Boolean function is true whenever two or more variables are true.\<close>
 
-value "boolean_function_to_bool_list 16 (bool_fun_threshold 2)"
+value "list_of_vec (boolean_function_to_bool_vec 16 (bool_fun_threshold 2))"
 
 lemma "boolean_function_to_bool_vec 8 (\<lambda>x. True) = vec 8 (\<lambda>i. True)"
   unfolding boolean_function_to_bool_vec_def ..
+
+text\<open>Following the notation in Knuth (BDDs), we compute the subfunctions of
+  a Boolean function. Knuth uses subfunctions in index @{term "0::nat"}.
+  It is important to note that we must use ``the most meaningful bit'',
+  that for Knuth corresponds to position  @{term "1"}, but in our case 
+  corresponds with the last position, @{term "{dim_vec x - 1}"}.\<close>
+
+definition subfunction_0 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> (bool vec \<Rightarrow> bool)"
+  where "subfunction_0 f = (\<lambda>x. f (vec (dim_vec x) (\<lambda>i. if i = (dim_vec x - 1) then False else x $ i)))"
+
+definition subfunction_1 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> (bool vec \<Rightarrow> bool)"
+  where "subfunction_1 f = (\<lambda>x. f (vec (dim_vec x) (\<lambda>i. if i = (dim_vec x - 1) then True else x $ i)))"
+
+value "list_of_vec (boolean_function_to_bool_vec 16 (bool_fun_threshold 3))"
+
+value "bool_fun_threshold 3 (nat_to_bool_vec 16 15)"
+
+value "list_of_vec (boolean_function_to_bool_vec 8 (subfunction_0 (bool_fun_threshold 3)))"
+
+value "(subfunction_0 (bool_fun_threshold 3)) (nat_to_bool_vec 16 11)"
+
+value "list_of_vec (boolean_function_to_bool_vec 16 (bool_fun_threshold 3))"
+
+value "list_of_vec (boolean_function_to_bool_vec 8 (subfunction_1 (bool_fun_threshold 3)))"
+
+definition subtable_0 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> bool vec"
+  where "subtable_0 f n = boolean_function_to_bool_vec (n div 2) (subfunction_0 f)"
+
+value "list_of_vec (subtable_0 (bool_fun_threshold 3) 16)"
+
+value "list_of_vec (first_half (boolean_function_to_bool_vec 16 (bool_fun_threshold 3)))"
+
+definition subtable_1 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> bool vec"
+  where "subtable_1 f n = boolean_function_to_bool_vec (n div 2) (subfunction_1 f)"
+
+value "list_of_vec (subtable_1 (bool_fun_threshold 3) 16)"
+
+value "list_of_vec (second_half (boolean_function_to_bool_vec 16 (bool_fun_threshold 3)))"
+
+lemma
+  shows "first_half (boolean_function_to_bool_vec n f) = subtable_0 f n"
+  unfolding first_half_def
+  unfolding boolean_function_to_bool_vec_def
+  unfolding dim_vec
+  unfolding subtable_0_def
+  unfolding boolean_function_to_bool_vec_def
+  unfolding subfunction_0_def
+  unfolding nat_to_bool_vec_def
+proof (intro eq_vecI, unfold dim_vec) try
+  show "n div 2 = n div 2" by fast
+  fix i
+  assume "i < n div 2"
+  have "(vec n (\<lambda>i. f (vec n (bit i))) $ i = 
+   f (vec (n div 2)
+                    (\<lambda>ia. if ia = n div 2 - 1 then False
+                           else vec (n div 2) (bit i) $ ia)))"
+    sorry
+  then
+  show "vec (n div 2) (($) (vec n (\<lambda>i. f (vec n (bit i))))) $ i =
+         vec (n div 2)
+          (\<lambda>i. f (vec (n div 2)
+                    (\<lambda>ia. if ia = n div 2 - 1 then False
+                           else vec (n div 2) (bit i) $ ia))) $
+         i " using eq_vecI
+
+
+lemma "bead (boolean_function_to_bool_vec n f) \<equiv> (subtable_0 f n \<noteq> subtable_1 f n)"
+  unfolding bead_def
+  unfolding first_half_def
+  unfolding second_half_def
+  unfolding boolean_function_to_bool_vec_def
+  unfolding dim_vec
+  
+
+
+definition beads_of_a_boolean_function :: "nat \<Rightarrow> (bool vec \<Rightarrow> bool) \<Rightarrow> (bool vec) set"
+  where "beads_of_a_boolean_function n f = (boolean_function_to_bool_vec n f)
+
 
 text\<open>How to generate all the beads (size 1 to size n) of a boolean function???\<close>
 

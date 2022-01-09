@@ -392,7 +392,6 @@ definition "one_another_ex \<equiv> do {
   graphifyci ''one_another_ex'' ex s
 }"
 
-
 lemma bf_ite_direct[simp]: "bf_ite i bf_True bf_False = i" by simp
 
 lemma andciI: "node_relator (tb, tc) rp \<Longrightarrow> node_relator (eb, ec) rp \<Longrightarrow> rq \<subseteq> rp \<Longrightarrow>

@@ -173,7 +173,7 @@ lemma "nofaces_boolean_function f \<union> {b. b \<in> carrier_vec n \<and> f b}
 
 text\<open>The notion of @{const simplicial_complex.simplex_complement}
   becomes now in boolean functions the negation, or the complement in base 
-  @{term "2::nat"}, of each @{typ "bool vec"}.}\<close>
+  @{term "2::nat"}, of each @{typ "bool vec"}.\<close>
 
 definition not :: "bool vec \<Rightarrow> bool vec"  (*"\<not> _" [20] 20*)
   where "not v = vec (dim_vec v) (\<lambda>n. \<not> v $ n)"
