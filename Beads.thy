@@ -124,6 +124,77 @@ text\<open>Following the notation in Knuth (BDDs), we compute the subfunctions o
   that for Knuth corresponds to position  @{term "1"}, but in our case 
   corresponds with the last position, @{term "{dim_vec x - 1}"}.\<close>
 
+definition subfunction_0 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
+  where "subfunction_0 f n = (\<lambda>x. f (vec (dim_vec x) (\<lambda>i. if i = n then False else x $ i)))"
+
+definition subfunction_0_dim :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
+  where "subfunction_0_dim f n = (\<lambda>x. f (vec (dim_vec x - 1) (\<lambda>i. if i < n then x $ i else x $ (i + 1))))"
+
+
+context boolean_functions
+begin
+
+lemma 
+  assumes m: "monotone_bool_fun f"
+  shows "monotone_bool_fun (subfunction_0 f i)"
+proof (unfold subfunction_0_def monotone_bool_fun_def mono_on_def, safe)
+  fix r s :: "bool vec"
+  assume r: "r \<in> carrier_vec n" and s: "s \<in> carrier_vec n" and r_le_s: "r \<le> s"
+  hence fr: "f r \<le> f s" using m unfolding monotone_bool_fun_def mono_on_def by simp
+  from r_le_s have "vec (dim_vec r) (\<lambda>ia. if ia = i then False else r $ ia) 
+    \<le> vec (dim_vec s) (\<lambda>ia. if ia = i then False else s $ ia)"
+    using r s unfolding carrier_vec_def less_eq_vec_def
+    by simp
+  thus "f (vec (dim_vec r) (\<lambda>ia. if ia = i then False else r $ ia))
+           \<le> f (vec (dim_vec s) (\<lambda>ia. if ia = i then False else s $ ia))"
+    by (metis (no_types, lifting) m boolean_functions.monotone_bool_fun_def carrier_vecD mono_on_def r s vec_carrier)
+qed
+
+lemma
+  fixes f :: "bool vec \<Rightarrow> bool"
+  assumes m: "mono_on f (carrier_vec n)"
+  shows "mono_on f (carrier_vec (n - 1))"
+  unfolding mono_on_def
+  unfolding carrier_vec_def 
+proof (safe)
+  fix r s :: "bool vec"
+  assume r: "dim_vec r = n - 1" and s: "dim_vec s = n - 1" and r_le_s: "r \<le> s"
+  show "f r \<le> f s"
+  proof (rule ccontr)
+    assume neg: "\<not> (f r \<le> f s)"
+    from r obtain r' 
+      where r': "r' = vec (dim_vec r + 1) (\<lambda>i. if i < dim_vec r then r $ i else False)"
+      by simp
+    from s obtain s' 
+      where s': "s' = vec (dim_vec s + 1) (\<lambda>i. if i < dim_vec s then s $ i else False)"
+      by simp
+    from r' and s' and r_le_s have r'_le_s': "r' \<le> s'" by (simp add: less_eq_vec_def)
+    hence "f r' \<le> f s'" using m r' s' r s unfolding mono_on_def carrier_vec_def
+      by (metis (no_types, lifting) add.commute bot_nat_0.not_eq_extremum eq_vecI m mono_onD 
+            order_le_less ordered_cancel_comm_monoid_diff_class.add_diff_inverse 
+            vec_carrier zero_less_diff zero_order(3))
+    hence "f r \<le> f s" using r'_le_s' unfolding r' s' r s using m
+      unfolding mono_on_def carrier_vec_def  try
+  
+lemma 
+  assumes m: "monotone_bool_fun f"
+  shows "monotone_bool_fun (subfunction_0_dim f i)"
+proof (unfold subfunction_0_dim_def monotone_bool_fun_def mono_on_def, safe)
+  fix r s :: "bool vec"
+  assume r: "r \<in> carrier_vec n" and s: "s \<in> carrier_vec n" and r_le_s: "r \<le> s"
+  hence fr: "f r \<le> f s" using m unfolding monotone_bool_fun_def mono_on_def by simp
+  from r_le_s have "vec (dim_vec r - 1) (\<lambda>ia. if ia < i then r $ ia else r $ (ia + 1)) 
+    \<le> vec (dim_vec s - 1) (\<lambda>ia. if ia < i then s $ ia else s $ (ia + 1))"
+    using r s unfolding carrier_vec_def less_eq_vec_def
+    by simp
+  thus "f (vec (dim_vec r - 1) (\<lambda>ia. if ia < i then r $ ia else r $ (ia + 1)))
+           \<le> f (vec (dim_vec s - 1) (\<lambda>ia. if ia < i then s $ ia else s $ (ia + 1)))"
+    
+    by (metis (no_types, lifting) m boolean_functions.monotone_bool_fun_def carrier_vecD mono_on_def r s vec_carrier)
+qed
+
+
+
 definition subfunction_0 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> (bool vec \<Rightarrow> bool)"
   where "subfunction_0 f = (\<lambda>x. f (vec (dim_vec x) (\<lambda>i. if i = (dim_vec x - 1) then False else x $ i)))"
 
