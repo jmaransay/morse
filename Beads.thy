@@ -2,6 +2,7 @@
 theory Beads
   imports 
     Boolean_functions
+    Simplicial_complex
 begin
 
 definition first_half :: "bool vec \<Rightarrow> bool vec"
@@ -119,10 +120,9 @@ lemma "boolean_function_to_bool_vec 8 (\<lambda>x. True) = vec 8 (\<lambda>i. Tr
   unfolding boolean_function_to_bool_vec_def ..
 
 text\<open>Following the notation in Knuth (BDDs), we compute the subfunctions of
-  a Boolean function. Knuth uses subfunctions in index @{term "0::nat"}.
-  It is important to note that we must use ``the most meaningful bit'',
-  that for Knuth corresponds to position  @{term "1"}, but in our case 
-  corresponds with the last position, @{term "{dim_vec x - 1}"}.\<close>
+  a Boolean function. Knuth uses subfunctions in index @{term "0::nat"},
+  but we prefer to define them in general, for every possible index 
+  @{term "i::nat"}.\<close>
 
 definition subfunction_0 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
   where "subfunction_0 f n = (\<lambda>x. f (vec (dim_vec x) (\<lambda>i. if i = n then False else x $ i)))"
@@ -130,13 +130,28 @@ definition subfunction_0 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<R
 definition subfunction_1 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
   where "subfunction_1 f n = (\<lambda>x. f (vec (dim_vec x) (\<lambda>i.  if i = n then True else x $ i)))"
 
+text\<open>The following definition represents the process
+  of increasing a vector in one additional variable
+  with a ``fixed'' value (either @{term True} or @{term False}.
+  This operation will be later used to produce the subfunctions
+  of a Boolean function.\<close>
+
+definition vec_aug :: "bool vec \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> bool vec"
+  where "vec_aug r k b = vec (dim_vec r + 1)
+  (\<lambda>i. if i < k then r $ i else if i = k then b else r $ (i - 1))"
+
+lemma vec_aug_in_carrier:
+  assumes r: "r \<in> carrier_vec (m - 1)"  
+    and i_l_m: "i < m"
+  shows "vec_aug r k b \<in> carrier_vec m"
+    using r unfolding vec_aug_def carrier_vec_def
+    using i_l_m by force
+
 definition subfunction_0_dim :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
-  where "subfunction_0_dim f n = (\<lambda>x. f (vec (dim_vec x + 1)
-  (\<lambda>i. if i < n then x $ i else if i = n then False else x $ (i - 1))))"
+  where "subfunction_0_dim f k = (\<lambda>r. f (vec_aug r k False))"
 
 definition subfunction_1_dim :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
-  where "subfunction_1_dim f n = (\<lambda>x. f (vec (dim_vec x + 1) 
-  (\<lambda>i. if i < n then x $ i else if i = n then True else x $ (i - 1))))"
+  where "subfunction_1_dim f k = (\<lambda>r. f (vec_aug r k True))"
 
 lemma
   assumes f: "f \<in> carrier_vec n \<rightarrow> UNIV"
@@ -178,24 +193,127 @@ value "subfunction_1 (bool_fun_threshold 3) 3 (vec_of_list [True, False, True, T
 context boolean_functions
 begin
 
+text\<open>The following lemma states that @{term subfunction_0_dim} from a 
+  monotone Boolean function in @{term m} variables produces another 
+  monotone Boolean function but in @{term "m - 1"} variables. In fact,
+  @{term subfunction_0_dim} is the operation ``LINK'' for simplicial complexes.\<close>
+
 lemma
-  assumes m: "mono_on f (carrier_vec n)"
-  shows "mono_on (subfunction_0_dim f i) (carrier_vec (n - 1))"
-proof (unfold subfunction_0_def mono_on_def, safe)
+  subfunction_0_monotone:
+  assumes m: "mono_on f (carrier_vec m)"
+  and i_l_m: "i < m"
+  shows "mono_on (subfunction_0_dim f i) (carrier_vec (m - 1))"
+proof (unfold subfunction_0_dim_def mono_on_def, safe)
   fix r s :: "bool vec"
-  assume r: "r \<in> carrier_vec (n - 1)" and s: "s \<in> carrier_vec (n - 1)" and r_le_s: "r \<le> s"
-  
-  hence fr: "f r \<le> f s" using m unfolding mono_on_def apply auto
-  from r_le_s have "vec (dim_vec r) (\<lambda>ia. if ia = i then False else r $ ia) 
-    \<le> vec (dim_vec s) (\<lambda>ia. if ia = i then False else s $ ia)"
-    using r s unfolding carrier_vec_def less_eq_vec_def
-    by simp
-  thus "f (vec (dim_vec r) (\<lambda>ia. if ia = i then False else r $ ia))
-           \<le> f (vec (dim_vec s) (\<lambda>ia. if ia = i then False else s $ ia))"
-    by (metis (no_types, lifting) m boolean_functions.monotone_bool_fun_def carrier_vecD mono_on_def r s vec_carrier)
+  assume r: "r \<in> carrier_vec (m - 1)" and s: "s \<in> carrier_vec (m - 1)" and r_le_s: "r \<le> s"
+  have "vec_aug r i False \<in> carrier_vec m"
+    and "vec_aug s i False \<in> carrier_vec m"
+    using i_l_m r s vec_aug_in_carrier by blast+
+  moreover have "vec_aug r i False \<le> vec_aug s i False"
+  proof (unfold vec_aug_def less_eq_vec_def dim_vec, intro conjI)
+    show dim_eq: "dim_vec r + 1 = dim_vec s + 1" using r s unfolding carrier_vec_def by simp
+    show "\<forall>ia<dim_vec s + 1.
+       vec (dim_vec r + 1)
+        (\<lambda>ia. if ia < i then r $ ia else if ia = i then False else r $ (ia - 1)) $
+       ia
+       \<le> vec (dim_vec s + 1)
+           (\<lambda>ia. if ia < i then s $ ia else if ia = i then False else s $ (ia - 1)) $
+          ia"
+    proof (intro allI, rule)
+      fix ia
+      assume ia: "ia < dim_vec s + 1"
+      show " vec (dim_vec r + 1)
+           (\<lambda>ia. if ia < i then r $ ia else if ia = i then False else r $ (ia - 1)) $
+          ia
+          \<le> vec (dim_vec s + 1)
+              (\<lambda>ia. if ia < i then s $ ia else if ia = i then False else s $ (ia - 1)) $
+             ia"
+      proof (cases "ia = i")
+        case True
+        show ?thesis using ia dim_eq by (simp add: True)
+      next
+        case False
+        note ia_ne_i = False 
+        show ?thesis
+        proof (cases "ia < i")
+          case True
+          show ?thesis
+            using ia dim_eq r_le_s ia_ne_i True i_l_m unfolding less_eq_vec_def
+            by auto (metis One_nat_def Suc_diff_Suc carrier_vecD diff_zero less_antisym not_less_eq plus_1_eq_Suc r trans_less_add1)
+        next
+          case False
+          show ?thesis
+            using ia dim_eq r_le_s ia_ne_i False i_l_m unfolding less_eq_vec_def
+            by auto
+        qed
+      qed
+    qed
+  qed
+  ultimately show "f (vec_aug r i False) \<le> f (vec_aug s i False)"
+    using m unfolding mono_on_def by blast
 qed
 
-lemma 
+text\<open>The following lemma states that @{term subfunction_1_dim} from a 
+  monotone Boolean function in @{term m} variables produces another 
+  monotone Boolean function but in @{term "m - 1"} variables. In fact,
+  this is the operation ``CONTRASTAR'' for simplicial complexes.\<close>
+
+lemma
+  subfunction_1_monotone:
+  assumes m: "mono_on f (carrier_vec m)"
+  and i_l_m: "i < m"
+  shows "mono_on (subfunction_1_dim f i) (carrier_vec (m - 1))"
+proof (unfold subfunction_1_dim_def mono_on_def, safe)
+  fix r s :: "bool vec"
+  assume r: "r \<in> carrier_vec (m - 1)" and s: "s \<in> carrier_vec (m - 1)" and r_le_s: "r \<le> s"
+  have "vec_aug r i True \<in> carrier_vec m"
+    and "vec_aug s i True \<in> carrier_vec m"
+    using i_l_m r s vec_aug_in_carrier by blast+
+  moreover have "vec_aug r i True \<le> vec_aug s i True"
+  proof (unfold vec_aug_def less_eq_vec_def dim_vec, intro conjI)
+    show dim_eq: "dim_vec r + 1 = dim_vec s + 1" using r s unfolding carrier_vec_def by simp
+    show "\<forall>ia<dim_vec s + 1.
+       vec (dim_vec r + 1)
+        (\<lambda>ia. if ia < i then r $ ia else if ia = i then True else r $ (ia - 1)) $
+       ia
+       \<le> vec (dim_vec s + 1)
+           (\<lambda>ia. if ia < i then s $ ia else if ia = i then True else s $ (ia - 1)) $
+          ia"
+    proof (intro allI, rule)
+      fix ia
+      assume ia: "ia < dim_vec s + 1"
+      show " vec (dim_vec r + 1)
+           (\<lambda>ia. if ia < i then r $ ia else if ia = i then True else r $ (ia - 1)) $
+          ia
+          \<le> vec (dim_vec s + 1)
+              (\<lambda>ia. if ia < i then s $ ia else if ia = i then True else s $ (ia - 1)) $
+             ia"
+      proof (cases "ia = i")
+        case True
+        show ?thesis using ia dim_eq by (simp add: True)
+      next
+        case False
+        note ia_ne_i = False 
+        show ?thesis
+        proof (cases "ia < i")
+          case True
+          show ?thesis
+            using ia dim_eq r_le_s ia_ne_i True i_l_m unfolding less_eq_vec_def
+            by auto (metis One_nat_def Suc_diff_Suc carrier_vecD diff_zero less_antisym not_less_eq plus_1_eq_Suc r trans_less_add1)
+        next
+          case False
+          show ?thesis
+            using ia dim_eq r_le_s ia_ne_i False i_l_m unfolding less_eq_vec_def
+            by auto
+        qed
+      qed
+    qed
+  qed
+  ultimately show "f (vec_aug r i True) \<le> f (vec_aug s i True)"
+    using m unfolding mono_on_def by blast
+qed
+
+lemma
   assumes m: "monotone_bool_fun f"
   shows "monotone_bool_fun (subfunction_0 f i)"
 proof (unfold subfunction_0_def monotone_bool_fun_def mono_on_def, safe)
@@ -210,7 +328,6 @@ proof (unfold subfunction_0_def monotone_bool_fun_def mono_on_def, safe)
            \<le> f (vec (dim_vec s) (\<lambda>ia. if ia = i then False else s $ ia))"
     by (metis (no_types, lifting) m boolean_functions.monotone_bool_fun_def carrier_vecD mono_on_def r s vec_carrier)
 qed
-
 
 lemma 
   assumes m: "monotone_bool_fun f"
@@ -228,82 +345,31 @@ proof (unfold subfunction_1_def monotone_bool_fun_def mono_on_def, safe)
     by (metis (no_types, lifting) m boolean_functions.monotone_bool_fun_def carrier_vecD mono_on_def r s vec_carrier)
 qed
 
+end
 
-lemma
-  fixes f :: "bool vec \<Rightarrow> bool"
-  assumes m: "monotone_bool_fun f"
-  shows "monotone_bool_fun (subfunction_0_dim f i)"
-  unfolding monotone_bool_fun_def
-  unfolding mono_on_def
-  unfolding carrier_vec_def
-proof (safe)
-  fix r s :: "bool vec"
-  assume "n = dim_vec r" and "r \<le> s" and "dim_vec s = dim_vec r"
-  show "subfunction_0_dim f i r \<le> subfunction_0_dim f i s"
-    unfolding subfunction_0_dim_def
+definition link :: "nat \<Rightarrow> nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "link x m \<Delta> = {s. s \<in> Pow ({0..<m} - {x}) \<and> s \<union> {x} \<in> \<Delta>}"
 
-lemma
-  fixes f :: "bool vec \<Rightarrow> bool"
-  assumes m: "mono_on f (carrier_vec n)"
-  shows "mono_on f (carrier_vec (n - 1))"
-  unfolding mono_on_def
-  unfolding carrier_vec_def
-proof (safe)
-  fix r s :: "bool vec"
-  assume r: "dim_vec r = n - 1" and s: "dim_vec s = n - 1" and r_le_s: "r \<le> s"
-  show "f r \<le> f s"
-  proof (rule ccontr)
-    assume neg: "\<not> (f r \<le> f s)"
-    from r obtain r' 
-      where r': "r' = vec (dim_vec r + 1) (\<lambda>i. if i < dim_vec r then r $ i else False)"
-      by simp
-    from s obtain s' 
-      where s': "s' = vec (dim_vec s + 1) (\<lambda>i. if i < dim_vec s then s $ i else False)"
-      by simp
-    from r' and s' and r_le_s have r'_le_s': "r' \<le> s'" by (simp add: less_eq_vec_def)
-    hence "f r' \<le> f s'" using m r' s' r s unfolding mono_on_def carrier_vec_def
-      by (metis (no_types, lifting) add.commute bot_nat_0.not_eq_extremum eq_vecI m mono_onD 
-            order_le_less ordered_cancel_comm_monoid_diff_class.add_diff_inverse 
-            vec_carrier zero_less_diff zero_order(3))
-    hence "f r \<le> f s" using r'_le_s' unfolding r' s' r s using m
-      unfolding mono_on_def carrier_vec_def  try
+definition cost :: "nat \<Rightarrow> nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "cost x m \<Delta> = {s. s \<in> Pow ({0..<m} - {x}) \<and> s \<in> \<Delta>}"
 
-lemma
-  assumes m: "monotone_bool_fun f"
-  shows "monotone_bool_fun (subfunction_0_dim f i)"
-proof (unfold subfunction_0_dim_def monotone_bool_fun_def mono_on_def, safe)
-  fix r s :: "bool vec"
-  assume r: "r \<in> carrier_vec n" and s: "s \<in> carrier_vec n" and r_le_s: "r \<le> s"
-  hence fr: "f r \<le> f s" using m unfolding monotone_bool_fun_def mono_on_def by simp
-  from r_le_s have "vec (dim_vec r - 1) (\<lambda>ia. if ia < i then r $ ia else r $ (ia + 1)) 
-    \<le> vec (dim_vec s - 1) (\<lambda>ia. if ia < i then s $ ia else s $ (ia + 1))"
-    using r s unfolding carrier_vec_def less_eq_vec_def
-    by simp
-  thus "f (vec (dim_vec r - 1) (\<lambda>ia. if ia < i then r $ ia else r $ (ia + 1)))
-           \<le> f (vec (dim_vec s - 1) (\<lambda>ia. if ia < i then s $ ia else s $ (ia + 1)))"
-    
-    by (metis (no_types, lifting) m boolean_functions.monotone_bool_fun_def carrier_vecD mono_on_def r s vec_carrier)
-qed
+text\<open>The following does not hold, we should define a notion of
+  ``dimension'' of a simplicial complex, which represents the
+  number of variables over which it is defined (not the variables themselves).
+  \<close>
+
+lemma 
+  assumes s: "simplicial_complex.simplicial_complex m S"
+  shows "simplicial_complex.simplicial_complex (m - 1) S"
+
+context simplicial_complex
+begin
 
 
+definition link :: "nat \<Rightarrow> nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "link x m \<Delta> = {s. s \<in> Pow ({0..<m} - {x}) \<and> s \<union> {x} \<in> \<Delta>}"
 
-definition subfunction_0 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> (bool vec \<Rightarrow> bool)"
-  where "subfunction_0 f = (\<lambda>x. f (vec (dim_vec x) (\<lambda>i. if i = (dim_vec x - 1) then False else x $ i)))"
 
-definition subfunction_1 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> (bool vec \<Rightarrow> bool)"
-  where "subfunction_1 f = (\<lambda>x. f (vec (dim_vec x) (\<lambda>i. if i = (dim_vec x - 1) then True else x $ i)))"
-
-value "list_of_vec (boolean_function_to_bool_vec 16 (bool_fun_threshold 3))"
-
-value "bool_fun_threshold 3 (nat_to_bool_vec 16 15)"
-
-value "list_of_vec (boolean_function_to_bool_vec 8 (subfunction_0 (bool_fun_threshold 3)))"
-
-value "(subfunction_0 (bool_fun_threshold 3)) (nat_to_bool_vec 16 11)"
-
-value "list_of_vec (boolean_function_to_bool_vec 16 (bool_fun_threshold 3))"
-
-value "list_of_vec (boolean_function_to_bool_vec 8 (subfunction_1 (bool_fun_threshold 3)))"
 
 definition subtable_0 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> bool vec"
   where "subtable_0 f n = boolean_function_to_bool_vec (n div 2) (subfunction_0 f)"
