@@ -127,12 +127,73 @@ text\<open>Following the notation in Knuth (BDDs), we compute the subfunctions o
 definition subfunction_0 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
   where "subfunction_0 f n = (\<lambda>x. f (vec (dim_vec x) (\<lambda>i. if i = n then False else x $ i)))"
 
-definition subfunction_0_dim :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
-  where "subfunction_0_dim f n = (\<lambda>x. f (vec (dim_vec x - 1) (\<lambda>i. if i < n then x $ i else x $ (i + 1))))"
+definition subfunction_1 :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
+  where "subfunction_1 f n = (\<lambda>x. f (vec (dim_vec x) (\<lambda>i.  if i = n then True else x $ i)))"
 
+definition subfunction_0_dim :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
+  where "subfunction_0_dim f n = (\<lambda>x. f (vec (dim_vec x + 1)
+  (\<lambda>i. if i < n then x $ i else if i = n then False else x $ (i - 1))))"
+
+definition subfunction_1_dim :: "(bool vec \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> (bool vec \<Rightarrow> bool)"
+  where "subfunction_1_dim f n = (\<lambda>x. f (vec (dim_vec x + 1) 
+  (\<lambda>i. if i < n then x $ i else if i = n then True else x $ (i - 1))))"
+
+lemma
+  assumes f: "f \<in> carrier_vec n \<rightarrow> UNIV"
+  shows "(subfunction_0 f i) \<in> carrier_vec (n - 1) \<rightarrow> UNIV"
+  using f unfolding carrier_vec_def subfunction_0_def
+  by simp
+
+lemma
+  assumes f: "f \<in> carrier_vec n \<rightarrow> UNIV"
+  shows "(subfunction_0_dim f i) \<in> carrier_vec (n - 1) \<rightarrow> UNIV"
+  using f by simp
+
+value "bool_fun_threshold 3 (vec_of_list [True, False, True, True])"
+
+value "subfunction_0 (bool_fun_threshold 3) 0 (vec_of_list [True, False, True, True])"
+
+value "subfunction_0_dim (bool_fun_threshold 3) 0 (vec_of_list [False, True, True])"
+
+value "subfunction_1 (bool_fun_threshold 3) 0 (vec_of_list [True, False, True, True])"
+
+value "subfunction_1_dim (bool_fun_threshold 3) 0 (vec_of_list [False, True, True])"
+
+value "subfunction_0 (bool_fun_threshold 3) 1 (vec_of_list [True, False, True, True])"
+
+value "subfunction_0_dim (bool_fun_threshold 3) 1 (vec_of_list [True, True, True])"
+
+value "subfunction_1 (bool_fun_threshold 3) 1 (vec_of_list [True, False, True, True])"
+
+value "subfunction_1_dim (bool_fun_threshold 3) 1 (vec_of_list [True, True, True])"
+
+value "subfunction_0 (bool_fun_threshold 3) 2 (vec_of_list [True, False, True, True])"
+
+value "subfunction_1 (bool_fun_threshold 3) 2 (vec_of_list [True, False, True, True])"
+
+value "subfunction_0 (bool_fun_threshold 3) 3 (vec_of_list [True, False, True, True])"
+
+value "subfunction_1 (bool_fun_threshold 3) 3 (vec_of_list [True, False, True, True])"
 
 context boolean_functions
 begin
+
+lemma
+  assumes m: "mono_on f (carrier_vec n)"
+  shows "mono_on (subfunction_0_dim f i) (carrier_vec (n - 1))"
+proof (unfold subfunction_0_def mono_on_def, safe)
+  fix r s :: "bool vec"
+  assume r: "r \<in> carrier_vec (n - 1)" and s: "s \<in> carrier_vec (n - 1)" and r_le_s: "r \<le> s"
+  
+  hence fr: "f r \<le> f s" using m unfolding mono_on_def apply auto
+  from r_le_s have "vec (dim_vec r) (\<lambda>ia. if ia = i then False else r $ ia) 
+    \<le> vec (dim_vec s) (\<lambda>ia. if ia = i then False else s $ ia)"
+    using r s unfolding carrier_vec_def less_eq_vec_def
+    by simp
+  thus "f (vec (dim_vec r) (\<lambda>ia. if ia = i then False else r $ ia))
+           \<le> f (vec (dim_vec s) (\<lambda>ia. if ia = i then False else s $ ia))"
+    by (metis (no_types, lifting) m boolean_functions.monotone_bool_fun_def carrier_vecD mono_on_def r s vec_carrier)
+qed
 
 lemma 
   assumes m: "monotone_bool_fun f"
@@ -150,12 +211,43 @@ proof (unfold subfunction_0_def monotone_bool_fun_def mono_on_def, safe)
     by (metis (no_types, lifting) m boolean_functions.monotone_bool_fun_def carrier_vecD mono_on_def r s vec_carrier)
 qed
 
+
+lemma 
+  assumes m: "monotone_bool_fun f"
+  shows "monotone_bool_fun (subfunction_1 f i)"
+proof (unfold subfunction_1_def monotone_bool_fun_def mono_on_def, safe)
+  fix r s :: "bool vec"
+  assume r: "r \<in> carrier_vec n" and s: "s \<in> carrier_vec n" and r_le_s: "r \<le> s"
+  hence fr: "f r \<le> f s" using m unfolding monotone_bool_fun_def mono_on_def by simp
+  from r_le_s have "vec (dim_vec r) (\<lambda>ia. if ia = i then True else r $ ia) 
+    \<le> vec (dim_vec s) (\<lambda>ia. if ia = i then True else s $ ia)"
+    using r s unfolding carrier_vec_def less_eq_vec_def
+    by simp
+  thus "f (vec (dim_vec r) (\<lambda>ia. if ia = i then True else r $ ia))
+           \<le> f (vec (dim_vec s) (\<lambda>ia. if ia = i then True else s $ ia))"
+    by (metis (no_types, lifting) m boolean_functions.monotone_bool_fun_def carrier_vecD mono_on_def r s vec_carrier)
+qed
+
+
+lemma
+  fixes f :: "bool vec \<Rightarrow> bool"
+  assumes m: "monotone_bool_fun f"
+  shows "monotone_bool_fun (subfunction_0_dim f i)"
+  unfolding monotone_bool_fun_def
+  unfolding mono_on_def
+  unfolding carrier_vec_def
+proof (safe)
+  fix r s :: "bool vec"
+  assume "n = dim_vec r" and "r \<le> s" and "dim_vec s = dim_vec r"
+  show "subfunction_0_dim f i r \<le> subfunction_0_dim f i s"
+    unfolding subfunction_0_dim_def
+
 lemma
   fixes f :: "bool vec \<Rightarrow> bool"
   assumes m: "mono_on f (carrier_vec n)"
   shows "mono_on f (carrier_vec (n - 1))"
   unfolding mono_on_def
-  unfolding carrier_vec_def 
+  unfolding carrier_vec_def
 proof (safe)
   fix r s :: "bool vec"
   assume r: "dim_vec r = n - 1" and s: "dim_vec s = n - 1" and r_le_s: "r \<le> s"
@@ -175,8 +267,8 @@ proof (safe)
             vec_carrier zero_less_diff zero_order(3))
     hence "f r \<le> f s" using r'_le_s' unfolding r' s' r s using m
       unfolding mono_on_def carrier_vec_def  try
-  
-lemma 
+
+lemma
   assumes m: "monotone_bool_fun f"
   shows "monotone_bool_fun (subfunction_0_dim f i)"
 proof (unfold subfunction_0_dim_def monotone_bool_fun_def mono_on_def, safe)
