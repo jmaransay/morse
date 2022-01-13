@@ -347,20 +347,191 @@ qed
 
 end
 
-definition link :: "nat \<Rightarrow> nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
-  where "link x m \<Delta> = {s. s \<in> Pow ({0..<m} - {x}) \<and> s \<union> {x} \<in> \<Delta>}"
+section\<open>Operations LINK and COST for simplicial complexes.\<close>
 
-definition cost :: "nat \<Rightarrow> nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
-  where "cost x m \<Delta> = {s. s \<in> Pow ({0..<m} - {x}) \<and> s \<in> \<Delta>}"
+text\<open>In our definition of @{term simplicial_complex.simplicial_complex}
+  we used as set of vertexes @{term "{0..<n::nat}"}. Since the @{term link}
+  and @{term cost} operations can remove any vertex, we introduce a more 
+  general notion of simplicial complex where the set of vertexes can be any 
+  finite set of natural numbers.\<close>
 
-text\<open>The following does not hold, we should define a notion of
-  ``dimension'' of a simplicial complex, which represents the
-  number of variables over which it is defined (not the variables themselves).
-  \<close>
+definition simplices :: "nat set \<Rightarrow> nat set set"
+  where "simplices V = Pow V"
+
+lemma "{} \<in> simplices V"
+  unfolding simplices_def by simp
+
+lemma
+  assumes k: "k \<le> n"
+  shows "{0..<k} \<in> simplices {0..<n}"
+  using k unfolding simplices_def by simp
+
+lemma finite_simplex:
+  assumes "finite V" and "\<sigma> \<in> simplices V"
+  shows "finite \<sigma>"
+  using assms(1) assms(2) finite_subset simplices_def by auto
+
+text\<open>A simplicial complex (in $n$ vertexes) is a collection of 
+  sets of vertexes such that every subset of 
+  a set of vertexes also belongs to the simplicial complex.\<close>
+
+definition simplicial_complex :: "nat set \<Rightarrow> nat set set => bool"
+  where "simplicial_complex V K \<equiv>  (\<forall>\<sigma>\<in>K. (\<sigma> \<in> simplices V) \<and> (Pow \<sigma>) \<subseteq> K)"
+
+text\<open>The notion of @{term simplicial_complex_card} is defined
+  as the number of vertexes of the simplicial complex. 
+  It can be identified with the number of variables of the associated
+  (monotone) Boolean function. Note that some of these vertexes 
+  could not belong to any simplex.\<close>
+
+definition simplicial_complex_card :: "nat set \<Rightarrow> nat set set => nat"
+  where "simplicial_complex_card V K = card V"
+
+text\<open>The following result shows the coherence with our definition
+  of simplicial complex in @{locale simplicial_complex}. 
+  The simplicial complex in vertexes @{term "{0..<n}"}
+  in locale @{term simplicial_complex} is an instance of
+  @{term simplicial_complex}.\<close>
+
+lemma
+  assumes s: "simplicial_complex.simplicial_complex n K"
+  shows "simplicial_complex {0..<n} K"
+  using s
+  unfolding simplicial_complex.simplicial_complex_def simplicial_complex_def
+  unfolding simplicial_complex.simplices_def simplices_def .
+
+lemma "simplicial_complex_card {0..<n} K = n"
+  unfolding simplicial_complex_card_def by simp
+
+text\<open>The following results are generalizations of
+  the ones in the locale @{locale simplicial_complex}
+  to a ``free'' set of vertexes.\<close>
+
+lemma simplicial_complex_empty_set: "simplicial_complex V {}"
+  unfolding simplicial_complex_def 
+  unfolding simplices_def by simp
+
+lemma simplicial_complex_contains_empty_set: "simplicial_complex V {{}}"
+  unfolding simplicial_complex_def 
+  unfolding simplices_def by simp
+
+lemma simplicial_complex_either_empty_or_contains_empty:
+  fixes V :: "nat set" and K::"nat set set"
+  assumes k: "simplicial_complex V K"
+  shows "K = {} \<or> {} \<in> K" using k unfolding simplicial_complex_def Pow_def by auto
 
 lemma 
+  finite_simplicial_complex:
+  assumes "finite V" and "simplicial_complex V K"
+  shows "finite K"
+  by (metis assms(1) assms(2) finite_Pow_iff finite_subset simplices_def simplicial_complex_def subsetI)
+
+definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "link x V K = {s. s \<in> simplices (V - {x}) \<and> s \<union> {x} \<in> K}"
+
+definition cost :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "cost x V K = {s. s \<in> simplices (V - {x}) \<and> s \<in> K}"
+
+value "Pow (set [1,2,3,4::nat])"
+
+value "link 4 (set [0::nat,1,2,3,4,5,6,7,8]) 
+        (Pow (set [1,2,3,4,5]) \<union> Pow (set [4,7]) \<union> Pow (set [2,8]))"
+
+value "cost 4 (set [0::nat,1,2,3,4,5,6,7,8]) 
+        (Pow (set [1,2,3,4,5]) \<union> Pow (set [4,7]) \<union> Pow (set [2,8]))"
+
+text\<open>The result of operations @{term link} and @{term cost} 
+  are simplicial complexes.\<close>
+
+lemma
+  assumes s: "simplicial_complex V K"
+  shows "simplicial_complex (V - {x}) (link x V K)"
+  unfolding link_def
+  using s
+  unfolding simplicial_complex_def simplices_def by fast
+
+lemma
+  assumes s: "simplicial_complex V K"
+  shows "simplicial_complex (V - {x}) (cost x V K)"
+  unfolding cost_def
+  using s
+  unfolding simplicial_complex_def simplices_def by fast
+
+text\<open>The number of vertexes  of operations @{term link} and @{term cost} 
+  is one less than the number of vertexes in the original simplicial complex.\<close>
+
+lemma
+  assumes "simplicial_complex_card V K = n"
+    and "x \<in> V"
+  shows "simplicial_complex_card (V - {x}) (link x V K) = n - 1"
+  using assms(1) assms(2) simplicial_complex_card_def by auto
+
+lemma
+  assumes "simplicial_complex_card V K = n"
+    and "x \<in> V"
+  shows "simplicial_complex_card (V - {x}) (cost x V K) = n - 1"
+  using assms(1) assms(2) simplicial_complex_card_def by auto
+
+section\<open>Equivalence between operations @{term link} and @{term cost} 
+  with @{term subfunction_0_dim} and @{term subfunction_1_dim}.\<close>
+
+definition
+  simplicial_complex_induced_by_monotone_boolean_function
+    :: "nat set => (bool vec => bool) => nat set set"
+  where "simplicial_complex_induced_by_monotone_boolean_function V f =
+        {y. \<exists>x. dim_vec x = card V \<and> f x \<and> ceros_of_boolean_input x = y}"
+
+text\<open>The following operation is ``equivalent'' to @{term vec_aug}
+  for arrays.\<close>
+
+definition set_aug :: "nat set \<Rightarrow> nat \<Rightarrow> nat set"
+  where "set_aug A i = (A \<inter> {0..<i}) \<union> {i} \<union> {x. x > i \<and> Suc x \<in> A}"
+
+value "set_aug (set [1,2,3,4]) 2"
+
+lemma
+  assumes c: "ceros_of_boolean_input v = A" and i: "i < dim_vec v"
+  shows "ceros_of_boolean_input (vec_aug v i False) = set_aug A i"
+  using c i
+  unfolding ceros_of_boolean_input_def vec_aug_def set_aug_def
+proof (auto)
+  try
+
+lemma
+  assumes k: "simplicial_complex_induced_by_monotone_boolean_function V f = K"
+  shows "simplicial_complex_induced_by_monotone_boolean_function (V - {x}) (subfunction_0_dim f x) = link x V K"
+  using k
+  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+  unfolding subfunction_0_dim_def
+  unfolding link_def unfolding vec_aug_def apply auto try
+
+
+term "link x V K"
+
+term "subfunction_0_dim f x"
+
+
+lemma
+  assumes "link x V K = subfunction_0_dim f x"
+
+
+
+
+lemma finite_simplices:
+  assumes "simplicial_complex K"
+  and "v \<in> K"
+shows "finite v"
+  using assms finite_simplex simplicial_complex.simplicial_complex_def by blast
+
+
+
+
+
+lemma
   assumes s: "simplicial_complex.simplicial_complex m S"
   shows "simplicial_complex.simplicial_complex (m - 1) S"
+
+
 
 context simplicial_complex
 begin
