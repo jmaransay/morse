@@ -477,33 +477,107 @@ section\<open>Equivalence between operations @{term link} and @{term cost}
 
 definition
   simplicial_complex_induced_by_monotone_boolean_function
-    :: "nat set => (bool vec => bool) => nat set set"
-  where "simplicial_complex_induced_by_monotone_boolean_function V f =
-        {y. \<exists>x. dim_vec x = card V \<and> f x \<and> ceros_of_boolean_input x = y}"
+    :: "(nat \<Rightarrow> nat) \<Rightarrow> nat set => (bool vec => bool) => nat set set"
+  where "simplicial_complex_induced_by_monotone_boolean_function mp V f =
+        {y\<in>simplices V. \<exists>x. dim_vec x = card V \<and> f x \<and> mp ` (ceros_of_boolean_input x) = y}"
 
 text\<open>The following operation is ``equivalent'' to @{term vec_aug}
   for arrays.\<close>
 
 definition set_aug :: "nat set \<Rightarrow> nat \<Rightarrow> nat set"
-  where "set_aug A i = (A \<inter> {0..<i}) \<union> {i} \<union> {x. x > i \<and> Suc x \<in> A}"
+  where "set_aug A i = (A \<inter> {0..<i}) \<union> {i} \<union> (\<lambda>x. Suc x) ` (A - {0..<i})"
 
-value "set_aug (set [1,2,3,4]) 2"
+value "set_aug (set [1,3,4,5]) 2"
 
 lemma
-  assumes c: "ceros_of_boolean_input v = A" and i: "i < dim_vec v"
+  ceros_of_boolean_input_set_aug:
+  fixes mp :: "nat \<Rightarrow> nat"
+  assumes c: "mp ` (ceros_of_boolean_input v) = A" and i: "i \<le> dim_vec v"
+  shows "mp ` (ceros_of_boolean_input (vec_aug v i False)) = mp ` (set_aug A i)"
+  using c i
+  unfolding ceros_of_boolean_input_def vec_aug_def set_aug_def
+  by force (*slow proof*)
+
+lemma
+  ceros_of_boolean_input_set_aug:
+  assumes c: "ceros_of_boolean_input v = A" and i: "i \<le> dim_vec v"
   shows "ceros_of_boolean_input (vec_aug v i False) = set_aug A i"
   using c i
   unfolding ceros_of_boolean_input_def vec_aug_def set_aug_def
-proof (auto)
-  try
+  by force (*slow proof*)
+
+lemma
+  assumes k: "simplicial_complex_induced_by_monotone_boolean_function {0..<n} f = K"
+  and x: "x < n"
+  shows "simplicial_complex_induced_by_monotone_boolean_function ({0..<n} - {x}) (subfunction_0_dim f x) = link x  {0..<n} K"
+proof (rule)
+  show "simplicial_complex_induced_by_monotone_boolean_function ({0..<n} - {x})
+     (subfunction_0_dim f x)
+    \<subseteq> link x {0..<n} K"
+  proof
+    fix y :: "nat set"
+    assume y: "y \<in> simplicial_complex_induced_by_monotone_boolean_function ({0..<n} - {x})
+                (subfunction_0_dim f x)"
+    from y obtain xa :: "bool vec" where d: "dim_vec xa = card ({0..<n} - {x})" 
+             and s: "subfunction_0_dim f x xa" and c: "ceros_of_boolean_input xa = y"
+      unfolding simplicial_complex_induced_by_monotone_boolean_function_def by fast
+    from y have y_v_x: "y \<in> simplices ({0..<n} - {x})"
+      unfolding simplicial_complex_induced_by_monotone_boolean_function_def by simp 
+    define y' where "y' = vec_aug xa x False"
+    have "set_aug y x \<in> simplices {0..<(n+1)}"
+      using y_v_x x unfolding simplices_def set_aug_def by auto
+    have cy': "ceros_of_boolean_input y' = set_aug y x"
+      unfolding y'_def
+      apply (rule ceros_of_boolean_input_set_aug [OF c, of x])
+      using x d by simp
+    have fy': "f y'" using s unfolding y'_def subfunction_0_dim_def .
+    hence "ceros_of_boolean_input y' \<in> K" 
+      using k
+      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+      
+
+
 
 lemma
   assumes k: "simplicial_complex_induced_by_monotone_boolean_function V f = K"
+  and finite: "finite V"
+  and x: "x \<in> V"
   shows "simplicial_complex_induced_by_monotone_boolean_function (V - {x}) (subfunction_0_dim f x) = link x V K"
-  using k
-  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-  unfolding subfunction_0_dim_def
-  unfolding link_def unfolding vec_aug_def apply auto try
+proof (rule)
+  show "simplicial_complex_induced_by_monotone_boolean_function (V - {x})
+     (subfunction_0_dim f x)
+    \<subseteq> link x V K"
+  proof
+    fix y :: "nat set"
+    assume y: "y \<in> simplicial_complex_induced_by_monotone_boolean_function (V - {x})
+                (subfunction_0_dim f x)"
+    from y obtain xa :: "bool vec" where d: "dim_vec xa = card (V - {x})" 
+             and s: "subfunction_0_dim f x xa" and c: "ceros_of_boolean_input xa = y"
+      unfolding simplicial_complex_induced_by_monotone_boolean_function_def by fast
+    from y have y_v_x: "y \<in> simplices (V - {x})" 
+      unfolding simplicial_complex_induced_by_monotone_boolean_function_def by simp 
+    define y' where "y' = vec_aug xa x False"
+    have "set_aug y x \<in> simplices V"  
+      using y_v_x x unfolding simplices_def set_aug_def try
+    have cy': "ceros_of_boolean_input y' = set_aug y x" 
+      using ceros_of_boolean_input_set_aug [OF c, of x] sorry
+    have fy': "f y'" using s unfolding y'_def subfunction_0_dim_def .
+    hence "ceros_of_boolean_input y' \<in> K" 
+      using k 
+      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+      
+      unfolding ceros_of_boolean_input_def y'_def vec_aug_def try
+    have dy': "dim_vec y' = card V"
+      using d x finite unfolding y'_def vec_aug_def dim_vec
+      by (metis add.commute card.remove plus_1_eq_Suc)
+   show "y \<in> link x V K"
+      unfolding link_def unfolding simplices_def
+      using y unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+
+      using k x
+      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+      unfolding subfunction_0_dim_def
+      unfolding link_def unfolding vec_aug_def unfolding simplices_def apply auto try apply auto try
 
 
 term "link x V K"
