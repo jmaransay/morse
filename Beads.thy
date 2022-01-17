@@ -378,6 +378,12 @@ text\<open>A simplicial complex (in $n$ vertexes) is a collection of
 definition simplicial_complex :: "nat set \<Rightarrow> nat set set => bool"
   where "simplicial_complex V K \<equiv>  (\<forall>\<sigma>\<in>K. (\<sigma> \<in> simplices V) \<and> (Pow \<sigma>) \<subseteq> K)"
 
+lemma simplicial_complex_simplice:
+  assumes s: "simplicial_complex V K"
+  and sigma: "\<sigma> \<in> simplices V" and pow: "Pow \<sigma> \<subseteq> K"
+shows "\<sigma> \<in> K"
+  using s sigma pow unfolding simplicial_complex_def by auto
+
 text\<open>The notion of @{term simplicial_complex_card} is defined
   as the number of vertexes of the simplicial complex. 
   It can be identified with the number of variables of the associated
@@ -497,7 +503,7 @@ definition
 end
 
 text\<open>The simplicial complex given by the @{term link} function
-  is a simplicial complex. Note that we also introduce the mapping @{term map}
+  is a simplicial complex. Note that we also introduce the mapping @{term mp}
   between the indexes of the Boolean arrays and the vertexes 
   in the simplicial complex @{term V}.\<close>
 
@@ -691,11 +697,17 @@ proof (intro conjI)
   qed
 qed
 
+lemma conjI3: assumes "A" and "B" and "C" shows "A \<and> B \<and> C"
+  by (simp add: assms(1) assms(2) assms(3))
+
 lemma 
   assumes s: "simplicial_complex_mp_with_boolean_function n mp V K"
-    and x: "x \<in> V" 
+    and x: "x \<in> V"
     and mp: "mp j = x"
     and j: "j < n"
+    and finite: "finite V"
+    and s_induced: "simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function
+      mp V f = K"
   shows "simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function
     (\<lambda>i. if i < j then mp i else mp (i + 1)) (V - {x}) (subfunction_0_dim f j) = (link x V K)
   "
@@ -712,11 +724,91 @@ proof (rule)
     unfolding simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input_def [OF s']
   proof
     fix xa
-    assume "xa \<in> {y \<in> simplices (V - {x}). \<exists>xa. dim_vec xa = card (V - {x}) 
+    assume xa_s: "xa \<in> {y \<in> simplices (V - {x}). \<exists>xa. dim_vec xa = card (V - {x}) 
               \<and> f (vec_aug xa j False) 
               \<and> (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {x. x < dim_vec xa \<and> xa $ x = False} =
                      y}"
+    hence xa: "xa \<in> simplices (V - {x})" by fast
+    from xa_s obtain xb :: "bool vec" 
+      where dim: "dim_vec xb = card (V - {x})" 
+      and f: "f (vec_aug xb j False)"
+      and im: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {x. x < dim_vec xb \<and> xb $ x = False} =
+                     xa" by auto
     show "xa \<in> {s \<in> simplices (V - {x}). s \<union> {x} \<in> K}"
+    proof (rule, intro conjI)
+      show "xa \<in> simplices (V - {x})" using xa .
+      show "xa \<union> {x} \<in> K"
+      proof (rule simplicial_complex_simplice [of V])
+        show "simplicial_complex V K" 
+          using s unfolding simplicial_complex_mp_with_boolean_function_def by fast
+        show "xa \<union> {x} \<in> simplices V" using xa x unfolding simplices_def by auto
+        have "xa \<union> {x} \<in> K"
+        proof -
+          have K: "K = {y \<in> simplices V. \<exists>x. dim_vec x = card V 
+                  \<and> f x 
+                  \<and> simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp x = y}"
+            unfolding s_induced [symmetric]
+            unfolding simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def [OF s]
+            ..
+          moreover have "xa \<union> {x} \<in>  {y \<in> simplices V. \<exists>x. dim_vec x = card V 
+                  \<and> f x 
+                  \<and> simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp x = y}"
+          proof (rule, intro conjI)
+            show "xa \<union> {x} \<in> simplices V"
+              using \<open>xa \<union> {x} \<in> simplices V\<close> by auto
+            show "\<exists>xb. dim_vec xb = card V 
+                     \<and> f xb 
+                     \<and> simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp xb = xa \<union> {x}"
+            proof (rule exI [of _ "vec_aug xb j False"], rule conjI3)
+              show "dim_vec (vec_aug xb j False) = card V" 
+                using dim x finite unfolding vec_aug_def dim_vec
+                by auto (metis card_Suc_Diff1 dim)
+              show "f (vec_aug xb j False)" using f .
+              show "simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp (vec_aug xb j False) =
+                    xa \<union> {x}"
+                unfolding simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input_def [OF s]
+              proof -
+                have card_V: "card V = n" 
+                  using s
+                  unfolding simplicial_complex_mp_with_boolean_function_def
+                  by (metis bij_betw_same_card card_atLeastLessThan diff_zero)
+                have set_eq: "{x. x < dim_vec (vec_aug xb j False) \<and> vec_aug xb j False $ x = False} =
+                  {x. x < j \<and> vec_aug xb j False $ x = False}
+                  \<union> {x. x = j \<and> vec_aug xb j False $ x = False}
+                  \<union> {x. j < x \<and> x < dim_vec (vec_aug xb j False) \<and> vec_aug xb j False $ x = False}"
+                  using j using dim card_V x unfolding vec_aug_def dim_vec by auto
+                have mp_j: "mp ` {x. x = j \<and> vec_aug xb j False $ x = False} = {x}" 
+                  using mp j card_V dim x unfolding vec_aug_def by auto
+                have mp_less_j: "mp ` {x. x < j \<and> vec_aug xb j False $ x = False} =
+                    (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {x. x < j \<and> xb $ x = False}"
+                  unfolding vec_aug_def dim_vec apply auto
+                  using card_V dim j x apply force using card_V dim j x by simp
+                have "mp ` {x. j < x \<and> x < dim_vec (vec_aug xb j False) \<and> vec_aug xb j False $ x = False}
+                  = (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {x. j \<le> x \<and> x < dim_vec xb \<and> xb $ x = False}"
+                  unfolding vec_aug_def dim_vec apply auto
+                  using card_V dim j x finite apply auto try
+                show "mp ` {x. x < dim_vec xb + 1 
+                      \<and> vec (dim_vec xb + 1)
+                        (\<lambda>i. if i < j then xb $ i else if i = j then False else xb $ (i - 1)) $
+                      x = False} = xa \<union> {x}"
+
+                unfolding simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input_def [OF s]
+                unfolding vec_aug_def dim_vec using im apply auto
+                using local.mp apply fastforce using j local.mp try
+            unfolding simplicial_complex_induced_by_monotone_boolean_function_def [of mp V f]
+            try
+            using simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def [of n mp V K f, symmetric]
+            using SMT.verit_eq_transitive(4) apply auto
+            apply (meson \<open>simplicial_complex V K\<close> simplicial_complex_def)
+        thus "Pow (xa \<union> {x}) \<subseteq> K"
+          using xa x
+          using s
+          unfolding simplicial_complex_mp_with_boolean_function_def
+          unfolding simplices_def simplicial_complex_def try
+        apply (rule ccontr)
+        using s
+        unfolding simplicial_complex_mp_with_boolean_function_def
+        unfolding simplicial_complex_def using xa unfolding simplices_def apply auto
       apply auto
       using \<open>xa \<in> {y \<in> simplices (V - {x}). \<exists>xa. dim_vec xa = card (V - {x}) \<and> f (vec_aug xa j False) \<and> (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {x. x < dim_vec xa \<and> xa $ x = False} = y}\<close> apply fastforce
       try
