@@ -501,7 +501,8 @@ text\<open>The simplicial complex given by the @{term link} function
   between the indexes of the Boolean arrays and the vertexes 
   in the simplicial complex @{term V}.\<close>
 
-lemma 
+lemma
+  simplicial_complex_mp_link:
   assumes s: "simplicial_complex_mp_with_boolean_function n mp V K"
   and x: "x \<in> V"
   and mp: "mp j = x"
@@ -595,6 +596,137 @@ proof (intro conjI)
   qed
 qed
 
+lemma
+  simplicial_complex_mp_cost:
+  assumes s: "simplicial_complex_mp_with_boolean_function n mp V K"
+  and x: "x \<in> V"
+  and mp: "mp j = x"
+  and j: "j < n"
+shows "simplicial_complex_mp_with_boolean_function
+      (n - 1) (\<lambda>i. if i < j then mp i else mp (i + 1)) (V - {x}) (cost x V K)"
+  unfolding simplicial_complex_mp_with_boolean_function_def
+proof (intro conjI)
+  show "simplicial_complex (V - {x}) (cost x V K)"
+    using s simplicial_complex_cost simplicial_complex_mp_with_boolean_function.s by blast
+  show "bij_betw (\<lambda>i. if i < j then mp i else mp (i + 1)) {0..<n - 1} (V - {x})"
+  proof (unfold bij_betw_def, intro conjI)
+    show "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<n - 1} = V - {x}"
+    proof -
+      have a: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<n - 1} = 
+        (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<j} \<union> 
+        (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {j..<n-1}"
+        using j by auto
+      have b: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<j} = mp ` {0..<j}" by simp
+      have "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {j..<n-1} = (\<lambda>i. mp (i + 1)) ` {j..<n -1}" by simp
+      also have "... = (mp \<circ> (\<lambda>i. i + 1)) ` {j..<n -1}" by simp
+      also have "... = mp ` {j+1..<n}"
+      proof -
+        have "(\<lambda>i. i + 1) ` {j..<n -1} =  {j+1..<n}" by auto
+        thus ?thesis by (metis image_comp)
+      qed
+      finally have c: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {j..<n-1} = mp ` {j+1..<n}" by simp
+      from a b c mp have "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<n-1} = 
+          mp ` {0..<j} \<union> mp ` {j+1..<n}" by simp
+      also have "... = mp ` ({0..<n} - {j})"
+      proof -
+        have "{0..<j} \<union> {j+1..<n} = {0..<n} - {j}" using j by auto
+        thus ?thesis by auto
+      qed
+      also have "... = mp ` {0..<n} - mp ` {j}" 
+        using j 
+        using simplicial_complex_mp_with_boolean_function.mp [OF s]
+        unfolding bij_betw_def inj_on_def by auto
+      also have "... = V - {x}"
+        using mp
+        using simplicial_complex_mp_with_boolean_function.mp [OF s]
+        unfolding bij_betw_def inj_on_def by auto
+      finally show ?thesis .
+    qed
+  next
+    show "inj_on (\<lambda>i. if i < j then mp i else mp (i + 1)) {0..<n - 1}"
+    proof (unfold inj_on_def, rule+)
+      fix x y
+      assume x: "x \<in> {0..<n - 1}" and y: "y \<in> {0..<n-1}"
+        and eq: "(if x < j then mp x else mp (x + 1)) = (if y < j then mp y else mp (y + 1)) " 
+      show "x = y"
+      proof (cases "x < j")
+        case True note xj = True
+        show ?thesis 
+        proof (cases "y < j")
+          case True
+          show ?thesis 
+            using True xj eq
+            using simplicial_complex_mp_with_boolean_function.mp [OF s]
+            using x y
+            unfolding bij_betw_def inj_on_def by simp
+        next
+          case False
+          show ?thesis
+            using False xj eq
+            using simplicial_complex_mp_with_boolean_function.mp [OF s]
+            using x y
+            unfolding bij_betw_def inj_on_def by fastforce
+        qed
+      next
+        case False note xj = False
+        show ?thesis
+          proof (cases "y < j")
+          case True
+          show ?thesis 
+            using True xj eq
+            using simplicial_complex_mp_with_boolean_function.mp [OF s]
+            using x y
+            unfolding bij_betw_def inj_on_def by fastforce
+        next
+          case False
+          show ?thesis
+            using False xj eq
+            using simplicial_complex_mp_with_boolean_function.mp [OF s]
+            using x y
+            unfolding bij_betw_def inj_on_def
+            by fastforce
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma 
+  assumes s: "simplicial_complex_mp_with_boolean_function n mp V K"
+    and x: "x \<in> V" 
+    and mp: "mp j = x"
+    and j: "j < n"
+  shows "simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function
+    (\<lambda>i. if i < j then mp i else mp (i + 1)) (V - {x}) (subfunction_0_dim f j) = (link x V K)
+  "
+proof (rule)
+  have s': "simplicial_complex_mp_with_boolean_function 
+      (n - 1) (\<lambda>i. if i < j then mp i else mp (i + 1)) (V - {x}) (link x V K)"
+    using simplicial_complex_mp_link [OF s x mp j] .
+  show "simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function
+     (\<lambda>i. if i < j then mp i else mp (i + 1)) (V - {x}) (subfunction_0_dim f j)
+    \<subseteq> link x V K"
+    unfolding simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def [OF simplicial_complex_mp_link [OF s x mp j]]
+    unfolding link_def
+    unfolding subfunction_0_dim_def
+    unfolding simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input_def [OF s']
+  proof
+    fix xa
+    assume "xa \<in> {y \<in> simplices (V - {x}). \<exists>xa. dim_vec xa = card (V - {x}) 
+              \<and> f (vec_aug xa j False) 
+              \<and> (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {x. x < dim_vec xa \<and> xa $ x = False} =
+                     y}"
+    show "xa \<in> {s \<in> simplices (V - {x}). s \<union> {x} \<in> K}"
+      apply auto
+      using \<open>xa \<in> {y \<in> simplices (V - {x}). \<exists>xa. dim_vec xa = card (V - {x}) \<and> f (vec_aug xa j False) \<and> (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {x. x < dim_vec xa \<and> xa $ x = False} = y}\<close> apply fastforce
+      try
+      find_theorems "subfunction_0_dim ?f"
+
+    using simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def [OF simplicial_complex_mp_link [OF _ x _ j, of mp K]]
+    
+    .
+    using simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def
+      [of "n-1" "(\<lambda>i. if i < j then mp i else mp (i + 1))" "V - {x}" "link x V K"]
 
 lemma 
   assumes s: "simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp v = A"
