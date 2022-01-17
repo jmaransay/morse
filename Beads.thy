@@ -444,6 +444,7 @@ text\<open>The result of operations @{term link} and @{term cost}
   are simplicial complexes.\<close>
 
 lemma
+  simplicial_complex_link:
   assumes s: "simplicial_complex V K"
   shows "simplicial_complex (V - {x}) (link x V K)"
   unfolding link_def
@@ -451,6 +452,7 @@ lemma
   unfolding simplicial_complex_def simplices_def by fast
 
 lemma
+  simplicial_complex_cost:
   assumes s: "simplicial_complex V K"
   shows "simplicial_complex (V - {x}) (cost x V K)"
   unfolding cost_def
@@ -475,57 +477,182 @@ lemma
 section\<open>Equivalence between operations @{term link} and @{term cost} 
   with @{term subfunction_0_dim} and @{term subfunction_1_dim}.\<close>
 
+locale simplicial_complex_mp_with_boolean_function = "boolean_functions" +
+  fixes mp :: "nat \<Rightarrow> nat"
+    and V :: "nat set"
+    and K :: "nat set set"
+  assumes s: "simplicial_complex V K"
+    and mp: "bij_betw mp {0..<n} V"
+begin
+
+definition ceros_of_boolean_input :: "bool vec \<Rightarrow> nat set"
+  where "ceros_of_boolean_input v = mp ` {x. x < dim_vec v \<and> vec_index v x = False}"
+
 definition
   simplicial_complex_induced_by_monotone_boolean_function
-    :: "(nat \<Rightarrow> nat) \<Rightarrow> nat set => (bool vec => bool) => nat set set"
-  where "simplicial_complex_induced_by_monotone_boolean_function mp V f =
-        {y\<in>simplices V. \<exists>x. dim_vec x = card V \<and> f x \<and> mp ` (ceros_of_boolean_input x) = y}"
+    :: "(bool vec => bool) => nat set set"
+  where "simplicial_complex_induced_by_monotone_boolean_function f =
+        {y\<in>simplices V. \<exists>x. dim_vec x = card V \<and> f x \<and> ceros_of_boolean_input x = y}"
+
+end
+
+text\<open>The simplicial complex given by the @{term link} function
+  is a simplicial complex. Note that we also introduce the mapping @{term map}
+  between the indexes of the Boolean arrays and the vertexes 
+  in the simplicial complex @{term V}.\<close>
+
+lemma 
+  assumes s: "simplicial_complex_mp_with_boolean_function n mp V K"
+  and x: "x \<in> V"
+  and mp: "mp j = x"
+  and j: "j < n"
+shows "simplicial_complex_mp_with_boolean_function 
+      (n - 1) (\<lambda>i. if i < j then mp i else mp (i + 1)) (V - {x}) (link x V K)"
+  unfolding simplicial_complex_mp_with_boolean_function_def
+proof (intro conjI)
+  show "simplicial_complex (V - {x}) (link x V K)"
+    using s simplicial_complex_link simplicial_complex_mp_with_boolean_function.s by blast
+  show "bij_betw (\<lambda>i. if i < j then mp i else mp (i + 1)) {0..<n - 1} (V - {x})"
+  proof (unfold bij_betw_def, intro conjI)
+    show "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<n - 1} = V - {x}"
+    proof -
+      have a: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<n - 1} = 
+        (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<j} \<union> 
+        (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {j..<n-1}"
+        using j by auto
+      have b: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<j} = mp ` {0..<j}" by simp
+      have "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {j..<n-1} = (\<lambda>i. mp (i + 1)) ` {j..<n -1}" by simp
+      also have "... = (mp \<circ> (\<lambda>i. i + 1)) ` {j..<n -1}" by simp
+      also have "... = mp ` {j+1..<n}"
+      proof -
+        have "(\<lambda>i. i + 1) ` {j..<n -1} =  {j+1..<n}" by auto
+        thus ?thesis by (metis image_comp)
+      qed
+      finally have c: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {j..<n-1} = mp ` {j+1..<n}" by simp
+      from a b c mp have "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<n-1} = 
+          mp ` {0..<j} \<union> mp ` {j+1..<n}" by simp
+      also have "... = mp ` ({0..<n} - {j})"
+      proof -
+        have "{0..<j} \<union> {j+1..<n} = {0..<n} - {j}" using j by auto
+        thus ?thesis by auto
+      qed
+      also have "... = mp ` {0..<n} - mp ` {j}" 
+        using j 
+        using simplicial_complex_mp_with_boolean_function.mp [OF s]
+        unfolding bij_betw_def inj_on_def by auto
+      also have "... = V - {x}"
+        using mp
+        using simplicial_complex_mp_with_boolean_function.mp [OF s]
+        unfolding bij_betw_def inj_on_def by auto
+      finally show ?thesis .
+    qed
+  next
+    show "inj_on (\<lambda>i. if i < j then mp i else mp (i + 1)) {0..<n - 1}"
+    proof (unfold inj_on_def, rule+)
+      fix x y
+      assume x: "x \<in> {0..<n - 1}" and y: "y \<in> {0..<n-1}"
+        and eq: "(if x < j then mp x else mp (x + 1)) = (if y < j then mp y else mp (y + 1)) " 
+      show "x = y"
+      proof (cases "x < j")
+        case True note xj = True
+        show ?thesis 
+        proof (cases "y < j")
+          case True
+          show ?thesis 
+            using True xj eq
+            using simplicial_complex_mp_with_boolean_function.mp [OF s]
+            using x y
+            unfolding bij_betw_def inj_on_def by simp
+        next
+          case False
+          show ?thesis
+            using False xj eq
+            using simplicial_complex_mp_with_boolean_function.mp [OF s]
+            using x y
+            unfolding bij_betw_def inj_on_def by fastforce
+        qed
+      next
+        case False note xj = False
+        show ?thesis
+          proof (cases "y < j")
+          case True
+          show ?thesis 
+            using True xj eq
+            using simplicial_complex_mp_with_boolean_function.mp [OF s]
+            using x y
+            unfolding bij_betw_def inj_on_def by fastforce
+        next
+          case False
+          show ?thesis
+            using False xj eq
+            using simplicial_complex_mp_with_boolean_function.mp [OF s]
+            using x y
+            unfolding bij_betw_def inj_on_def
+            by fastforce
+        qed
+      qed
+    qed
+  qed
+qed
+
+
+lemma 
+  assumes s: "simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp v = A"
+  shows "simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp (vec_aug v i False) 
+  = A \<union> (mp ` {i})"
+  using s
+  unfolding vec_aug_def
+  using simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input_def
+  
 
 text\<open>The following operation is ``equivalent'' to @{term vec_aug}
   for arrays.\<close>
 
+definition simplex_bv :: "bool vec \<Rightarrow> (nat \<Rightarrow> nat) \<Rightarrow> nat set"
+  where "simplex_bv v mp = ceros_of_boolean_input v mp"
+
+definition mp_aug :: ""
+
 definition set_aug :: "nat set \<Rightarrow> nat \<Rightarrow> nat set"
-  where "set_aug A i = (A \<inter> {0..<i}) \<union> {i} \<union> (\<lambda>x. Suc x) ` (A - {0..<i})"
+  where "set_aug A i = (A \<inter> {0..<i}) \<union> {i} \<union> (\<lambda>x. x + 1) ` (A - {0..<i})"
 
-value "set_aug (set [1,3,4,5]) 2"
+definition set_aug_map :: "(nat \<Rightarrow> nat) \<Rightarrow> nat set \<Rightarrow> nat \<Rightarrow> nat set"
+  where "set_aug_map f A i = f ` A \<union> f ` {i}"
+
+value "set_aug_map id (set [1,3,4,5]) 2"
 
 lemma
   ceros_of_boolean_input_set_aug:
+  assumes c: "ceros_of_boolean_input v mp = A" and i: "i \<le> dim_vec v"
+  shows "ceros_of_boolean_input (vec_aug v i False) mp = set_aug_map mp A i"
+  using c i
+  unfolding ceros_of_boolean_input_def vec_aug_def set_aug_map_def
+  apply auto try
+  by force (*slow proof*)
+
+thm fun_upd_def
+
+lemma
   fixes mp :: "nat \<Rightarrow> nat"
-  assumes c: "mp ` (ceros_of_boolean_input v) = A" and i: "i \<le> dim_vec v"
-  shows "mp ` (ceros_of_boolean_input (vec_aug v i False)) = mp ` (set_aug A i)"
-  using c i
-  unfolding ceros_of_boolean_input_def vec_aug_def set_aug_def
-  by force (*slow proof*)
-
-lemma
-  ceros_of_boolean_input_set_aug:
-  assumes c: "ceros_of_boolean_input v = A" and i: "i \<le> dim_vec v"
-  shows "ceros_of_boolean_input (vec_aug v i False) = set_aug A i"
-  using c i
-  unfolding ceros_of_boolean_input_def vec_aug_def set_aug_def
-  by force (*slow proof*)
-
-lemma
-  assumes k: "simplicial_complex_induced_by_monotone_boolean_function {0..<n} f = K"
-  and x: "x < n"
-  shows "simplicial_complex_induced_by_monotone_boolean_function ({0..<n} - {x}) (subfunction_0_dim f x) = link x  {0..<n} K"
+  assumes k: "simplicial_complex_induced_by_monotone_boolean_function (fun_upd mp i x) V f = K"
+  and x: "x \<in> V"
+  shows "simplicial_complex_induced_by_monotone_boolean_function mp (V - {x}) (subfunction_0_dim f x) = link x V K"
 proof (rule)
-  show "simplicial_complex_induced_by_monotone_boolean_function ({0..<n} - {x})
+  show "simplicial_complex_induced_by_monotone_boolean_function mp (V - {x})
      (subfunction_0_dim f x)
-    \<subseteq> link x {0..<n} K"
+    \<subseteq> link x V K"
   proof
     fix y :: "nat set"
-    assume y: "y \<in> simplicial_complex_induced_by_monotone_boolean_function ({0..<n} - {x})
+    assume y: "y \<in> simplicial_complex_induced_by_monotone_boolean_function mp (V - {x})
                 (subfunction_0_dim f x)"
-    from y obtain xa :: "bool vec" where d: "dim_vec xa = card ({0..<n} - {x})" 
-             and s: "subfunction_0_dim f x xa" and c: "ceros_of_boolean_input xa = y"
+    from y obtain xa :: "bool vec" where d: "dim_vec xa = card (V - {x})" 
+             and s: "subfunction_0_dim f x xa" and c: "mp ` ceros_of_boolean_input xa = y"
       unfolding simplicial_complex_induced_by_monotone_boolean_function_def by fast
-    from y have y_v_x: "y \<in> simplices ({0..<n} - {x})"
+    from y have y_v_x: "y \<in> simplices (V - {x})"
       unfolding simplicial_complex_induced_by_monotone_boolean_function_def by simp 
     define y' where "y' = vec_aug xa x False"
-    have "set_aug y x \<in> simplices {0..<(n+1)}"
-      using y_v_x x unfolding simplices_def set_aug_def by auto
+    have yx: "y \<union> {x} \<in> simplices V"
+      using y_v_x x unfolding simplices_def by auto
     have cy': "ceros_of_boolean_input y' = set_aug y x"
       unfolding y'_def
       apply (rule ceros_of_boolean_input_set_aug [OF c, of x])
@@ -537,6 +664,17 @@ proof (rule)
       
 
 
+
+
+
+lemma
+  ceros_of_boolean_input_set_aug:
+  fixes mp :: "nat \<Rightarrow> nat"
+  assumes c: "mp ` (ceros_of_boolean_input v) = A" and i: "i \<le> dim_vec v"
+  shows "mp ` (ceros_of_boolean_input (vec_aug v i False)) = (set_aug_map mp A i)"
+  using c i
+  unfolding ceros_of_boolean_input_def vec_aug_def set_aug_def
+  by force (*slow proof*)
 
 lemma
   assumes k: "simplicial_complex_induced_by_monotone_boolean_function V f = K"
