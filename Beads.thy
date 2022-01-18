@@ -314,6 +314,24 @@ proof (unfold subfunction_1_dim_def mono_on_def, safe)
 qed
 
 lemma
+  subfunction_0_dim_subfunction_1_dim_mon:
+  assumes m: "mono_on f (carrier_vec (dim_vec v + 1))"
+    and s0: "(subfunction_0_dim f i) v"
+  shows "(subfunction_1_dim f i) v"
+proof -
+  have mon: "vec (dim_vec v + 1) (\<lambda>ia. if ia < i then v $ ia else if ia = i then False else v $ (ia - 1))
+      \<le> vec (dim_vec v + 1)
+        (\<lambda>ia. if ia < i then v $ ia else if ia = i then True else v $ (ia - 1))"
+    unfolding less_eq_vec_def by simp
+  have "(subfunction_0_dim f i) v \<le> (subfunction_1_dim f i) v"
+    unfolding subfunction_0_dim_def
+    unfolding subfunction_1_dim_def
+    unfolding vec_aug_def
+    by (rule mono_onD [of f "carrier_vec (dim_vec v + 1)"], intro m, simp, simp, rule mon)
+  then show ?thesis using s0 by simp
+qed
+
+lemma
   assumes m: "monotone_bool_fun f"
   shows "monotone_bool_fun (subfunction_0 f i)"
 proof (unfold subfunction_0_def monotone_bool_fun_def mono_on_def, safe)
@@ -464,6 +482,13 @@ lemma
   unfolding cost_def
   using s
   unfolding simplicial_complex_def simplices_def by fast
+
+lemma link_subset_cost: 
+  assumes s: "simplicial_complex V K"
+  shows "link x V K \<subseteq> cost x V K"
+  using s
+  unfolding simplicial_complex_def
+  unfolding link_def cost_def simplices_def by auto  
 
 text\<open>The number of vertexes  of operations @{term link} and @{term cost} 
   is one less than the number of vertexes in the original simplicial complex.\<close>
