@@ -872,7 +872,16 @@ proof (rule)
     fix xa
     assume xa: "xa \<in> {s \<in> simplices (V - {x}). s \<union> {x} \<in> K}"
     hence xa_s: "xa \<in> simplices (V - {x})" and xa_x: "xa \<union> {x} \<in> K" by simp_all
-    define xb :: "bool vec"
+    have f_xa_x: "f (simplicial_complex_mp_with_boolean_function.bool_vec_from_simplice n mp (xa \<union> {x}))"
+      using xa_x
+      unfolding s_induced [symmetric]
+      unfolding simplicial_complex_mp_with_boolean_function.bool_vec_from_simplice_def [OF s]
+      unfolding simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def [OF s, of f]
+      unfolding simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input_def [OF s]
+      apply auto
+      try
+      by auto
+      define xb :: "bool vec"
       where xb_def: "xb =
         simplicial_complex_mp_with_boolean_function.bool_vec_from_simplice (n - 1) (\<lambda>i. if i < j then mp i else mp (i + 1)) xa"
     show "xa \<in> {y \<in> simplices (V - {x}).
@@ -888,7 +897,24 @@ proof (rule)
         unfolding dim_vec
         using bij_betw_same_card s' simplicial_complex_mp_with_boolean_function.mp by fastforce
       show "f (vec (dim_vec xb + 1) (\<lambda>i. if i < j then xb $ i else if i = j then False else xb $ (i - 1)))"
-
+        unfolding xb_def
+        unfolding simplicial_complex_mp_with_boolean_function.bool_vec_from_simplice_def [OF s', of xa]
+        unfolding dim_vec apply auto try
+      proof -
+        from xa_x obtain xc :: "bool vec" 
+          where d_xc: "dim_vec xc = card V"
+          and f_xc: "f xc"
+          and ceros_xc: "simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp xc = (xa \<union> {x})"
+            unfolding simplicial_complex_mp_with_boolean_function.bool_vec_from_simplice_def [OF s, of "xa \<union> {x}"]
+            unfolding s_induced [symmetric] 
+            unfolding simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def [OF s, of f]
+            by auto
+          show ?thesis 
+            using f_xc
+            using ceros_xc 
+            unfolding simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input_def [OF s]
+          apply (rule) using s
+          unfolding simplicial_complex_mp_with_boolean_function_def
 
 
 
