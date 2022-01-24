@@ -1265,164 +1265,34 @@ proof (rule)
   qed
 qed
 
-
-
+lemma
+  link_commute:
+  assumes i: "i \<in> V"
+  and j: "j \<in> V"
+  shows "link j (V - {i}) (link i V K) = link i (V - {j}) (link j V K)"
+  unfolding link_def unfolding simplices_def using i j 
+  by auto (simp_all add: insert_commute)
 
 lemma
-  assumes s: "simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp v = A"
-  shows "simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp (vec_aug v i False) 
-  = A \<union> (mp ` {i})"
-  using s
+  cost_commute:
+  assumes i: "i \<in> V"
+  and j: "j \<in> V"
+  shows "cost j (V - {i}) (cost i V K) = cost i (V - {j}) (cost j V K)"
+  unfolding cost_def unfolding simplices_def using i j by auto 
+
+lemma subfunction_0_commute:
+  fixes f :: "bool vec \<Rightarrow> bool" and v :: "bool vec"
+  assumes v: "v \<in> carrier_vec n"
+  and m: "mono_on f (carrier_vec n)"
+  and i: "i < n" and j: "j < n"
+  shows "(subfunction_0_dim (subfunction_0_dim f i) j) v = 
+    (subfunction_0_dim (subfunction_0_dim f j) i) v"
+  unfolding subfunction_0_dim_def
   unfolding vec_aug_def
-  using simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input_def
-  
-
-text\<open>The following operation is ``equivalent'' to @{term vec_aug}
-  for arrays.\<close>
-
-definition simplex_bv :: "bool vec \<Rightarrow> (nat \<Rightarrow> nat) \<Rightarrow> nat set"
-  where "simplex_bv v mp = ceros_of_boolean_input v mp"
-
-definition mp_aug :: ""
-
-definition set_aug :: "nat set \<Rightarrow> nat \<Rightarrow> nat set"
-  where "set_aug A i = (A \<inter> {0..<i}) \<union> {i} \<union> (\<lambda>x. x + 1) ` (A - {0..<i})"
-
-definition set_aug_map :: "(nat \<Rightarrow> nat) \<Rightarrow> nat set \<Rightarrow> nat \<Rightarrow> nat set"
-  where "set_aug_map f A i = f ` A \<union> f ` {i}"
-
-value "set_aug_map id (set [1,3,4,5]) 2"
-
-lemma
-  ceros_of_boolean_input_set_aug:
-  assumes c: "ceros_of_boolean_input v mp = A" and i: "i \<le> dim_vec v"
-  shows "ceros_of_boolean_input (vec_aug v i False) mp = set_aug_map mp A i"
-  using c i
-  unfolding ceros_of_boolean_input_def vec_aug_def set_aug_map_def
+  using v i j m
+  unfolding carrier_vec_def dim_vec mono_on_def less_eq_vec_def
   apply auto try
-  by force (*slow proof*)
 
-thm fun_upd_def
-
-lemma
-  fixes mp :: "nat \<Rightarrow> nat"
-  assumes k: "simplicial_complex_induced_by_monotone_boolean_function (fun_upd mp i x) V f = K"
-  and x: "x \<in> V"
-  shows "simplicial_complex_induced_by_monotone_boolean_function mp (V - {x}) (subfunction_0_dim f x) = link x V K"
-proof (rule)
-  show "simplicial_complex_induced_by_monotone_boolean_function mp (V - {x})
-     (subfunction_0_dim f x)
-    \<subseteq> link x V K"
-  proof
-    fix y :: "nat set"
-    assume y: "y \<in> simplicial_complex_induced_by_monotone_boolean_function mp (V - {x})
-                (subfunction_0_dim f x)"
-    from y obtain xa :: "bool vec" where d: "dim_vec xa = card (V - {x})" 
-             and s: "subfunction_0_dim f x xa" and c: "mp ` ceros_of_boolean_input xa = y"
-      unfolding simplicial_complex_induced_by_monotone_boolean_function_def by fast
-    from y have y_v_x: "y \<in> simplices (V - {x})"
-      unfolding simplicial_complex_induced_by_monotone_boolean_function_def by simp 
-    define y' where "y' = vec_aug xa x False"
-    have yx: "y \<union> {x} \<in> simplices V"
-      using y_v_x x unfolding simplices_def by auto
-    have cy': "ceros_of_boolean_input y' = set_aug y x"
-      unfolding y'_def
-      apply (rule ceros_of_boolean_input_set_aug [OF c, of x])
-      using x d by simp
-    have fy': "f y'" using s unfolding y'_def subfunction_0_dim_def .
-    hence "ceros_of_boolean_input y' \<in> K" 
-      using k
-      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-      
-
-
-
-
-
-lemma
-  ceros_of_boolean_input_set_aug:
-  fixes mp :: "nat \<Rightarrow> nat"
-  assumes c: "mp ` (ceros_of_boolean_input v) = A" and i: "i \<le> dim_vec v"
-  shows "mp ` (ceros_of_boolean_input (vec_aug v i False)) = (set_aug_map mp A i)"
-  using c i
-  unfolding ceros_of_boolean_input_def vec_aug_def set_aug_def
-  by force (*slow proof*)
-
-lemma
-  assumes k: "simplicial_complex_induced_by_monotone_boolean_function V f = K"
-  and finite: "finite V"
-  and x: "x \<in> V"
-  shows "simplicial_complex_induced_by_monotone_boolean_function (V - {x}) (subfunction_0_dim f x) = link x V K"
-proof (rule)
-  show "simplicial_complex_induced_by_monotone_boolean_function (V - {x})
-     (subfunction_0_dim f x)
-    \<subseteq> link x V K"
-  proof
-    fix y :: "nat set"
-    assume y: "y \<in> simplicial_complex_induced_by_monotone_boolean_function (V - {x})
-                (subfunction_0_dim f x)"
-    from y obtain xa :: "bool vec" where d: "dim_vec xa = card (V - {x})" 
-             and s: "subfunction_0_dim f x xa" and c: "ceros_of_boolean_input xa = y"
-      unfolding simplicial_complex_induced_by_monotone_boolean_function_def by fast
-    from y have y_v_x: "y \<in> simplices (V - {x})" 
-      unfolding simplicial_complex_induced_by_monotone_boolean_function_def by simp 
-    define y' where "y' = vec_aug xa x False"
-    have "set_aug y x \<in> simplices V"  
-      using y_v_x x unfolding simplices_def set_aug_def try
-    have cy': "ceros_of_boolean_input y' = set_aug y x" 
-      using ceros_of_boolean_input_set_aug [OF c, of x] sorry
-    have fy': "f y'" using s unfolding y'_def subfunction_0_dim_def .
-    hence "ceros_of_boolean_input y' \<in> K" 
-      using k 
-      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-      
-      unfolding ceros_of_boolean_input_def y'_def vec_aug_def try
-    have dy': "dim_vec y' = card V"
-      using d x finite unfolding y'_def vec_aug_def dim_vec
-      by (metis add.commute card.remove plus_1_eq_Suc)
-   show "y \<in> link x V K"
-      unfolding link_def unfolding simplices_def
-      using y unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-
-      using k x
-      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-      unfolding subfunction_0_dim_def
-      unfolding link_def unfolding vec_aug_def unfolding simplices_def apply auto try apply auto try
-
-
-term "link x V K"
-
-term "subfunction_0_dim f x"
-
-
-lemma
-  assumes "link x V K = subfunction_0_dim f x"
-
-
-
-
-lemma finite_simplices:
-  assumes "simplicial_complex K"
-  and "v \<in> K"
-shows "finite v"
-  using assms finite_simplex simplicial_complex.simplicial_complex_def by blast
-
-
-
-
-
-lemma
-  assumes s: "simplicial_complex.simplicial_complex m S"
-  shows "simplicial_complex.simplicial_complex (m - 1) S"
-
-
-
-context simplicial_complex
-begin
-
-
-definition link :: "nat \<Rightarrow> nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
-  where "link x m \<Delta> = {s. s \<in> Pow ({0..<m} - {x}) \<and> s \<union> {x} \<in> \<Delta>}"
 
 
 
