@@ -1282,14 +1282,19 @@ lemma
 
 lemma subfunction_0_commute:
   fixes f :: "bool vec \<Rightarrow> bool" and v :: "bool vec"
-  assumes v: "v \<in> carrier_vec n"
-  and m: "mono_on f (carrier_vec n)"
+  assumes v: "v \<in> carrier_vec n" and f: "f v"
+  and mn2: "mono_on f (carrier_vec (n + 2))"
   and i: "i < n" and j: "j < n"
-  shows "(subfunction_0_dim (subfunction_0_dim f i) j) v = 
+  shows "(subfunction_0_dim (subfunction_0_dim f i) j) v=
     (subfunction_0_dim (subfunction_0_dim f j) i) v"
   unfolding subfunction_0_dim_def
+  apply (rule cong [of f], simp)
   unfolding vec_aug_def
-  using v i j m
+  unfolding dim_vec
+  apply (intro eq_vecI)
+   prefer 2
+  apply simp
+  using v i j mn2 f
   unfolding carrier_vec_def dim_vec mono_on_def less_eq_vec_def
   apply auto try
 
