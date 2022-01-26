@@ -1280,6 +1280,24 @@ lemma
   shows "cost j (V - {i}) (cost i V K) = cost i (V - {j}) (cost j V K)"
   unfolding cost_def unfolding simplices_def using i j by auto 
 
+lemma
+  cost_link_commute:
+  assumes i: "i \<in> V"
+  and j: "j \<in> V"
+  and i_ne_j: "i \<noteq> j"
+  shows "cost j (V - {i}) (link i V K) = link i (V - {j}) (cost j V K)"
+  unfolding link_def cost_def unfolding simplices_def using i j i_ne_j
+  by auto
+
+lemma
+  link_cost_commute:
+  assumes i: "i \<in> V"
+  and j: "j \<in> V"
+  and i_ne_j: "i \<noteq> j"
+  shows "link j (V - {i}) (cost i V K) = cost i (V - {j}) (link j V K)"
+  unfolding link_def cost_def unfolding simplices_def using i j i_ne_j
+  by auto
+
 lemma subfunction_0_commute:
   fixes f :: "bool vec \<Rightarrow> bool" and v :: "bool vec"
   assumes v: "v \<in> carrier_vec n" and f: "f v"
