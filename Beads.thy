@@ -1298,6 +1298,37 @@ lemma
   unfolding link_def cost_def unfolding simplices_def using i j i_ne_j
   by auto
 
+section\<open>Join and cones\<close>
+
+definition join_vertices :: "nat set \<Rightarrow> nat set \<Rightarrow> nat set"
+  where "join_vertices V V' = (V \<union> V')"
+
+definition join_simplices :: "nat set set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "join_simplices K K' = (K \<union> K' \<union> {x. \<exists>y y'. x = y \<union> y' \<and> y \<in> K \<and> y' \<in> K'})"
+
+definition cone_vertices :: "nat \<Rightarrow> nat set \<Rightarrow> nat set"
+  where "cone_vertices n V = join_vertices {n} V"
+
+definition cone_simplices :: "nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "cone_simplices n K = join_simplices {{n}} K"
+
+section\<open>Evasiveness for simplicial complexes\<close>
+
+(*function finite :: "nat set \<Rightarrow> bool"
+  where 
+  "finite {} = True"
+  | "finite (insert x {}) = True"*)
+
+function evasive :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+  where 
+  "evasive {} {} = True"
+  | "evasive {} (insert x K) = False"
+  | "evasive (insert x {}) K = True"
+  | "evasive V K = (\<exists>x\<in>V. evasive (V - {x}) (link x V K) \<or> evasive (V - {x}) (cost x V K))"
+  unfolding link_def cost_def simplices_def apply fast apply simp_all apply auto try by pat_completeness auto
+
+termination
+
 lemma subfunction_0_commute:
   fixes f :: "bool vec \<Rightarrow> bool" and v :: "bool vec"
   assumes v: "v \<in> carrier_vec n" and f: "f v"
