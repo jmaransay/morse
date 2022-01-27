@@ -453,7 +453,7 @@ lemma simplicial_complex_contains_empty_set: "simplicial_complex V {{}}"
   unfolding simplices_def by simp
 
 lemma simplicial_complex_either_empty_or_contains_empty:
-  fixes V :: "nat set" and K::"nat set set"
+  fixes V :: "'a set" and K::"'a set set"
   assumes k: "simplicial_complex V K"
   shows "K = {} \<or> {} \<in> K" using k unfolding simplicial_complex_def Pow_def by auto
 
@@ -1306,15 +1306,15 @@ lemma
 
 section\<open>Internal and External Join and cones\<close>
 
-definition join_vertices :: "nat set \<Rightarrow> nat set \<Rightarrow> nat set"
+definition join_vertices :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set"
   where "join_vertices V V' = (V \<union> V')"
 
-definition join_simplices :: "nat set set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+definition join_simplices :: "'a set set \<Rightarrow> 'a set set \<Rightarrow> 'a set set"
   where "join_simplices K K' = (K \<union> K' \<union> {x. \<exists>y\<in>K. \<exists>y'\<in>K'. x = y \<union> y'})"
 
 lemma simplicial_complex_singleton:
-  fixes n :: nat
-  shows "simplicial_complex {n} {{},{n}}"
+  fixes x :: 'a
+  shows "simplicial_complex {x} {{},{x}}"
   unfolding simplicial_complex_def simplices_def by auto
 
 lemma
@@ -1330,10 +1330,10 @@ shows "simplicial_complex (join_vertices V V') (join_simplices K K')"
    apply (meson PowI subsetD)
   by (meson PowI subsetD subset_UnE)
 
-definition external_join_vertices :: "nat set \<Rightarrow> nat set \<Rightarrow> (nat + nat) set"
+definition external_join_vertices :: "'a set \<Rightarrow> 'a set \<Rightarrow> ('a + 'a) set"
   where "external_join_vertices V V' = (V <+> V')"
 
-definition external_join_simplices :: "nat set set \<Rightarrow> nat set set \<Rightarrow> (nat + nat) set set"
+definition external_join_simplices :: "'a set set \<Rightarrow> 'a set set \<Rightarrow> ('a + 'a) set set"
   where "external_join_simplices K K' = {x. \<exists>y\<in>K. \<exists>y'\<in>K'. x = y <+> y'}"
 
 lemma
@@ -1354,46 +1354,64 @@ next
   fix \<sigma> y y' x
   assume y: "y \<in> K" and y': "y' \<in> K'" and x: "x \<subseteq> y <+> y'"
   show "\<exists>y\<in>K. \<exists>y'\<in>K'. x = y <+> y'"
-  proof -
-    obtain rx where "rx \<in> y" and "Inr rx \<in> y <+> y'" try
-  apply auto proof try
+  proof (cases "x = {}")
+    case True show ?thesis
+      using True s s' simplicial_complex_either_empty_or_contains_empty y y' by auto
+  next
+    case False
+    from False obtain x' :: "'a + 'a" where x': "x' \<in> x" by auto
+    then obtain xy and xy' where x_split: "x = xy <+> xy'" using x by blast
+    with x have "xy \<subseteq> y" and "xy' \<subseteq> y'" by auto
+    with y and y' and s and s' have "xy \<in> K" and "xy' \<in> K'"
+      unfolding simplicial_complex_def simplices_def by auto
+    then show ?thesis using x_split by auto
+  qed
+qed
 
+(*definition cone_vertices :: "nat \<Rightarrow> nat set \<Rightarrow> nat set"
+  where "cone_vertices n V = join_vertices {n} V"*)
 
-
-definition cone_vertices :: "nat \<Rightarrow> nat set \<Rightarrow> nat set"
-  where "cone_vertices n V = join_vertices {n} V"
+definition cone_vertices :: "'a \<Rightarrow> 'a set \<Rightarrow> ('a + 'a) set"
+  where "cone_vertices n V = external_join_vertices {n} V"
 
 text\<open>In principle for the cone it should be enough to use @{term "{n}"} as
   simplice, but including also @{term "{}"} we have that the @{thm cone_vertices_def}
   together with @{thm cone_simplices_def} are already a simplicial complex.\<close>
 
-definition cone_simplices :: "nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
-  where "cone_simplices n K = join_simplices {{},{n}} K"
+definition cone_simplices :: "'a \<Rightarrow> 'a set set \<Rightarrow> ('a + 'a) set set"
+  where "cone_simplices n K = external_join_simplices {{},{n}} K"
 
 corollary simplicial_complex_cone:
   assumes s: "simplicial_complex V K"
   shows "simplicial_complex (cone_vertices x V) (cone_simplices x K)"
-  using simplicial_complex_join [OF simplicial_complex_singleton [of x] s]
+  using simplicial_complex_external_join [OF simplicial_complex_singleton [of x] s]
   unfolding cone_vertices_def cone_simplices_def by simp
-
-find_theorems "disjoint_union"
 
 section\<open>Evasiveness for simplicial complexes\<close>
 
-(*function finite :: "nat set \<Rightarrow> bool"
-  where 
-  "finite {} = True"
-  | "finite (insert x {}) = True"*)
+function non_evasive :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
+  where
+   "non_evasive {} K = False"
+ | "finite V \<Longrightarrow> non_evasive V K = (\<exists>x\<in>V. V = {x} 
+                    \<or> (non_evasive (V - {x}) (link x V K) \<and> non_evasive (V - {x}) (cost x V K)))"
+ | "\<not> finite V \<Longrightarrow> non_evasive V K = False"
+  unfolding link_def cost_def simplices_def by auto+
+termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
+  fix V :: "'a set" and K :: "'a set set" and x :: "'a"
+  assume f: "finite V" and x: "x \<in> V"
+  show "((V - {x}, link x V K), V, K) \<in> measure (\<lambda>(V, K). card V)"
+    using f x by auto (metis card_gt_0_iff diff_Suc_less empty_iff)
+  show "((V - {x}, cost x V K), V, K) \<in> measure (\<lambda>(V, K). card V)"
+    using f x by auto (metis card_gt_0_iff diff_Suc_less empty_iff)
+qed simp
 
-function evasive :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where 
-  "evasive {} {} = True"
-  | "evasive {} (insert x K) = False"
-  | "evasive (insert x {}) K = True"
-  | "evasive V K = (\<exists>x\<in>V. evasive (V - {x}) (link x V K) \<or> evasive (V - {x}) (cost x V K))"
-  unfolding link_def cost_def simplices_def apply fast apply simp_all apply auto try by pat_completeness auto
+lemma "non_evasive {x} {{}}" by simp
 
-termination
+lemma "\<not> non_evasive {1, 2} {{2::nat}}"
+  using non_evasive.simps(2) [of "{1,2}" "{{2}}"]
+  unfolding link_def cost_def simplices_def apply auto
+  try
+
 
 lemma subfunction_0_commute:
   fixes f :: "bool vec \<Rightarrow> bool" and v :: "bool vec"
