@@ -385,13 +385,14 @@ text\<open>In our definition of @{term simplicial_complex.simplicial_complex}
   general notion of simplicial complex where the set of vertexes can be any 
   finite set of natural numbers.\<close>
 
-definition simplices :: "nat set \<Rightarrow> nat set set"
+definition simplices :: "'a set \<Rightarrow> 'a set set"
   where "simplices V = Pow V"
 
 lemma "{} \<in> simplices V"
   unfolding simplices_def by simp
 
 lemma
+  fixes k :: nat and n :: nat
   assumes k: "k \<le> n"
   shows "{0..<k} \<in> simplices {0..<n}"
   using k unfolding simplices_def by simp
@@ -399,13 +400,13 @@ lemma
 lemma finite_simplex:
   assumes "finite V" and "\<sigma> \<in> simplices V"
   shows "finite \<sigma>"
-  using assms(1) assms(2) finite_subset simplices_def by auto
+  using assms(1) assms(2) finite_subset unfolding simplices_def by auto
 
 text\<open>A simplicial complex (in $n$ vertexes) is a collection of 
   sets of vertexes such that every subset of 
   a set of vertexes also belongs to the simplicial complex.\<close>
 
-definition simplicial_complex :: "nat set \<Rightarrow> nat set set => bool"
+definition simplicial_complex :: "'a set \<Rightarrow> 'a set set => bool"
   where "simplicial_complex V K \<equiv>  (\<forall>\<sigma>\<in>K. (\<sigma> \<in> simplices V) \<and> (Pow \<sigma>) \<subseteq> K)"
 
 lemma simplicial_complex_simplice:
@@ -420,7 +421,7 @@ text\<open>The notion of @{term simplicial_complex_card} is defined
   (monotone) Boolean function. Note that some of these vertexes 
   could not belong to any simplex.\<close>
 
-definition simplicial_complex_card :: "nat set \<Rightarrow> nat set set => nat"
+definition simplicial_complex_card :: "'a set \<Rightarrow> 'a set set => nat"
   where "simplicial_complex_card V K = card V"
 
 text\<open>The following result shows the coherence with our definition
@@ -462,10 +463,10 @@ lemma
   shows "finite K"
   by (metis assms(1) assms(2) finite_Pow_iff finite_subset simplices_def simplicial_complex_def subsetI)
 
-definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+definition link :: "'a \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> 'a set set"
   where "link x V K = {s. s \<in> simplices (V - {x}) \<and> s \<union> {x} \<in> K}"
 
-definition cost :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+definition cost :: "'a \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> 'a set set"
   where "cost x V K = {s. s \<in> simplices (V - {x}) \<and> s \<in> K}"
 
 value "Pow (set [1,2,3,4::nat])"
@@ -509,34 +510,34 @@ lemma
   assumes "simplicial_complex_card V K = n"
     and "x \<in> V"
   shows "simplicial_complex_card (V - {x}) (link x V K) = n - 1"
-  using assms(1) assms(2) simplicial_complex_card_def by auto
+  using assms(1) assms(2) unfolding simplicial_complex_card_def by auto
 
 lemma
   assumes "simplicial_complex_card V K = n"
     and "x \<in> V"
   shows "simplicial_complex_card (V - {x}) (cost x V K) = n - 1"
-  using assms(1) assms(2) simplicial_complex_card_def by auto
+  using assms(1) assms(2) unfolding simplicial_complex_card_def by auto
 
 section\<open>Equivalence between operations @{term link} and @{term cost} 
   with @{term subfunction_0_dim} and @{term subfunction_1_dim}.\<close>
 
 locale simplicial_complex_mp_with_boolean_function = "boolean_functions" +
-  fixes mp :: "nat \<Rightarrow> nat"
-    and V :: "nat set"
-    and K :: "nat set set"
+  fixes mp :: "nat \<Rightarrow> 'a"
+    and V :: "'a set"
+    and K :: "'a set set"
   assumes s: "simplicial_complex V K"
     and mp: "bij_betw mp {0..<n} V"
 begin
 
-definition ceros_of_boolean_input :: "bool vec \<Rightarrow> nat set"
+definition ceros_of_boolean_input :: "bool vec \<Rightarrow> 'a set"
   where "ceros_of_boolean_input v = mp ` {x. x < dim_vec v \<and> vec_index v x = False}"
 
-definition bool_vec_from_simplice :: "nat set => (bool vec)"
+definition bool_vec_from_simplice :: "'a set => (bool vec)"
   where "bool_vec_from_simplice \<sigma> = vec n (\<lambda>i. mp i \<notin> \<sigma>)"
 
 definition
   simplicial_complex_induced_by_monotone_boolean_function
-    :: "(bool vec => bool) => nat set set"
+    :: "(bool vec => bool) => 'a set set"
   where "simplicial_complex_induced_by_monotone_boolean_function f =
         {y\<in>simplices V. \<exists>x. dim_vec x = card V \<and> f x \<and> ceros_of_boolean_input x = y}"
 
@@ -558,7 +559,8 @@ shows "simplicial_complex_mp_with_boolean_function
   unfolding simplicial_complex_mp_with_boolean_function_def
 proof (intro conjI)
   show "simplicial_complex (V - {x}) (link x V K)"
-    using s simplicial_complex_link simplicial_complex_mp_with_boolean_function.s by blast
+    using s simplicial_complex_link [of V K] simplicial_complex_mp_with_boolean_function.s 
+    by blast
   show "bij_betw (\<lambda>i. if i < j then mp i else mp (i + 1)) {0..<n - 1} (V - {x})"
   proof (unfold bij_betw_def, intro conjI)
     show "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<n - 1} = V - {x}"
@@ -575,7 +577,8 @@ proof (intro conjI)
         have "(\<lambda>i. i + 1) ` {j..<n -1} =  {j+1..<n}" by auto
         thus ?thesis by (metis image_comp)
       qed
-      finally have c: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {j..<n-1} = mp ` {j+1..<n}" by simp
+      finally have c: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {j..<n-1} = mp ` {j+1..<n}" 
+        by simp
       from a b c mp have "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<n-1} = 
           mp ` {0..<j} \<union> mp ` {j+1..<n}" by simp
       also have "... = mp ` ({0..<n} - {j})"
@@ -598,7 +601,7 @@ proof (intro conjI)
     proof (unfold inj_on_def, rule+)
       fix x y
       assume x: "x \<in> {0..<n - 1}" and y: "y \<in> {0..<n-1}"
-        and eq: "(if x < j then mp x else mp (x + 1)) = (if y < j then mp y else mp (y + 1)) " 
+        and eq: "(if x < j then mp x else mp (x + 1)) = (if y < j then mp y else mp (y + 1))" 
       show "x = y"
       proof (cases "x < j")
         case True note xj = True
@@ -653,7 +656,8 @@ shows "simplicial_complex_mp_with_boolean_function
   unfolding simplicial_complex_mp_with_boolean_function_def
 proof (intro conjI)
   show "simplicial_complex (V - {x}) (cost x V K)"
-    using s simplicial_complex_cost simplicial_complex_mp_with_boolean_function.s by blast
+    using s simplicial_complex_cost [of V K] simplicial_complex_mp_with_boolean_function.s 
+    by blast
   show "bij_betw (\<lambda>i. if i < j then mp i else mp (i + 1)) {0..<n - 1} (V - {x})"
   proof (unfold bij_betw_def, intro conjI)
     show "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<n - 1} = V - {x}"
@@ -670,7 +674,8 @@ proof (intro conjI)
         have "(\<lambda>i. i + 1) ` {j..<n -1} =  {j+1..<n}" by auto
         thus ?thesis by (metis image_comp)
       qed
-      finally have c: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {j..<n-1} = mp ` {j+1..<n}" by simp
+      finally have c: "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {j..<n-1} = mp ` {j+1..<n}" 
+        by simp
       from a b c mp have "(\<lambda>i. if i < j then mp i else mp (i + 1)) ` {0..<n-1} = 
           mp ` {0..<j} \<union> mp ` {j+1..<n}" by simp
       also have "... = mp ` ({0..<n} - {j})"
@@ -693,7 +698,7 @@ proof (intro conjI)
     proof (unfold inj_on_def, rule+)
       fix x y
       assume x: "x \<in> {0..<n - 1}" and y: "y \<in> {0..<n-1}"
-        and eq: "(if x < j then mp x else mp (x + 1)) = (if y < j then mp y else mp (y + 1)) " 
+        and eq: "(if x < j then mp x else mp (x + 1)) = (if y < j then mp y else mp (y + 1))" 
       show "x = y"
       proof (cases "x < j")
         case True note xj = True
@@ -819,7 +824,7 @@ proof (rule)
                   \<union> {x. j < x \<and> x < dim_vec (vec_aug xb j False) \<and> vec_aug xb j False $ x = False}
                   \<union> {x. x = j \<and> vec_aug xb j False $ x = False}"
                   using j using dim card_V x unfolding vec_aug_def dim_vec by auto
-                have mp_j: "mp ` {x. x = j \<and> vec_aug xb j False $ x = False} = {x}" 
+                have mp_j: "mp ` {x. x = j \<and> vec_aug xb j False $ x = False} = {x}"
                   using mp j card_V dim x unfolding vec_aug_def by auto
                 have mp_less_j: "mp ` {x. x < j \<and> vec_aug xb j False $ x = False} =
                     (\<lambda>i. if i < j then mp i else mp (i + 1)) ` {x. x < j \<and> xb $ x = False}"
@@ -1159,7 +1164,8 @@ proof (rule)
       using inj_on_image_mem_iff [OF inj, of j "{xa. xa < dim_vec ya \<and> ya $ xa = False}"]
       using mp_ya j mp inj dim_ya card_V atLeast0LessThan using s
       unfolding simplicial_complex_mp_with_boolean_function_def 
-      using simplices_def xa_s by auto
+      unfolding simplices_def using xa_s
+      by auto (metis (no_types, lifting) Pow_iff bij_betw_def finite_imp_inj_to_nat_seg image_eqI inj_on_insert insert_image insert_subset lessThan_iff local.finite mem_Collect_eq mp_ya simplices_def)
     then have ya_j_True: "ya $ j = True"
       by (simp add: card_V dim_ya j)
     define xb :: "bool vec"
@@ -1298,19 +1304,79 @@ lemma
   unfolding link_def cost_def unfolding simplices_def using i j i_ne_j
   by auto
 
-section\<open>Join and cones\<close>
+section\<open>Internal and External Join and cones\<close>
 
 definition join_vertices :: "nat set \<Rightarrow> nat set \<Rightarrow> nat set"
   where "join_vertices V V' = (V \<union> V')"
 
 definition join_simplices :: "nat set set \<Rightarrow> nat set set \<Rightarrow> nat set set"
-  where "join_simplices K K' = (K \<union> K' \<union> {x. \<exists>y y'. x = y \<union> y' \<and> y \<in> K \<and> y' \<in> K'})"
+  where "join_simplices K K' = (K \<union> K' \<union> {x. \<exists>y\<in>K. \<exists>y'\<in>K'. x = y \<union> y'})"
+
+lemma simplicial_complex_singleton:
+  fixes n :: nat
+  shows "simplicial_complex {n} {{},{n}}"
+  unfolding simplicial_complex_def simplices_def by auto
+
+lemma
+  simplicial_complex_join:
+  assumes s: "simplicial_complex V K"
+  and s': "simplicial_complex V' K'"
+shows "simplicial_complex (join_vertices V V') (join_simplices K K')"
+  using s s'
+  unfolding join_vertices_def join_simplices_def simplicial_complex_def 
+  unfolding simplices_def 
+  apply (auto)
+    apply blast
+   apply (meson PowI subsetD)
+  by (meson PowI subsetD subset_UnE)
+
+definition external_join_vertices :: "nat set \<Rightarrow> nat set \<Rightarrow> (nat + nat) set"
+  where "external_join_vertices V V' = (V <+> V')"
+
+definition external_join_simplices :: "nat set set \<Rightarrow> nat set set \<Rightarrow> (nat + nat) set set"
+  where "external_join_simplices K K' = {x. \<exists>y\<in>K. \<exists>y'\<in>K'. x = y <+> y'}"
+
+lemma
+  simplicial_complex_external_join:
+  assumes s: "simplicial_complex V K"
+  and s': "simplicial_complex V' K'"
+shows "simplicial_complex (external_join_vertices V V') (external_join_simplices K K')"
+  unfolding external_join_vertices_def external_join_simplices_def simplicial_complex_def 
+  unfolding simplices_def Pow_def proof (safe)
+  fix y y' xa
+  assume y: "y \<in> K" and y': "y' \<in> K" and xa: "xa \<in> y"
+  show "xa \<in> V" using s y xa unfolding simplicial_complex_def simplices_def by auto
+next
+  fix y y' ya
+  assume y: "y \<in> K" and y': "y' \<in> K'" and ya: "ya \<in> y'"
+  show "ya \<in> V'" using s' y' ya unfolding simplicial_complex_def simplices_def by auto
+next
+  fix \<sigma> y y' x
+  assume y: "y \<in> K" and y': "y' \<in> K'" and x: "x \<subseteq> y <+> y'"
+  show "\<exists>y\<in>K. \<exists>y'\<in>K'. x = y <+> y'"
+  proof -
+    obtain rx where "rx \<in> y" and "Inr rx \<in> y <+> y'" try
+  apply auto proof try
+
+
 
 definition cone_vertices :: "nat \<Rightarrow> nat set \<Rightarrow> nat set"
   where "cone_vertices n V = join_vertices {n} V"
 
+text\<open>In principle for the cone it should be enough to use @{term "{n}"} as
+  simplice, but including also @{term "{}"} we have that the @{thm cone_vertices_def}
+  together with @{thm cone_simplices_def} are already a simplicial complex.\<close>
+
 definition cone_simplices :: "nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
-  where "cone_simplices n K = join_simplices {{n}} K"
+  where "cone_simplices n K = join_simplices {{},{n}} K"
+
+corollary simplicial_complex_cone:
+  assumes s: "simplicial_complex V K"
+  shows "simplicial_complex (cone_vertices x V) (cone_simplices x K)"
+  using simplicial_complex_join [OF simplicial_complex_singleton [of x] s]
+  unfolding cone_vertices_def cone_simplices_def by simp
+
+find_theorems "disjoint_union"
 
 section\<open>Evasiveness for simplicial complexes\<close>
 
