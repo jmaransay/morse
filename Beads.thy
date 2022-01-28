@@ -3,6 +3,7 @@ theory Beads
   imports 
     Boolean_functions
     Simplicial_complex
+    Bij_betw_simplicial_complex_bool_func
 begin
 
 definition first_half :: "bool vec \<Rightarrow> bool vec"
@@ -1434,6 +1435,27 @@ lemma
   apply auto
   apply (metis in_mono insert_ident)
   by (metis insert_eq_iff subsetD)
+
+lemma
+  assumes s: "simplicial_complex.simplicial_complex 0 K"
+  shows "K = {} \<or> K = {{}}"
+  using s 
+  unfolding simplicial_complex.simplicial_complex_def simplicial_complex.simplices_def 
+  by auto
+
+lemma
+  shows "simplicial_complex.boolean_function_from_simplicial_complex 0 {} = (\<lambda>x. False)"
+  unfolding simplicial_complex.boolean_function_from_simplicial_complex_def
+  unfolding simplicial_complex.bool_vec_set_from_simplice_set_def
+  unfolding simplicial_complex.bool_vec_from_simplice_def by simp
+
+lemma
+  shows "simplicial_complex.boolean_function_from_simplicial_complex 0 {{}} =
+    (\<lambda>x::bool vec. x = vec 0 (\<lambda>i. True))"
+  unfolding simplicial_complex.boolean_function_from_simplicial_complex_def
+  unfolding simplicial_complex.bool_vec_set_from_simplice_set_def
+  unfolding simplicial_complex.bool_vec_from_simplice_def by fastforce
+
 
 section\<open>Evasiveness for simplicial complexes\<close>
 
