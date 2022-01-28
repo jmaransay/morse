@@ -1371,21 +1371,69 @@ qed
 (*definition cone_vertices :: "nat \<Rightarrow> nat set \<Rightarrow> nat set"
   where "cone_vertices n V = join_vertices {n} V"*)
 
-definition cone_vertices :: "'a \<Rightarrow> 'a set \<Rightarrow> ('a + 'a) set"
-  where "cone_vertices n V = external_join_vertices {n} V"
+definition cone_vertices :: "'a \<Rightarrow> 'a set \<Rightarrow> 'a set"
+  where "cone_vertices n V = join_vertices {n} V"
+
+definition cone_simplices :: "'a \<Rightarrow> 'a set set \<Rightarrow> 'a set set"
+  where "cone_simplices n K = join_simplices {{},{n}} K"
 
 text\<open>In principle for the cone it should be enough to use @{term "{n}"} as
-  simplice, but including also @{term "{}"} we have that the @{thm cone_vertices_def}
+  simplex, but including also @{term "{}"} we have that the @{thm cone_vertices_def}
   together with @{thm cone_simplices_def} are already a simplicial complex.\<close>
-
-definition cone_simplices :: "'a \<Rightarrow> 'a set set \<Rightarrow> ('a + 'a) set set"
-  where "cone_simplices n K = external_join_simplices {{},{n}} K"
 
 corollary simplicial_complex_cone:
   assumes s: "simplicial_complex V K"
   shows "simplicial_complex (cone_vertices x V) (cone_simplices x K)"
-  using simplicial_complex_external_join [OF simplicial_complex_singleton [of x] s]
+  using simplicial_complex_join [OF simplicial_complex_singleton [of x] s]
   unfolding cone_vertices_def cone_simplices_def by simp
+
+lemma cone_empty: "cone_simplices x {} = {{},{x}}" 
+  unfolding cone_simplices_def join_simplices_def by simp
+
+text\<open>The need to add @{term "insert {} K"} as a premise
+  is mentioned in theoretical works, such as for instance Carl Miller
+  in @{url "https://arxiv.org/pdf/1306.0110.pdf"} (see the definition
+  of emph\<open>cone\<close> in p. 74).\<close>
+
+lemma
+  cost_cone_identity:
+  assumes x: "x \<notin> V"
+    and s: "simplicial_complex V K"
+  shows "cost x V (cone_simplices x K) = insert {} K"
+proof (cases "K = {}")
+  case True
+  show ?thesis 
+    unfolding True 
+    unfolding cone_empty cost_def simplices_def by auto
+next
+  case False
+  show ?thesis unfolding cone_simplices_def
+    unfolding cost_def simplices_def join_simplices_def 
+    using x using False using s
+    unfolding simplicial_complex_def simplices_def by auto
+qed
+
+corollary
+  cost_cone_identity_nempty:
+  assumes x: "x \<notin> V"
+    and s: "simplicial_complex V K"
+    and K: "K \<noteq> {}"
+  shows "cost x V (cone_simplices x K) = K"
+  using cost_cone_identity [OF x s] using K
+  by (metis insert_absorb s simplicial_complex_either_empty_or_contains_empty)
+
+lemma
+  cost_cone_link_cone:
+  assumes x: "x \<notin> V"
+    and s: "simplicial_complex V K"
+    and K: "K \<noteq> {}"
+  shows "cost x V (cone_simplices x K) = link x V (cone_simplices x K)"
+  unfolding cost_def link_def simplices_def cone_simplices_def join_simplices_def
+  using x s K
+  unfolding simplicial_complex_def simplices_def
+  apply auto
+  apply (metis in_mono insert_ident)
+  by (metis insert_eq_iff subsetD)
 
 section\<open>Evasiveness for simplicial complexes\<close>
 
