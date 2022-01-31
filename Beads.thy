@@ -1436,6 +1436,88 @@ lemma
   apply (metis in_mono insert_ident)
   by (metis insert_eq_iff subsetD)
 
+definition vertex_in_simplicial_complex :: "'a \<Rightarrow> 'a set set \<Rightarrow> bool"
+  where "vertex_in_simplicial_complex v K = (\<exists>s\<in>K. v \<in> s)"
+
+lemma
+  assumes x: "x \<in> V"
+    and s: "simplicial_complex V K"
+    and v: "vertex_in_simplicial_complex x K"
+  shows "cone_simplices x K = cone_simplices x (cost x V K)"
+  unfolding cost_def simplices_def cone_simplices_def join_simplices_def
+  using x s
+  unfolding simplicial_complex_def simplices_def
+proof (cases "V = {x}")
+  have K: "K \<noteq> {}" and K': "K \<noteq> {{}}" 
+    using v unfolding vertex_in_simplicial_complex_def by auto
+  case True
+  have A: "{s \<in> Pow (V - {x}). s \<in> K} = {{}}" 
+    unfolding True
+    using K s simplicial_complex_either_empty_or_contains_empty by blast
+  have B: "{xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'} = {{x},{}}"
+    unfolding True Diff_cancel unfolding Pow_empty apply simp
+    using K s simplicial_complex_either_empty_or_contains_empty by auto
+  show "{{}, {x}} \<union> K \<union> {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>K. xa = y \<union> y'} =
+    {{}, {x}} \<union> {s \<in> Pow (V - {x}). s \<in> K} \<union>
+    {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'}"
+    unfolding cone_simplices_def
+    unfolding B
+    unfolding A using K K' simplicial_complex_either_empty_or_contains_empty [OF s] 
+    using s True unfolding simplicial_complex_def simplices_def by auto
+next
+  case False
+  have f: "V \<noteq> {} \<and> V \<noteq> {x}" using x False by auto
+  show "{{}, {x}} \<union> K \<union> {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>K. xa = y \<union> y'} =
+    {{}, {x}} \<union> {s \<in> Pow (V - {x}). s \<in> K} \<union>
+    {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'}" 
+    using v unfolding vertex_in_simplicial_complex_def
+    try
+    apply auto
+
+
+lemma
+  assumes x: "x \<in> V"
+    and s: "simplicial_complex V K"
+    and v: "vertex_in_simplicial_complex x K"
+  shows "K = cone_simplices x (cost x V K)"
+  unfolding cost_def simplices_def cone_simplices_def join_simplices_def
+  using x s
+  unfolding simplicial_complex_def simplices_def
+proof (cases "V = {x}")
+  have K: "K \<noteq> {}" and K': "K \<noteq> {{}}" 
+    using v unfolding vertex_in_simplicial_complex_def by auto
+  case True
+  have A: "{s \<in> Pow (V - {x}). s \<in> K} = {{}}" 
+    unfolding True
+    using K s simplicial_complex_either_empty_or_contains_empty by blast
+  have B: "{xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'} = {{x},{}}"
+    unfolding True Diff_cancel unfolding Pow_empty apply simp
+    using K s simplicial_complex_either_empty_or_contains_empty by auto
+  show "K =
+    {{}, {x}} \<union> {s \<in> Pow (V - {x}). s \<in> K} \<union>
+    {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'}"
+    unfolding B
+    unfolding A using K K' simplicial_complex_either_empty_or_contains_empty [OF s] 
+    using s True unfolding simplicial_complex_def simplices_def 
+    by auto (metis insert_absorb insert_not_empty subset_singletonD)+
+next
+  case False
+  have f: "V \<noteq> {} \<and> V \<noteq> {x}" using x False by auto
+  show "K =
+    {{}, {x}} \<union> {s \<in> Pow (V - {x}). s \<in> K} \<union>
+    {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'}" 
+    using v unfolding vertex_in_simplicial_complex_def
+    try
+    apply auto
+
+  have "{s \<in> Pow (V - {x}). s \<in> K} \<union>
+  {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'} "
+      try
+  apply auto
+
+
+section\<open>Some results in dimension 0.\<close>
+
 lemma
   assumes s: "simplicial_complex.simplicial_complex 0 K"
   shows "K = {} \<or> K = {{}}"
