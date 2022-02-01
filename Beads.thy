@@ -1436,8 +1436,30 @@ lemma
   apply (metis in_mono insert_ident)
   by (metis insert_eq_iff subsetD)
 
+text\<open>A different characterization of a cone, in this case as a predicate.\<close>
+
+definition cone :: "'a \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
+  where "cone v V K = simplicial_complex (V - {v}) (cost v V K)"
+
 definition vertex_in_simplicial_complex :: "'a \<Rightarrow> 'a set set \<Rightarrow> bool"
   where "vertex_in_simplicial_complex v K = (\<exists>s\<in>K. v \<in> s)"
+
+lemma 
+  assumes s: "simplicial_complex V K"
+    and k: "K \<noteq> {}"
+    and v: "v \<in> V"
+    and v: "vertex_in_simplicial_complex v K"
+  shows "cone v V K \<equiv> (cost v V (cone_simplices v K) = K)"
+  using s v k
+  unfolding cone_def cone_simplices_def cone_vertices_def
+  unfolding join_vertices_def join_simplices_def try
+
+value "cone_vertices 2 {1::nat}"
+
+value "cone_simplices 3 {{},{1::nat},{2},{1,2}}"
+
+value "cost 1 {1::nat,2,3} {{},{1},{1,2,3}}"
+
 
 lemma
   assumes x: "x \<in> V"
