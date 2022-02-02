@@ -1436,10 +1436,26 @@ lemma
   apply (metis in_mono insert_ident)
   by (metis insert_eq_iff subsetD)
 
-text\<open>A different characterization of a cone, in this case as a predicate.\<close>
+text\<open>A different characterization of a cone, in this case as a predicate.
+  This characterization is useful for vertexes which appear in the simplicial
+  complex simplices. A simplicial complex is a cone if one of its vertexes
+  is connected to every other vertex.\<close>
 
-definition cone :: "'a \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
-  where "cone v V K = simplicial_complex (V - {v}) (cost v V K)"
+definition cone :: "'a \<Rightarrow> 'a set set \<Rightarrow> bool"
+  where "cone v K = (K = cone_simplices v K)"
+
+value "cone 1 {{},{1},{2::nat},{3}}"
+
+value "cone 1 {{},{1},{2::nat},{3},{1,2}}"
+
+value "cone 1 {{},{1},{2::nat},{3},{2,1},{2,3}}"
+
+value "cone 2 {{},{1},{2::nat},{3},{2,1},{2,3}}"
+
+value "cone 1 {{},{1},{2::nat},{3},{1,2},{1,3}}"
+
+(*definition cone :: "'a \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
+  where "cone v V K = simplicial_complex (V - {v}) (cost v V K)"*)
 
 definition vertex_in_simplicial_complex :: "'a \<Rightarrow> 'a set set \<Rightarrow> bool"
   where "vertex_in_simplicial_complex v K = (\<exists>s\<in>K. v \<in> s)"
@@ -1448,12 +1464,18 @@ lemma
   assumes s: "simplicial_complex V K"
     and k: "K \<noteq> {}"
     and v: "v \<in> V"
-    and v: "vertex_in_simplicial_complex v K"
-  shows "cone v V K \<equiv> (cost v V (cone_simplices v K) = K)"
-  using s v k
+    and vk: "vertex_in_simplicial_complex v K"
+  shows "cone v K \<equiv> (cost v V (cone_simplices v K) = K)"
+  using s k v vk
   unfolding cone_def cone_simplices_def cone_vertices_def
-  unfolding join_vertices_def join_simplices_def try
-
+  unfolding join_vertices_def join_simplices_def cost_def 
+  unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def
+  apply auto
+  
+  try
+  value "cone 1 {{},{1::nat},{2},{1,2}}"
+  value "cone_simplices 1 {{},{1::nat},{2},{1,2}}"
+  value "cost 1 {1::nat,2} (cone_simplices 1 {{},{1},{2},{1,2}}) = {{},{1},{2},{1,2}}"
 value "cone_vertices 2 {1::nat}"
 
 value "cone_simplices 3 {{},{1::nat},{2},{1,2}}"
