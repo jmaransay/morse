@@ -1465,16 +1465,48 @@ lemma
     and k: "K \<noteq> {}"
     and v: "v \<in> V"
     and vk: "vertex_in_simplicial_complex v K"
-  shows "cone v K \<equiv> (cost v V (cone_simplices v K) = K)"
+  shows "cone v K = (K = cone_simplices v (cost v V K))"
+proof (rule)
+  (*show "cone v K \<Longrightarrow> (K = cone_simplices v (cost v V K))"*)
+  show "(K = cone_simplices v (cost v V K)) \<Longrightarrow> cone v K"
+    using s k v vk
+    unfolding cone_def cone_simplices_def cone_vertices_def
+    unfolding join_vertices_def join_simplices_def cost_def 
+    unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def
+    by auto (smt (verit, del_insts) Un_iff insert_absorb2 insert_iff mem_Collect_eq)
+next
+  show "cone v K \<Longrightarrow> (K = cone_simplices v (cost v V K))"
+    using s k v vk
+    unfolding cone_def cone_simplices_def cone_vertices_def
+    unfolding join_vertices_def join_simplices_def cost_def 
+    unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def
+    try
+    apply auto
+    apply (smt (verit, del_insts) Un_iff insert_absorb2 insert_iff mem_Collect_eq)
+    sorry
+
+  
+
+    sorry
+  ultimately show ?thesis ..
+  qed
+qed
+    try
+proof (auto)
   using s k v vk
   unfolding cone_def cone_simplices_def cone_vertices_def
   unfolding join_vertices_def join_simplices_def cost_def 
   unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def
+
+  find_theorems "\<lbrakk> (?A \<Longrightarrow> ?B); (?B \<Longrightarrow> ?A)\<rbrakk> \<Longrightarrow> (?A \<equiv> ?B)"
+
   apply auto
+proof (rule equivE)
   
   try
   value "cone 1 {{},{1::nat},{2},{1,2}}"
-  value "cone_simplices 1 {{},{1::nat},{2},{1,2}}"
+  value "cone_simplices 1 (cost 1 {1,2} {{},{1::nat},{2},{1,2}})"
+  value "cone_simplices 1 (cost 1 {1,2} {{},{1::nat},{2},{1,2}}) = {{},{1::nat},{2},{1,2}}"
   value "cost 1 {1::nat,2} (cone_simplices 1 {{},{1},{2},{1,2}}) = {{},{1},{2},{1,2}}"
 value "cone_vertices 2 {1::nat}"
 
