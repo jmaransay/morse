@@ -1444,15 +1444,17 @@ text\<open>A different characterization of a cone, in this case as a predicate.
 definition cone :: "'a \<Rightarrow> 'a set set \<Rightarrow> bool"
   where "cone v K = (K = cone_simplices v K)"
 
-value "cone 1 {{},{1},{2::nat},{3}}"
+value "cone 0 {{},{0},{1::nat},{2}} = False"
 
-value "cone 1 {{},{1},{2::nat},{3},{1,2}}"
+value "cone 0 {{},{0},{1::nat},{2},{0,1}} = False"
 
-value "cone 1 {{},{1},{2::nat},{3},{2,1},{2,3}}"
+value "cone 0 {{},{0},{1::nat},{2},{1,0},{1,2}} = False"
 
-value "cone 2 {{},{1},{2::nat},{3},{2,1},{2,3}}"
+value "cone 1 {{},{0},{1::nat},{2},{1,0},{1,2}} = True"
 
-value "cone 1 {{},{1},{2::nat},{3},{1,2},{1,3}}"
+value "cone 0 {{},{0},{1::nat},{2},{0,1},{0,2}} = True"
+
+value "cone 0 {{},{0},{1::nat},{2},{0,1},{0,2},{1,2},{0,1,2}} = True"
 
 (*definition cone :: "'a \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
   where "cone v V K = simplicial_complex (V - {v}) (cost v V K)"*)
@@ -1460,7 +1462,7 @@ value "cone 1 {{},{1},{2::nat},{3},{1,2},{1,3}}"
 definition vertex_in_simplicial_complex :: "'a \<Rightarrow> 'a set set \<Rightarrow> bool"
   where "vertex_in_simplicial_complex v K = (\<exists>s\<in>K. v \<in> s)"
 
-lemma 
+lemma
   assumes s: "simplicial_complex V K"
     and k: "K \<noteq> {}"
     and v: "v \<in> V"
@@ -1476,11 +1478,69 @@ proof (rule)
     by auto (smt (verit, del_insts) Un_iff insert_absorb2 insert_iff mem_Collect_eq)
 next
   show "cone v K \<Longrightarrow> (K = cone_simplices v (cost v V K))"
+  proof
+    assume cone: "cone v K"
+    show "cone_simplices v (cost v V K) \<subseteq> K"
+      using cone s k v vk
+      unfolding cone_def cone_simplices_def cone_vertices_def
+      unfolding join_vertices_def join_simplices_def cost_def
+      unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def by auto
+    show "K \<subseteq> cone_simplices v (cost v V K)"
+    proof
+      fix x
+      assume x: "x \<in> K"
+      from cone obtain k k' where x_kk': "x = k \<union> k'" 
+         and k: "k \<in> {{},{v}}" and k': "k' \<in> K"
+        unfolding cone_def
+        unfolding cone_simplices_def
+        unfolding join_simplices_def using x by blast
+      show "x \<in> cone_simplices v (cost v V K)"
+      proof (cases "k = {v}")
+        case True
+        have PP: "k' \<in> Pow (V - {v})" 
+          using True using x_kk' k k'
+          using s x unfolding simplicial_complex_def simplices_def try
+      
+      have PP: "k' \<in> Pow (V - {v})"
+        using cone sorry
+      show "x \<in> cone_simplices v (cost v V K)"
+        using x
+        unfolding x_kk'
+        using k k' PP
+        unfolding cone_simplices_def join_simplices_def cost_def simplices_def
+        by auto
+  proof -
+    have one: "{{}, {v}} \<union> {s \<in> Pow (V - {v}). s \<in> K} \<union>
+    {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V - {v}). s \<in> K}. x = y \<union> y'} \<subseteq> 
+    {{}, {v}} \<union> K \<union> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'}" by auto
+    have two: "{{}, {v}} \<union> K \<union> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'} \<subseteq>
+        {{}, {v}} \<union> {s \<in> Pow (V - {v}). s \<in> K} \<union>
+        {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V - {v}). s \<in> K}. x = y \<union> y'}"
+    proof
+      fix x
+      assume x: "x \<in> {{}, {v}} \<union> K \<union> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'}"
+      show "x \<in> {{}, {v}} \<union> {s \<in> Pow (V - {v}). s \<in> K} \<union>
+              {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V - {v}). s \<in> K}. x = y \<union> y'}"
+      proof (cases "x \<in> {{}, {v}}")
+        case True
+        show ?thesis using True by fast
+      next
+        case False
+        note x_not_v = False
+        show ?thesis
+        proof (cases "x \<in> K")
+          case True
+          
     using s k v vk
-    unfolding cone_def cone_simplices_def cone_vertices_def
-    unfolding join_vertices_def join_simplices_def cost_def 
     unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def
     try
+
+    apply auto
+    try
+
+    ..
+
+
     apply auto
     apply (smt (verit, del_insts) Un_iff insert_absorb2 insert_iff mem_Collect_eq)
     sorry
