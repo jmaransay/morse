@@ -1463,15 +1463,15 @@ definition vertex_in_simplicial_complex :: "'a \<Rightarrow> 'a set set \<Righta
   where "vertex_in_simplicial_complex v K = (\<exists>s\<in>K. v \<in> s)"
 
 lemma
+  cone_cost:
   assumes s: "simplicial_complex V K"
     and k: "K \<noteq> {}"
     and v: "v \<in> V"
-    and vk: "vertex_in_simplicial_complex v K"
+    (*and vk: "vertex_in_simplicial_complex v K"*)
   shows "cone v K = (K = cone_simplices v (cost v V K))"
 proof (rule)
-  (*show "cone v K \<Longrightarrow> (K = cone_simplices v (cost v V K))"*)
   show "(K = cone_simplices v (cost v V K)) \<Longrightarrow> cone v K"
-    using s k v vk
+    using s k v
     unfolding cone_def cone_simplices_def cone_vertices_def
     unfolding join_vertices_def join_simplices_def cost_def 
     unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def
@@ -1481,7 +1481,7 @@ next
   proof
     assume cone: "cone v K"
     show "cone_simplices v (cost v V K) \<subseteq> K"
-      using cone s k v vk
+      using cone s k v
       unfolding cone_def cone_simplices_def cone_vertices_def
       unfolding join_vertices_def join_simplices_def cost_def
       unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def by auto
@@ -1495,162 +1495,53 @@ next
         unfolding cone_simplices_def
         unfolding join_simplices_def using x by blast
       show "x \<in> cone_simplices v (cost v V K)"
-      proof (cases "k = {v}")
-        case True
-        have PP: "k' \<in> Pow (V - {v})" 
-          using True using x_kk' k k'
-          using s x unfolding simplicial_complex_def simplices_def try
-      
-      have PP: "k' \<in> Pow (V - {v})"
-        using cone sorry
-      show "x \<in> cone_simplices v (cost v V K)"
-        using x
-        unfolding x_kk'
-        using k k' PP
-        unfolding cone_simplices_def join_simplices_def cost_def simplices_def
-        by auto
-  proof -
-    have one: "{{}, {v}} \<union> {s \<in> Pow (V - {v}). s \<in> K} \<union>
-    {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V - {v}). s \<in> K}. x = y \<union> y'} \<subseteq> 
-    {{}, {v}} \<union> K \<union> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'}" by auto
-    have two: "{{}, {v}} \<union> K \<union> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'} \<subseteq>
-        {{}, {v}} \<union> {s \<in> Pow (V - {v}). s \<in> K} \<union>
-        {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V - {v}). s \<in> K}. x = y \<union> y'}"
-    proof
-      fix x
-      assume x: "x \<in> {{}, {v}} \<union> K \<union> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'}"
-      show "x \<in> {{}, {v}} \<union> {s \<in> Pow (V - {v}). s \<in> K} \<union>
-              {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V - {v}). s \<in> K}. x = y \<union> y'}"
-      proof (cases "x \<in> {{}, {v}}")
-        case True
-        show ?thesis using True by fast
-      next
+      proof (cases "v \<in> k'")
         case False
-        note x_not_v = False
-        show ?thesis
-        proof (cases "x \<in> K")
-          case True
-          
-    using s k v vk
-    unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def
-    try
-
-    apply auto
-    try
-
-    ..
-
-
-    apply auto
-    apply (smt (verit, del_insts) Un_iff insert_absorb2 insert_iff mem_Collect_eq)
-    sorry
-
-  
-
-    sorry
-  ultimately show ?thesis ..
+        have PP: "k' \<in> Pow (V - {v})" 
+          using False using x_kk' k k'
+          using s x unfolding simplicial_complex_def simplices_def by auto
+        thus ?thesis
+          using x_kk'
+          using k x k'
+          unfolding cost_def cone_simplices_def simplices_def join_simplices_def by auto
+      next
+        case True
+        hence k_id: "k \<union> k' = k'" using x_kk' using k by auto
+        have "x \<in> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V - {v}). s \<in> K}. x = y \<union> y'}"
+        proof (rule, rule bexI [of _ "{v}"], rule bexI [of _ "k' - {v}"])
+          show "x = {v} \<union> (k' - {v})" unfolding x_kk' k_id using True by auto
+          show "k' - {v} \<in> {s \<in> Pow (V - {v}). s \<in> K}" 
+            using k' using s unfolding simplicial_complex_def simplices_def by auto
+          show "{v} \<in> {{}, {v}}" by fast
+        qed
+        thus ?thesis
+          unfolding cost_def cone_simplices_def simplices_def join_simplices_def by simp
+      qed
+    qed
   qed
 qed
-    try
-proof (auto)
-  using s k v vk
-  unfolding cone_def cone_simplices_def cone_vertices_def
-  unfolding join_vertices_def join_simplices_def cost_def 
-  unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def
 
-  find_theorems "\<lbrakk> (?A \<Longrightarrow> ?B); (?B \<Longrightarrow> ?A)\<rbrakk> \<Longrightarrow> (?A \<equiv> ?B)"
+lemma
+  cone_cost_equiv:
+  assumes s: "simplicial_complex V K"
+    and k: "K \<noteq> {}"
+    and v: "v \<in> V"
+  shows "(K = cone_simplices v K) = (K = cone_simplices v (cost v V K))"
+  using cone_cost [OF s k v] unfolding cone_def .
 
-  apply auto
-proof (rule equivE)
-  
-  try
-  value "cone 1 {{},{1::nat},{2},{1,2}}"
-  value "cone_simplices 1 (cost 1 {1,2} {{},{1::nat},{2},{1,2}})"
-  value "cone_simplices 1 (cost 1 {1,2} {{},{1::nat},{2},{1,2}}) = {{},{1::nat},{2},{1,2}}"
-  value "cost 1 {1::nat,2} (cone_simplices 1 {{},{1},{2},{1,2}}) = {{},{1},{2},{1,2}}"
+value "cone 1 {{},{1::nat},{2},{1,2}}"
+
+value "cone_simplices 1 (cost 1 {1,2} {{},{1::nat},{2},{1,2}})"
+
+value "cone_simplices 1 (cost 1 {1,2} {{},{1::nat},{2},{1,2}}) = {{},{1::nat},{2},{1,2}}"
+
+value "cost 1 {1::nat,2} (cone_simplices 1 {{},{1},{2},{1,2}}) = {{},{1},{2},{1,2}}"
+
 value "cone_vertices 2 {1::nat}"
 
 value "cone_simplices 3 {{},{1::nat},{2},{1,2}}"
 
 value "cost 1 {1::nat,2,3} {{},{1},{1,2,3}}"
-
-
-lemma
-  assumes x: "x \<in> V"
-    and s: "simplicial_complex V K"
-    and v: "vertex_in_simplicial_complex x K"
-  shows "cone_simplices x K = cone_simplices x (cost x V K)"
-  unfolding cost_def simplices_def cone_simplices_def join_simplices_def
-  using x s
-  unfolding simplicial_complex_def simplices_def
-proof (cases "V = {x}")
-  have K: "K \<noteq> {}" and K': "K \<noteq> {{}}" 
-    using v unfolding vertex_in_simplicial_complex_def by auto
-  case True
-  have A: "{s \<in> Pow (V - {x}). s \<in> K} = {{}}" 
-    unfolding True
-    using K s simplicial_complex_either_empty_or_contains_empty by blast
-  have B: "{xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'} = {{x},{}}"
-    unfolding True Diff_cancel unfolding Pow_empty apply simp
-    using K s simplicial_complex_either_empty_or_contains_empty by auto
-  show "{{}, {x}} \<union> K \<union> {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>K. xa = y \<union> y'} =
-    {{}, {x}} \<union> {s \<in> Pow (V - {x}). s \<in> K} \<union>
-    {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'}"
-    unfolding cone_simplices_def
-    unfolding B
-    unfolding A using K K' simplicial_complex_either_empty_or_contains_empty [OF s] 
-    using s True unfolding simplicial_complex_def simplices_def by auto
-next
-  case False
-  have f: "V \<noteq> {} \<and> V \<noteq> {x}" using x False by auto
-  show "{{}, {x}} \<union> K \<union> {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>K. xa = y \<union> y'} =
-    {{}, {x}} \<union> {s \<in> Pow (V - {x}). s \<in> K} \<union>
-    {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'}" 
-    using v unfolding vertex_in_simplicial_complex_def
-    try
-    apply auto
-
-
-lemma
-  assumes x: "x \<in> V"
-    and s: "simplicial_complex V K"
-    and v: "vertex_in_simplicial_complex x K"
-  shows "K = cone_simplices x (cost x V K)"
-  unfolding cost_def simplices_def cone_simplices_def join_simplices_def
-  using x s
-  unfolding simplicial_complex_def simplices_def
-proof (cases "V = {x}")
-  have K: "K \<noteq> {}" and K': "K \<noteq> {{}}" 
-    using v unfolding vertex_in_simplicial_complex_def by auto
-  case True
-  have A: "{s \<in> Pow (V - {x}). s \<in> K} = {{}}" 
-    unfolding True
-    using K s simplicial_complex_either_empty_or_contains_empty by blast
-  have B: "{xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'} = {{x},{}}"
-    unfolding True Diff_cancel unfolding Pow_empty apply simp
-    using K s simplicial_complex_either_empty_or_contains_empty by auto
-  show "K =
-    {{}, {x}} \<union> {s \<in> Pow (V - {x}). s \<in> K} \<union>
-    {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'}"
-    unfolding B
-    unfolding A using K K' simplicial_complex_either_empty_or_contains_empty [OF s] 
-    using s True unfolding simplicial_complex_def simplices_def 
-    by auto (metis insert_absorb insert_not_empty subset_singletonD)+
-next
-  case False
-  have f: "V \<noteq> {} \<and> V \<noteq> {x}" using x False by auto
-  show "K =
-    {{}, {x}} \<union> {s \<in> Pow (V - {x}). s \<in> K} \<union>
-    {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'}" 
-    using v unfolding vertex_in_simplicial_complex_def
-    try
-    apply auto
-
-  have "{s \<in> Pow (V - {x}). s \<in> K} \<union>
-  {xa. \<exists>y\<in>{{}, {x}}. \<exists>y'\<in>{s \<in> Pow (V - {x}). s \<in> K}. xa = y \<union> y'} "
-      try
-  apply auto
-
 
 section\<open>Some results in dimension 0.\<close>
 
