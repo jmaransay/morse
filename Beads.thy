@@ -1497,7 +1497,7 @@ next
       show "x \<in> cone_simplices v (cost v V K)"
       proof (cases "v \<in> k'")
         case False
-        have PP: "k' \<in> Pow (V - {v})" 
+        have "k' \<in> Pow (V - {v})" 
           using False using x_kk' k k'
           using s x unfolding simplicial_complex_def simplices_def by auto
         thus ?thesis
@@ -1585,6 +1585,78 @@ termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
 qed simp
 
 lemma "non_evasive {x} {{}}" by simp
+
+definition evasive :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
+  where "evasive V K = (\<not> non_evasive V K)"
+
+lemma
+  assumes s: "simplicial_complex V K"
+    and f: "finite V"
+    and v: "v \<notin> V"
+  shows "non_evasive (V \<union> {v}) (cone_simplices v K)"
+using f s v proof (induct "card V" arbitrary: K V)
+  case 0
+  have "V = {}" using 0 by simp
+  then show ?case unfolding 0 using non_evasive.simps (2) [of "{} \<union> {v}"] by fast
+next
+  case (Suc n)
+  assume ind: "\<And>V K. n = card V \<Longrightarrow>
+    finite V \<Longrightarrow>
+    simplicial_complex V K \<Longrightarrow> v \<notin> V \<Longrightarrow> non_evasive (V \<union> {v}) (cone_simplices v K)"
+    and c: "Suc n = card V"
+    and f: "finite V"
+    and s: "simplicial_complex V K"
+    and v: "v \<notin> V"
+  have fVv: "finite (V \<union> {v})" using f by fast
+  show "non_evasive (V \<union> {v}) (cone_simplices v K)"
+  proof (unfold non_evasive.simps (2) [OF fVv, of "(cone_simplices v K)"])
+    show "\<exists>x\<in>V \<union> {v}.
+       V \<union> {v} = {x} \<or>
+       non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) \<and>
+       non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K))"
+    proof (cases "card V")
+    case 0
+    show ?thesis using 0 using c by simp
+  next
+    case (Suc n)
+    have "\<exists>x\<in>V \<union> {v}. non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) \<and>
+              non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K))"
+    proof (rule bexI)
+      fix x
+      show "non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) 
+        \<and> non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K))"
+        using ind
+      proof (cases "x = v")
+        case True
+        show ?thesis unfolding True
+      using ind
+    thus ?thesis by auto
+qed
+  case 1
+  fix K :: "'a set set" show "non_evasive {} K" try
+proof (cases "V = {}")
+  case True
+  show ?thesis unfolding True using non_evasive.simps (2) [of "{} \<union> {v}"] by fast
+next
+  case False
+  note V_ne = False
+  show ?thesis
+  proof (cases "finite V")
+    case False
+    show ?thesis
+      using non_evasive.simps (3) [of "V \<union> {v}" "cone_simplices v K"] 
+      using False f by force
+    next
+      case True
+      hence fVv: "finite (V \<union> {v})" by fast
+      show ?thesis
+        unfolding non_evasive.simps (2) [OF fVv]
+        using V_ne thm non_evasive.induct apply auto
+      try
+
+
+
+lemma 
 
 lemma "\<not> non_evasive {1, 2} {{2::nat}}"
   using non_evasive.simps(2) [of "{1,2}" "{{2}}"]
