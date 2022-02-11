@@ -1614,11 +1614,42 @@ next
        V \<union> {v} = {x} \<or>
        non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) \<and>
        non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K))"
-    proof (cases "card V")
+    proof (rule ccontr)
+      show "\<not> (\<exists>x\<in>V \<union> {v}.
+           V \<union> {v} = {x} \<or>
+           non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) \<and>
+           non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K))) \<Longrightarrow>
+          False"
+      proof -
+        assume "\<not> (\<exists>x\<in>V \<union> {v}.
+           V \<union> {v} = {x} \<or>
+           non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) \<and>
+           non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K)))"
+        then obtain x
+          where x_in: "x \<in> V \<union> {v}"
+            and evasive: "\<not> non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K))
+              \<or>
+           \<not> non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K))"
+          using c by auto
+        show False
+        proof (cases "x = v")
+          case True
+          show ?thesis using evasive unfolding True sorry
+        next
+          case False
+          then show ?thesis sorry
+        qed
+
+        have card_Vvx: "card (V \<union> {v} - {x}) = Suc n" using x_in c v
+          by (metis Diff_insert_absorb Un_insert_right card_Diff_singleton insert_iff sup_bot.right_neutral)
+        hence "card V = n" using v x_in apply auto try
+        from ind
+        
+    
     case 0
     show ?thesis using 0 using c by simp
   next
-    case (Suc n)
+    case (Suc k)
     have "\<exists>x\<in>V \<union> {v}. non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) \<and>
               non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K))"
     proof (rule bexI)
