@@ -1589,6 +1589,15 @@ lemma "non_evasive {x} {{}}" by simp
 definition evasive :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
   where "evasive V K = (\<not> non_evasive V K)"
 
+lemma 
+  assumes x: "x \<noteq> v"
+  and x': "x \<in> V"
+shows "link x (V \<union> {v}) (cone_simplices v K) = cone_simplices v (link x (V \<union> {v}) K)"
+  using x x'
+  unfolding link_def cone_simplices_def simplices_def join_simplices_def apply auto
+  try
+
+
 lemma
   assumes s: "simplicial_complex V K"
     and f: "finite V"
@@ -1600,9 +1609,9 @@ using f s v proof (induct "card V" arbitrary: K V)
   then show ?case unfolding 0 using non_evasive.simps (2) [of "{} \<union> {v}"] by fast
 next
   case (Suc n)
-  assume ind: "\<And>V K. n = card V \<Longrightarrow>
-    finite V \<Longrightarrow>
-    simplicial_complex V K \<Longrightarrow> v \<notin> V \<Longrightarrow> non_evasive (V \<union> {v}) (cone_simplices v K)"
+    assume ind: "\<And>V K. n = card V \<Longrightarrow>
+      finite V \<Longrightarrow>
+      simplicial_complex V K \<Longrightarrow> v \<notin> V \<Longrightarrow> non_evasive (V \<union> {v}) (cone_simplices v K)"
     and c: "Suc n = card V"
     and f: "finite V"
     and s: "simplicial_complex V K"
@@ -1637,7 +1646,7 @@ next
           show ?thesis using evasive unfolding True sorry
         next
           case False
-          then show ?thesis sorry
+          show ?thesis using evasive using False sorry
         qed
 
         have card_Vvx: "card (V \<union> {v} - {x}) = Suc n" using x_in c v
