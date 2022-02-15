@@ -1474,7 +1474,7 @@ proof (rule)
     using s k v
     unfolding cone_def cone_simplices_def cone_vertices_def
     unfolding join_vertices_def join_simplices_def cost_def 
-    unfolding vertex_in_simplicial_complex_def simplicial_complex_def simplices_def
+    unfolding simplicial_complex_def simplices_def
     by auto (smt (verit, del_insts) Un_iff insert_absorb2 insert_iff mem_Collect_eq)
 next
   show "cone v K \<Longrightarrow> (K = cone_simplices v (cost v V K))"
@@ -1571,8 +1571,7 @@ section\<open>Evasiveness for simplicial complexes\<close>
 function non_evasive :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
   where
    "non_evasive {} K = False"
- | "finite V \<Longrightarrow> non_evasive V K = (\<exists>x\<in>V. V = {x} 
-                    \<or> (non_evasive (V - {x}) (link x V K) \<and> non_evasive (V - {x}) (cost x V K)))"
+ | "finite V \<Longrightarrow> non_evasive V K = (\<exists>x\<in>V. (non_evasive (V - {x}) (link x V K) \<and> non_evasive (V - {x}) (cost x V K)))"
  | "\<not> finite V \<Longrightarrow> non_evasive V K = False"
   unfolding link_def cost_def simplices_def by auto+
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
@@ -1589,14 +1588,35 @@ lemma "non_evasive {x} {{}}" by simp
 definition evasive :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
   where "evasive V K = (\<not> non_evasive V K)"
 
-lemma 
+lemma
   assumes x: "x \<noteq> v"
   and x': "x \<in> V"
-shows "link x (V \<union> {v}) (cone_simplices v K) = cone_simplices v (link x (V \<union> {v}) K)"
+  (*and s: "simplicial_complex V K"
+    and k: "K \<noteq> {}"*)
+shows "cost x (V \<union> {v}) (cone_simplices v K) = cone_simplices v (cost x (V \<union> {v}) K)"
   using x x'
-  unfolding link_def cone_simplices_def simplices_def join_simplices_def apply auto
-  try
+  unfolding simplicial_complex_def cost_def cone_simplices_def simplices_def join_simplices_def
+  by auto
 
+value "{s \<in> Pow ({2} \<union> {1} - {2::nat}). s \<union> {2} \<in> ({{}, {1}}
+       \<union> {{}}
+        \<union> {x. \<exists>y\<in>{{}, {1}}. \<exists>y'\<in>{{}}. x = y \<union> y'})}"
+
+value "{x. \<exists>y\<in>{{}, {1::nat}}. \<exists>y'\<in>{{}}. x = y \<union> y'}"
+
+lemma 
+  assumes x: "x \<noteq> v"
+  and x': "x \<in> V" and xk: "vertex_in_simplicial_complex x K"
+  and s: "simplicial_complex V K"
+shows "link x (V \<union> {v}) (cone_simplices v K) = cone_simplices v (link x (V \<union> {v}) K)"
+  using x x' s xk
+  unfolding link_def
+  unfolding cone_simplices_def
+  unfolding join_simplices_def
+  unfolding vertex_in_simplicial_complex_def
+  unfolding simplicial_complex_def link_def cone_simplices_def simplices_def join_simplices_def
+  apply simp
+  try apply auto
 
 lemma
   assumes s: "simplicial_complex V K"
