@@ -1604,19 +1604,92 @@ value "{s \<in> Pow ({2} \<union> {1} - {2::nat}). s \<union> {2} \<in> ({{}, {1
 
 value "{x. \<exists>y\<in>{{}, {1::nat}}. \<exists>y'\<in>{{}}. x = y \<union> y'}"
 
-lemma 
-  assumes x: "x \<noteq> v"
-  and x': "x \<in> V" and xk: "vertex_in_simplicial_complex x K"
+lemma [simp]:
+  assumes v: "vertex_in_simplicial_complex x K"
+  shows "K \<noteq> {}"
+  using v
+  by (meson empty_iff vertex_in_simplicial_complex_def)
+
+lemma [simp]:
+  assumes v: "vertex_in_simplicial_complex x K"
+  shows "K \<noteq> {{}}"
+  using v
+  by (metis empty_iff singletonD vertex_in_simplicial_complex_def)
+
+lemma
+  assumes (*x: "x \<noteq> v"
+  and*) x: "x \<in> V" and v: "v \<notin> V" and xk: "vertex_in_simplicial_complex x K"
   and s: "simplicial_complex V K"
 shows "link x (V \<union> {v}) (cone_simplices v K) = cone_simplices v (link x (V \<union> {v}) K)"
-  using x x' s xk
-  unfolding link_def
-  unfolding cone_simplices_def
-  unfolding join_simplices_def
-  unfolding vertex_in_simplicial_complex_def
-  unfolding simplicial_complex_def link_def cone_simplices_def simplices_def join_simplices_def
-  apply simp
-  try apply auto
+proof
+  from x v have xv: "x \<noteq> v" by auto
+  show "link x (V \<union> {v}) (cone_simplices v K) \<subseteq> cone_simplices v (link x (V \<union> {v}) K)"
+  proof
+    fix xa :: "'a set"
+    assume xa: "xa \<in> link x (V \<union> {v}) (cone_simplices v K)"
+    hence xa_pow: "xa \<in> Pow (V \<union> {v} - {x})"
+          and xa_car: "xa \<union> {x} \<in> {{}, {v}} \<union> K \<union> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'}"
+      unfolding link_def cone_simplices_def simplices_def join_simplices_def by fast+
+    show "xa \<in> cone_simplices v (link x (V \<union> {v}) K)"
+      using xa xa_pow x v s xk xv
+      unfolding link_def
+      unfolding cone_simplices_def
+      unfolding join_simplices_def
+      unfolding vertex_in_simplicial_complex_def
+      unfolding simplicial_complex_def link_def cone_simplices_def simplices_def join_simplices_def
+      proof (cases "xa \<union> {x} \<in> {{}, {v}}")
+        case True then show "xa \<in> {{}, {v}} \<union> {s \<in> Pow (V \<union> {v} - {x}). s \<union> {x} \<in> K} \<union>
+          {xa. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V \<union> {v} - {x}). s \<union> {x} \<in> K}. xa = y \<union> y'}" by auto
+      next
+        case False
+        note xa_not = False
+        show "xa \<in> {{}, {v}} \<union> {s \<in> Pow (V \<union> {v} - {x}). s \<union> {x} \<in> K} \<union>
+          {xa. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V \<union> {v} - {x}). s \<union> {x} \<in> K}. xa = y \<union> y'}"
+        proof (cases "xa \<union> {x} \<in> K")
+          case True then show ?thesis using xa_not xa_pow by simp
+        next
+          case False 
+          note xa_x_not_in_K = False
+          then have xa_in: "xa \<union> {x} \<in> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'}"
+            using xa_not xa_car by auto
+          then obtain y y'
+            where y: "y\<in>{{}, {v}}" and y': "y'\<in> K" and xa_x: "xa \<union> {x} = y \<union> y'" by auto
+          show ?thesis
+          proof (cases "y = {}")
+            case True
+            with xa_in and y and xa_x have "xa \<union> {x} = y'" by auto
+            hence "xa \<union> {x} \<in> K" using y' by fast
+            hence False using xa_x_not_in_K by fast
+            thus ?thesis by fast
+          next
+            case False hence yv: "y = {v}" using y by fast
+            hence "xa \<union> {x} = y' \<union> {v}" using xa_x by fast
+            hence xa: "xa = (y' - {x}) \<union> {v}"
+              using xa_pow xv by blast
+            have "xa \<in> {xa. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V \<union> {v} - {x}). s \<union> {x} \<in> K}. xa = y \<union> y'}"
+            proof (rule, rule bexI [of _ y], rule bexI [of _ "y' - {x}"])
+              show "y \<in> {{}, {v}}" using yv by fast
+              show "xa = y \<union> (y' - {x})" using xa yv by fast
+              show "y' - {x} \<in> {s \<in> Pow (V \<union> {v} - {x}). s \<union> {x} \<in> K}"
+              proof (rule, rule conjI)
+                show "y' - {x} \<in> Pow (V \<union> {v} - {x})" using xa_pow xa by simp
+                show "y' - {x} \<union> {x} \<in> K" using y'
+                  by (metis UnE UnI2 Un_insert_right insert_Diff singleton_iff sup_bot_right xa_x xv yv)
+              qed
+            qed
+            thus ?thesis by fast
+          qed
+        qed
+      qed
+    qed
+  show "cone_simplices v (link x (V \<union> {v}) K) \<subseteq> link x (V \<union> {v}) (cone_simplices v K)"
+   using x v s xk xv
+   unfolding link_def
+   unfolding cone_simplices_def
+   unfolding join_simplices_def
+   unfolding vertex_in_simplicial_complex_def
+   unfolding simplicial_complex_def link_def cone_simplices_def simplices_def join_simplices_def
+   try
 
 lemma
   assumes s: "simplicial_complex V K"
