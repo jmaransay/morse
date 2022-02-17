@@ -478,6 +478,12 @@ value "link 4 (set [0::nat,1,2,3,4,5,6,7,8])
 value "cost 4 (set [0::nat,1,2,3,4,5,6,7,8]) 
         (Pow (set [1,2,3,4,5]) \<union> Pow (set [4,7]) \<union> Pow (set [2,8]))"
 
+lemma link_empty [simp]: "link x V {} = {}"
+  by (simp add: link_def)
+
+lemma cost_empty [simp]: "cost x V {} = {}"
+  by (simp add: cost_def)
+
 text\<open>The result of operations @{term link} and @{term cost} 
   are simplicial complexes.\<close>
 
@@ -1571,7 +1577,7 @@ section\<open>Evasiveness for simplicial complexes\<close>
 function non_evasive :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
   where
    "non_evasive {} K = False"
- | "finite V \<Longrightarrow> non_evasive V K = (\<exists>x\<in>V. V = {x} \<or> (K = {}) \<or> (non_evasive (V - {x}) (link x V K) \<and> non_evasive (V - {x}) (cost x V K)))"
+ | "finite V \<Longrightarrow> non_evasive V K = (\<exists>x\<in>V. V = {x} \<or> (non_evasive (V - {x}) (link x V K) \<and> non_evasive (V - {x}) (cost x V K)))"
  | "\<not> finite V \<Longrightarrow> non_evasive V K = False"
   unfolding link_def cost_def simplices_def by auto+
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
@@ -1583,7 +1589,7 @@ termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
     using f x by auto (metis card_gt_0_iff diff_Suc_less empty_iff)
 qed simp
 
-lemma 
+lemma
   non_evasive_singleton_true: "non_evasive {x} {{}}" by simp
 
 lemma 
@@ -1593,8 +1599,41 @@ lemma
   non_evasive_empty_simplicial:
   assumes f: "finite V"
   and v_ne: "V \<noteq> {}"
-  shows "non_evasive V {}"
-  by (metis f finite.simps insertI1 non_evasive.simps(2) v_ne)
+shows "non_evasive V {}"
+using f v_ne proof (induct "card V" arbitrary: V)
+  case 0
+  then have False by simp thus ?case by simp
+next
+  case (Suc n)
+  show ?case proof (cases "card V = 1")
+    case True
+    then show ?thesis
+      by (metis One_nat_def card_1_singleton_iff non_evasive_singleton_false)
+  next
+    case False
+    with Suc (2) obtain x where x: "x \<in> V" by fastforce
+    have "non_evasive (V - {x}) (link x V {}) \<and> non_evasive (V - {x}) (cost x V {})"
+    proof (rule conjI)
+      show "non_evasive (V - {x}) (link x V {})"
+        unfolding link_empty
+      proof (rule Suc (1))
+       show "n = card (V - {x})" by (metis Suc.hyps(2) card_Diff_singleton diff_Suc_1 x)
+       show "finite (V - {x})" using Suc.prems(1) by blast
+       show "V - {x} \<noteq> {}"
+         by (metis False One_nat_def Suc.prems(1) card.remove card_eq_0_iff x)
+     qed
+     show "non_evasive (V - {x}) (cost x V {})"
+        unfolding cost_empty
+      proof (rule Suc (1))
+       show "n = card (V - {x})" by (metis Suc.hyps(2) card_Diff_singleton diff_Suc_1 x)
+       show "finite (V - {x})" using Suc.prems(1) by blast
+       show "V - {x} \<noteq> {}"
+         by (metis False One_nat_def Suc.prems(1) card.remove card_eq_0_iff x)
+     qed
+   qed
+   then show ?thesis using non_evasive.simps (2) [OF Suc (3), of "{}"] using x by blast
+ qed
+qed
 
 definition evasive :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
   where "evasive V K = (\<not> non_evasive V K)"
@@ -1778,16 +1817,13 @@ next
   show "non_evasive (V \<union> {v}) (cone_simplices v K)"
   proof (unfold non_evasive.simps (2) [OF fVv, of "(cone_simplices v K)"])
     show "\<exists>x\<in>V \<union> {v}.
-       V \<union> {v} = {x} \<or> cone_simplices v K = {} \<or>
+       V \<union> {v} = {x} \<or>
        non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) \<and>
        non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K))"
-    proof (cases "V = {}")
-      case True show ?thesis unfolding True by fast
-    next
-      case False
-      then obtain x where x: "x \<in> V" by fast
-      have x_n_v: "x \<noteq> v" using x v by auto 
-        show ?thesis
+    proof -
+      from c obtain x where x: "x \<in> V" by fastforce
+      have x_n_v: "x \<noteq> v" using x v by auto
+      show ?thesis
       proof (rule bexI [of _ x])
         show "x \<in> V \<union> {v}" using x by fast
         have "non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) \<and>
@@ -1833,13 +1869,62 @@ next
            using fVv vvx by blast
        qed
      qed
-     thus " V \<union> {v} = {x} \<or> cone_simplices v K = {} \<or>
+     thus " V \<union> {v} = {x} \<or>
           non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) \<and>
           non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K))" by fast
    qed
+  qed
  qed
 qed
 
+lemma
+  assumes s: "simplicial_complex V K"
+    and f: "finite V"
+    and w: "w \<in> V"
+    and v: "\<not> vertex_in_simplicial_complex w K"
+  shows "non_evasive V K"
+  using f w v proof (induct "card V" arbitrary: V K)
+  case 0
+  show ?case using 0 (1,2,3) by simp
+next
+  case (Suc n)
+  show ?case
+  proof (cases "n = 0")
+    case True show ?thesis 
+      using True using Suc (2)
+      by (metis Suc.prems(1) Suc.prems(2) card_1_singleton_iff empty_iff insertE non_evasive.simps(2))
+  next
+    case False then obtain x where x: "x \<in> V" and x_n_w: "x \<noteq> w"
+      using Suc (2)
+      by (metis Suc.prems(1) Suc_le_mono card_le_Suc0_iff_eq le_antisym zero_le)
+    have "non_evasive (V - {x}) (link x V K) \<and> non_evasive (V - {x}) (cost x V K)"
+    proof (rule conjI)
+      show "non_evasive (V - {x}) (link x V K)"
+      proof (rule Suc (1))
+       show "n = card (V - {x})"
+         by (metis Suc.hyps(2) card_Diff_singleton diff_Suc_1 x)
+         show "finite (V - {x})" using Suc.prems(1) by blast
+         show "w \<in> V - {x}" using x_n_w using Suc.prems(2) by blast
+         show "\<not> vertex_in_simplicial_complex w (link x V K)" 
+           using Suc (5)
+           unfolding link_def vertex_in_simplicial_complex_def simplices_def by auto
+       qed
+      show "non_evasive (V - {x}) (cost x V K)"
+      proof (rule Suc (1))
+       show "n = card (V - {x})"
+         by (metis Suc.hyps(2) card_Diff_singleton diff_Suc_1 x)
+         show "finite (V - {x})" using Suc.prems(1) by blast
+         show "w \<in> V - {x}" using x_n_w using Suc.prems(2) by blast
+         show "\<not> vertex_in_simplicial_complex w (cost x V K)" 
+           using Suc (5)
+           unfolding cost_def vertex_in_simplicial_complex_def simplices_def by auto
+      qed
+    qed
+    thus ?thesis using non_evasive.simps (2) [OF Suc (3), of K] using x by blast
+  qed
+qed
+
+      
 lemma "\<not> non_evasive {1, 2} {{2::nat}}"
   using non_evasive.simps(2) [of "{1,2}" "{{2}}"]
   unfolding link_def cost_def simplices_def
