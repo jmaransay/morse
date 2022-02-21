@@ -1924,6 +1924,30 @@ next
   qed
 qed
 
+section\<open>Dismantelable simplicial complexes\<close>
+
+function dismantelable :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
+  where
+   "dismantelable {} K = False"
+ | "finite V \<Longrightarrow> dismantelable V K = (\<exists>x\<in>V. V = {x} \<or> (cone x (link x V K) \<and> dismantelable (V - {x}) (cost x V K)))"
+ | "\<not> finite V \<Longrightarrow> dismantelable V K = False"
+  unfolding link_def cost_def simplices_def by auto+
+termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
+  fix V :: "'a set" and K :: "'a set set" and x :: "'a"
+  assume f: "finite V" and x: "x \<in> V"
+  show "((V - {x}, cost x V K), V, K) \<in> measure (\<lambda>(V, K). card V)"
+    using f x by auto (metis card_gt_0_iff diff_Suc_less empty_iff)
+qed simp
+
+lemma
+  assumes s: "simplicial_complex V K"
+    and f: "finite V"
+    and d: "dismantelable V K"
+  shows "non_evasive V K"
+  using s f d proof (induct "card V" arbitrary: V K)
+
+
+
       
 lemma "\<not> non_evasive {1, 2} {{2::nat}}"
   using non_evasive.simps(2) [of "{1,2}" "{{2}}"]
