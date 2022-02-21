@@ -1796,6 +1796,7 @@ lemma
   unfolding simplicial_complex_def simplices_def link_def by auto
 
 lemma
+  non_evasive_cone:
   assumes s: "simplicial_complex V K"
     and f: "finite V"
     and v: "v \<notin> V"
@@ -1878,6 +1879,7 @@ next
 qed
 
 lemma
+  non_evasive_vertex_irrelevant:
   assumes s: "simplicial_complex V K"
     and f: "finite V"
     and w: "w \<in> V"
@@ -1902,12 +1904,12 @@ next
       show "non_evasive (V - {x}) (link x V K)"
       proof (rule Suc (1))
        show "n = card (V - {x})"
-         by (metis Suc.hyps(2) card_Diff_singleton diff_Suc_1 x)
-         show "finite (V - {x})" using Suc.prems(1) by blast
-         show "w \<in> V - {x}" using x_n_w using Suc.prems(2) by blast
-         show "\<not> vertex_in_simplicial_complex w (link x V K)" 
-           using Suc (5)
-           unfolding link_def vertex_in_simplicial_complex_def simplices_def by auto
+        by (metis Suc.hyps(2) card_Diff_singleton diff_Suc_1 x)
+       show "finite (V - {x})" using Suc.prems(1) by blast
+       show "w \<in> V - {x}" using x_n_w using Suc.prems(2) by blast
+       show "\<not> vertex_in_simplicial_complex w (link x V K)"
+        using Suc (5)
+        unfolding link_def vertex_in_simplicial_complex_def simplices_def by auto
        qed
       show "non_evasive (V - {x}) (cost x V K)"
       proof (rule Suc (1))
@@ -1945,10 +1947,72 @@ lemma
     and d: "dismantelable V K"
   shows "non_evasive V K"
   using s f d proof (induct "card V" arbitrary: V K)
+  case 0
+  hence es: "V = {}" by simp
+  show ?case 
+    using "0.prems"(3)
+    unfolding es
+    unfolding dismantelable.simps(1) by blast
+next
+  case (Suc n)
+  show ?case
+  proof (cases "n = 0")
+    case True show ?thesis 
+      using True using Suc (2)
+      using non_evasive.simps(2) [OF Suc (4), of K]
+      by (metis card_1_singleton_iff singletonI)
+  next
+    case False then obtain x where x: "x \<in> V" 
+      and cx: "cone x (link x V K)" and dx: "dismantelable (V - {x}) (cost x V K)"
+      using Suc (2) Suc (5) unfolding dismantelable.simps (2) [OF Suc (4), of K] by auto
+    have "non_evasive (V - {x}) (link x V K) \<and> non_evasive (V - {x}) (cost x V K)"
+    proof (rule conjI)
+      show "non_evasive (V - {x}) (cost x V K)"
+      proof (rule Suc (1))
+       show "n = card (V - {x})"
+        by (metis Suc.hyps(2) card_Diff_singleton diff_Suc_1 x)
+       show "finite (V - {x})" using Suc.prems (2) by blast
+       show "simplicial_complex (V - {x}) (cost x V K)"
+         using simplicial_complex_cost [OF Suc.prems (1), of x] .
+       show "dismantelable (V - {x}) (cost x V K)"
+         using dx .
+     qed
+     thm Suc
+     have fVx: "finite (V - {x})" using Suc (4) by simp
+     have l_c: "(link x V K) = (cone_simplices x (link x V K))"
+       using cx using cone_def [of x "link x V K"] by simp
+     have fff: "non_evasive ((V - {x}) \<union> {x}) (cone_simplices x (link x V K))"
+     proof (rule non_evasive_cone)
+       show "simplicial_complex (V - {x}) (link x V K)" 
+         using simplicial_complex_link [OF Suc (3), of x] .
+      show "finite (V - {x})" using Suc (4) by simp
+      show "x \<notin> V - {x}" by simp
+    qed
+    hence "non_evasive V (link x V K)"
+      apply (subst l_c) using x
+      by (metis Un_insert_right insert_Diff sup_bot.right_neutral)
+    hence "non_evasive V (link x (V \<union> {x}) K)"
+      using link_invariant [OF Suc (3)] by simp
+    show "non_evasive (V - {x}) (link x V K)"
+    proof (unfold non_evasive.simps (2) [OF fVx], rule bexI [of _ x])
+       using non_evasive.simps (2) [of "(V - {x}) \<union> {x}"] try
+       apply (subst l_c)
+       using non_evasive_cone
+       using cx using non_evasive_cone [of "V - {x} \<union> {x}"] using cone_def try
+       find_theorems "cone"
+      proof (rule Suc (1))
+       show "n = card (V - {x})"
+        by (metis Suc.hyps(2) card_Diff_singleton diff_Suc_1 x)
+       show "finite (V - {x})" using Suc.prems (2) by blast
+       show "simplicial_complex (V - {x}) (link x V K)"
+         using simplicial_complex_link [OF Suc.prems (1), of x] .
+       show "dismantelable (V - {x}) (link x V K)"
+         using cx
+         
+    thus ?thesis using non_evasive.simps (2) [OF Suc (4), of K] using x by blast
 
 
 
-      
 lemma "\<not> non_evasive {1, 2} {{2::nat}}"
   using non_evasive.simps(2) [of "{1,2}" "{{2}}"]
   unfolding link_def cost_def simplices_def
