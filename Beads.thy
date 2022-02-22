@@ -1697,11 +1697,10 @@ lemma
   link_cone_cone_link:
   assumes x: "x \<in> V"
     and xk: "vertex_in_simplicial_complex x K"
-    and v: "v \<notin> V"
+    and xv: "x \<noteq> v"
     and s: "simplicial_complex V K"
   shows "link x (V \<union> {v}) (cone_simplices v K) = cone_simplices v (link x (V \<union> {v}) K)"
-proof
-  from x v have xv: "x \<noteq> v" by auto
+proof (rule)
   show "link x (V \<union> {v}) (cone_simplices v K) \<subseteq> cone_simplices v (link x (V \<union> {v}) K)"
   proof
     fix xa :: "'a set"
@@ -1710,7 +1709,7 @@ proof
           and xa_car: "xa \<union> {x} \<in> {{}, {v}} \<union> K \<union> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'}"
       unfolding link_def cone_simplices_def simplices_def join_simplices_def by fast+
     show "xa \<in> cone_simplices v (link x (V \<union> {v}) K)"
-      using xa xa_pow x v s xk xv
+      using xa xa_pow x s xk xv
       unfolding link_def
       unfolding cone_simplices_def
       unfolding join_simplices_def
@@ -1727,7 +1726,7 @@ proof
         proof (cases "xa \<union> {x} \<in> K")
           case True then show ?thesis using xa_not xa_pow by simp
         next
-          case False 
+          case False
           note xa_x_not_in_K = False
           then have xa_in: "xa \<union> {x} \<in> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'}"
             using xa_not xa_car by auto
@@ -1768,7 +1767,7 @@ proof
     hence xa_in: "xa \<in> {{}, {v}} \<union> {s \<in> Pow (V \<union> {v} - {x}). s \<union> {x} \<in> K} \<union>
         {xa. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V \<union> {v} - {x}). s \<union> {x} \<in> K}. xa = y \<union> y'}"
       unfolding cone_simplices_def join_simplices_def link_def simplices_def by fast
-    from xk have empty_in_K: "{} \<in> K" 
+    from xk have empty_in_K: "{} \<in> K"
       unfolding vertex_in_simplicial_complex_def
       using s simplicial_complex_either_empty_or_contains_empty by auto
     show "xa \<in> link x (V \<union> {v}) (cone_simplices v K)"
@@ -1782,7 +1781,7 @@ proof
           using True using vertex_in_simplicial_complex_singleton [OF xk s] by auto
       qed
       next
-        case False 
+        case False
         note xa_not_v = False
         show ?thesis
         proof (cases "xa \<in> {s \<in> Pow (V \<union> {v} - {x}). s \<union> {x} \<in> K}")
@@ -1793,7 +1792,7 @@ proof
           case False with xa_in xa_not_v
           have xa_union: "xa \<in> {xa. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>{s \<in> Pow (V \<union> {v} - {x}). s \<union> {x} \<in> K}. xa = y \<union> y'}" 
             by fast
-          have "xa \<in> {s \<in> Pow (V \<union> {v} - {x}). 
+          have "xa \<in> {s \<in> Pow (V \<union> {v} - {x}).
             s \<union> {x} \<in> {x. \<exists>y\<in>{{}, {v}}. \<exists>y'\<in>K. x = y \<union> y'}}"
           proof (rule, rule conjI)
            show "xa \<in> Pow (V \<union> {v} - {x})" 
@@ -1807,6 +1806,25 @@ proof
     qed
   qed
 qed
+
+corollary
+  link_cone_cone_link_external_vertex:
+  assumes x: "x \<in> V"
+    and xk: "vertex_in_simplicial_complex x K"
+    and v: "v \<notin> V"
+    and s: "simplicial_complex V K"
+  shows "link x (V \<union> {v}) (cone_simplices v K) = cone_simplices v (link x (V \<union> {v}) K)"
+  using link_cone_cone_link [OF x xk _ s, of v] using x v by auto
+
+corollary
+  link_cone_cone_link_internal_vertex:
+  assumes x: "x \<in> V"
+    and xk: "vertex_in_simplicial_complex x K"
+    and v: "v \<in> V"
+    and xv: "x \<noteq> v"
+    and s: "simplicial_complex V K"
+  shows "link x V (cone_simplices v K) = cone_simplices v (link x V K)"
+  using link_cone_cone_link [OF x xk xv s] using insert_absorb [OF v] by simp
 
 lemma
   cost_invariant:
@@ -1826,9 +1844,8 @@ lemma
   non_evasive_cone:
   assumes s: "simplicial_complex V K"
     and f: "finite V"
-    and v: "v \<notin> V"
   shows "non_evasive (V \<union> {v}) (cone_simplices v K)"
-using f s v proof (induct "card V" arbitrary: K V)
+using f s proof (induct "card V" arbitrary: K V)
   case 0
   have "V = {}" using 0 by simp
   then show ?case unfolding 0 using non_evasive.simps (2) [of "{} \<union> {v}"] by fast
@@ -1836,11 +1853,10 @@ next
   case (Suc n)
     assume ind: "\<And>V K. n = card V \<Longrightarrow>
       finite V \<Longrightarrow>
-      simplicial_complex V K \<Longrightarrow> v \<notin> V \<Longrightarrow> non_evasive (V \<union> {v}) (cone_simplices v K)"
+      simplicial_complex V K \<Longrightarrow> non_evasive (V \<union> {v}) (cone_simplices v K)"
     and c: "Suc n = card V"
     and f: "finite V"
     and s: "simplicial_complex V K"
-    and v: "v \<notin> V"
   have fVv: "finite (V \<union> {v})" using f by fast
   show "non_evasive (V \<union> {v}) (cone_simplices v K)"
   proof (unfold non_evasive.simps (2) [OF fVv, of "(cone_simplices v K)"])
@@ -1848,9 +1864,12 @@ next
        V \<union> {v} = {x} \<or>
        non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K)) \<and>
        non_evasive (V \<union> {v} - {x}) (cost x (V \<union> {v}) (cone_simplices v K))"
-    proof -
-      from c obtain x where x: "x \<in> V" by fastforce
-      have x_n_v: "x \<noteq> v" using x v by auto
+     proof (cases "V = {v}")
+      case True show ?thesis unfolding True by fast
+    next
+      case False
+      with c obtain x where x: "x \<in> V" and x_n_v: "x \<noteq> v"
+        by (metis card.empty is_singletonI' is_singleton_the_elem nat.simps(3) singletonI)
       show ?thesis
       proof (rule bexI [of _ x])
         show "x \<in> V \<union> {v}" using x by fast
@@ -1868,23 +1887,21 @@ next
            show "simplicial_complex (V - {x}) (cost x (V \<union> {v}) K)" 
              unfolding cost_invariant [OF s, of x v]
              by (simp add: s simplicial_complex_cost)
-           show "v \<notin> V - {x}" using v by blast
          qed
          show "non_evasive (V \<union> {v} - {x}) (link x (V \<union> {v}) (cone_simplices v K))"
          proof (cases "vertex_in_simplicial_complex x K")
            case True
-            have lclc: "link x (V \<union> {v}) (cone_simplices v K) = cone_simplices v (link x (V \<union> {v}) K)"
-              using link_cone_cone_link [OF x True v s] .
-            show ?thesis unfolding lclc vvx
-            proof (rule ind)
+           have lclc: "link x (V \<union> {v}) (cone_simplices v K) = cone_simplices v (link x (V \<union> {v}) K)"
+              using link_cone_cone_link [OF x True x_n_v s] .
+           show ?thesis unfolding lclc vvx
+           proof (rule ind)
             show "n = card (V - {x})" by (metis c card_Diff_singleton diff_Suc_1 x)
             show "finite (V - {x})" using f by blast
             show "simplicial_complex (V - {x}) (link x (V \<union> {v}) K)" 
               unfolding link_invariant [OF s, of x v]
              by (simp add: s simplicial_complex_link)
-           show "v \<notin> V - {x}" using v by blast
-         qed
-       next
+           qed
+         next
          case False
          then have link_empty: "(link x (V \<union> {v}) (cone_simplices v K)) = {}"
            unfolding vertex_in_simplicial_complex_def
@@ -1904,6 +1921,20 @@ next
   qed
  qed
 qed
+
+corollary non_evasive_cone_external_vertex:
+  assumes s: "simplicial_complex V K"
+    and f: "finite V"
+    and v: "v \<notin> V"
+  shows "non_evasive (V \<union> {v}) (cone_simplices v K)"
+  using non_evasive_cone [OF s f, of v] .
+
+corollary non_evasive_cone_internal_vertex: 
+  assumes s: "simplicial_complex V K"
+    and f: "finite V"
+    and v: "v \<in> V"
+  shows "non_evasive V (cone_simplices v K)"
+  using non_evasive_cone [OF s f, of v] using insert_absorb [OF v] by simp
 
 lemma
   non_evasive_vertex_irrelevant:
@@ -1984,7 +2015,7 @@ section\<open>Dismantelable simplicial complexes\<close>
 function dismantelable :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
   where
    "dismantelable {} K = False"
- | "finite V \<Longrightarrow> dismantelable V K = (\<exists>x\<in>V. V = {x} \<or> (\<exists>k\<in>V. k \<noteq> x \<and> (cone k (link x V K) \<and> dismantelable (V - {x}) (cost x V K))))"
+ | "finite V \<Longrightarrow> dismantelable V K = (\<exists>x\<in>V. V = {x} \<or> (\<exists>k\<in>V. (cone k (link x V K)) \<and> dismantelable (V - {x}) (cost x V K)))"
  | "\<not> finite V \<Longrightarrow> dismantelable V K = False"
   unfolding link_def cost_def simplices_def by auto+
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
@@ -2030,59 +2061,20 @@ next
        show "dismantelable (V - {x}) (cost x V K)"
          using dx .
      qed
-     have i: "(V - {x}) = (V - {x} - {k}) \<union> {k}" using x k kx by auto
      have l_c: "(link x V K) = (cone_simplices k (link x V K))"
        using cx using coneI [OF cx] by simp
-     have " non_evasive (V - {x} - {k} \<union> {k}) (cone_simplices k (link x V K))"
-       thm non_evasive_cone
-       show "non_evasive (V - {x}) (link x V K)"
-     proof (subst l_c, subst i, rule non_evasive_cone) thm non_evasive_cone
-      
-     have "non_evasive ((V - {x}) \<union> {k}) (cone_simplices k (link x V K))"
-     proof (rule non_evasive_cone)
-       show "simplicial_complex (V - {x}) (link x V K)" 
-         using simplicial_complex_link [OF  Suc (3), of x] .
-       show "finite (V - {x})" using Suc (4) by simp
-       show "k \<notin> 
-     then show "non_evasive (V - {x}) (link x V K)"
-       apply (subst l_c) using i by auto
-       apply (rule non_evasive_cone)
-     have fVx: "finite (V - {x})" using Suc (4) by simp
-     have l_c: "(link x V K) = (cone_simplices k (link x V K))"
-       using cx using coneI [OF cx] by simp
-     have fff: "non_evasive ((V - {x}) \<union> {x}) (cone_simplices x (link x V K))"
-     proof (rule non_evasive_cone)
-       show "simplicial_complex (V - {x}) (link x V K)" 
-         using simplicial_complex_link [OF Suc (3), of x] .
-      show "finite (V - {x})" using Suc (4) by simp
-      show "x \<notin> V - {x}" by simp
-    qed
-    hence "non_evasive V (link x V K)"
-      apply (subst l_c) using x
-      by (metis Un_insert_right insert_Diff sup_bot.right_neutral)
-    hence "non_evasive V (link x (V \<union> {x}) K)"
-      using link_invariant [OF Suc (3)] by simp
-    hence "non_evasive V K"
-      sorry
-    show "non_evasive (V - {x}) (link x V K)"
-    proof (unfold non_evasive.simps (2) [OF fVx], rule bexI [of _ x])
-       using non_evasive.simps (2) [of "(V - {x}) \<union> {x}"] try
-       apply (subst l_c)
-       using non_evasive_cone
-       using cx using non_evasive_cone [of "V - {x} \<union> {x}"] using cone_def try
-       find_theorems "cone"
-      proof (rule Suc (1))
-       show "n = card (V - {x})"
-        by (metis Suc.hyps(2) card_Diff_singleton diff_Suc_1 x)
-       show "finite (V - {x})" using Suc.prems (2) by blast
+     have "non_evasive (V - {x}) (cone_simplices k (link x V K))"
+     proof (rule non_evasive_cone_internal_vertex)
        show "simplicial_complex (V - {x}) (link x V K)"
-         using simplicial_complex_link [OF Suc.prems (1), of x] .
-       show "dismantelable (V - {x}) (link x V K)"
-         using cx
-         
-    thus ?thesis using non_evasive.simps (2) [OF Suc (4), of K] using x by blast
-
-
+         using simplicial_complex_link [OF Suc (3), of x] .
+       show "finite (V - {x})" using Suc (4) by simp
+       show "k \<in> V - {x}" using k kx by simp
+     qed
+     thus "non_evasive (V - {x}) (link x V K)" by (subst l_c, safe)
+   qed
+   thus ?thesis unfolding non_evasive.simps (2) [OF Suc (4), of K] using x by blast
+ qed
+qed
 
 lemma "\<not> non_evasive {1, 2} {{2::nat}}"
   using non_evasive.simps(2) [of "{1,2}" "{{2}}"]
