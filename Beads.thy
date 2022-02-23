@@ -2015,7 +2015,8 @@ section\<open>Dismantelable simplicial complexes\<close>
 function dismantelable :: "'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
   where
    "dismantelable {} K = False"
- | "finite V \<Longrightarrow> dismantelable V K = (\<exists>x\<in>V. V = {x} \<or> (\<exists>k\<in>V. (cone k (link x V K)) \<and> dismantelable (V - {x}) (cost x V K)))"
+ | "finite V \<Longrightarrow> dismantelable V K = (\<exists>x\<in>V. V = {x} 
+      \<or> (\<exists>k\<in>V. k \<noteq> x \<and> (cone k (link x V K)) \<and> dismantelable (V - {x}) (cost x V K)))"
  | "\<not> finite V \<Longrightarrow> dismantelable V K = False"
   unfolding link_def cost_def simplices_def by auto+
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
@@ -2026,6 +2027,7 @@ termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
 qed simp
 
 lemma
+  dismantelable_implies_non_evasive:
   assumes s: "simplicial_complex V K"
     and f: "finite V"
     and d: "dismantelable V K"
@@ -2048,7 +2050,9 @@ next
   next
     case False then obtain x k where x: "x \<in> V" and k: "k \<in> V" and kx: "k \<noteq> x"
       and cx: "cone k (link x V K)" and dx: "dismantelable (V - {x}) (cost x V K)"
-      using Suc (2) Suc (5) unfolding dismantelable.simps (2) [OF Suc (4), of K] by auto
+      using Suc (2)
+      using Suc (5)
+      unfolding dismantelable.simps (2) [OF Suc (4), of K] by auto
     have "non_evasive (V - {x}) (link x V K) \<and> non_evasive (V - {x}) (cost x V K)"
     proof (rule conjI)
       show "non_evasive (V - {x}) (cost x V K)"
@@ -2074,6 +2078,85 @@ next
    qed
    thus ?thesis unfolding non_evasive.simps (2) [OF Suc (4), of K] using x by blast
  qed
+qed
+
+section\<open>$m$-Vertex reducible simplicial complexes.\<close>
+
+function m_vertex_reducible :: "nat \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool"
+  where
+   "m_vertex_reducible 0 V K = dismantelable V K"
+ | "finite V \<Longrightarrow> m_vertex_reducible (Suc m) V K = (\<exists>x\<in>V. V = {x} 
+      \<or> ((m_vertex_reducible m (V - {x}) (link x V K)) \<and> m_vertex_reducible (Suc m) (V - {x}) (cost x V K)))"
+ | "\<not> finite V \<Longrightarrow> m_vertex_reducible m V K = False"
+  unfolding link_def cost_def simplices_def apply auto
+   using not0_implies_Suc by blast
+termination proof (relation "Wellfounded.measure (\<lambda>(m,V,K). card V)")
+  fix m :: nat and V :: "'a set" and K :: "'a set set" and x :: "'a"
+  assume f: "finite V" and x: "x \<in> V"
+  show "((m, V - {x}, link x V K), Suc m, V, K) \<in> measure (\<lambda>(m, V, K). card V)"
+    using f x by auto (metis card_gt_0_iff diff_Suc_less empty_iff)
+  show "((Suc m, V - {x}, cost x V K), Suc m, V, K) \<in> measure (\<lambda>(m, V, K). card V)"
+    using f x by auto (metis card_gt_0_iff diff_Suc_less empty_iff)
+qed simp
+
+lemma
+  m_vertex_reducible_implies_non_evasive:
+  assumes s: "simplicial_complex V K"
+    and f: "finite V"
+    and d: "m_vertex_reducible m V K"
+  shows "non_evasive V K"
+  using s f d proof (induct "m" arbitrary: V K)
+  case 0
+  show ?case using 0 (3) unfolding m_vertex_reducible.simps (1) 
+    using dismantelable_implies_non_evasive [OF 0 (1,2)] by fast
+next
+  case (Suc m)
+  note ind = Suc (1)
+  note s = Suc (2)
+  note f = Suc (3)  
+  note m = Suc (4)
+  show ?case using s m f
+  proof (induct "card V" arbitrary: V K)
+    case 0 have False using 0 unfolding m_vertex_reducible.simps (2) [OF 0 (4)] by simp
+    thus ?case by simp
+  next
+    case (Suc n)
+    show ?case
+    proof (cases "n = 0")
+      case True
+      then obtain x where V: "V = {x}" using Suc (2)
+        by (metis card_1_singleton_iff) 
+      show ?thesis unfolding V by simp
+    next
+      case False
+      then obtain x where x: "x \<in> V"
+        and m_link: "m_vertex_reducible m (V - {x}) (link x V K)" 
+        and m_cost: "m_vertex_reducible (Suc m) (V - {x}) (cost x V K)"
+      using Suc (4) Suc (2)
+      using m_vertex_reducible.simps (2) [OF Suc (5), of m K] by auto
+      have "non_evasive (V - {x}) (link x V K) \<and> non_evasive (V - {x}) (cost x V K)"
+      proof (rule conjI)
+        show "non_evasive (V - {x}) (link x V K)"
+        proof (rule ind)
+          show "simplicial_complex (V - {x}) (link x V K)" 
+            using simplicial_complex_link [OF Suc (3), of x] .
+          show "finite (V - {x})" using Suc (5) by simp
+          show "m_vertex_reducible m (V - {x}) (link x V K)" using m_link .
+        qed
+        show "non_evasive (V - {x}) (cost x V K)" thm Suc
+        proof (rule Suc (1))
+          show "n = card (V - {x})"
+            by (metis Suc (2) card_Diff_singleton diff_Suc_1 x)
+          show "simplicial_complex (V - {x}) (cost x V K)"
+            using simplicial_complex_cost [OF Suc (3), of x] .
+          show "m_vertex_reducible (Suc m) (V - {x}) (cost x V K)"
+            using m_cost .
+          show "finite (V - {x})" using Suc (5) by simp
+        qed
+      qed
+      thus ?thesis unfolding non_evasive.simps (2) [OF Suc (5), of K] using x by blast
+    qed
+  qed
 qed
 
 lemma "\<not> non_evasive {1, 2} {{2::nat}}"
