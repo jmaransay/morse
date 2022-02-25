@@ -4,6 +4,7 @@ theory Beads
     Boolean_functions
     Simplicial_complex
     Bij_betw_simplicial_complex_bool_func
+    Evasive
 begin
 
 definition first_half :: "bool vec \<Rightarrow> bool vec"
@@ -2158,6 +2159,38 @@ next
     qed
   qed
 qed
+
+section\<open>Relationship between the notion of \emph{non evasive} 
+  for ROBDD and simplicial complexes.\<close>
+
+lemma
+  shows "height (mk_ifex f l) \<le> length l"
+proof (induct "length l" arbitrary: l f) 
+  case 0
+  show ?case using 0 by simp
+next
+  case (Suc n)
+  from Suc (2) obtain l' x' where l_suc: "l = x' # l'" and ll': "length l' = n"    
+    by (meson Suc_length_conv)
+  have ht: "height (mk_ifex (bf_restrict x' True f) l') \<le> n"
+    and hf: "height (mk_ifex (bf_restrict x' False f) l') \<le> n"
+    using Suc (1) [of l'] ll' by simp_all
+  show ?case 
+    unfolding l_suc
+    unfolding mk_ifex.simps using ht hf apply auto try
+  apply simp
+  try
+
+lemma
+  assumes ne: "\<not> Evasive.evasive (Suc n) f"
+  and f: "boolean_functions.monotone_bool_fun (Suc n) f"
+ shows "non_evasive ({..<Suc n} - {0}) (link 0 {..<Suc n} (simplicial_complex_induced_by_monotone_boolean_function n f))"
+using ne f proof (induct "card {..<n}" arbitrary: n)
+  case 0
+  from 0 (1) have n: "n = 0" by simp
+  have False using 0 (2) unfolding n unfolding Evasive.evasive_def apply auto try show ?case unfolding n apply auto try
+  
+
 
 lemma "\<not> non_evasive {1, 2} {{2::nat}}"
   using non_evasive.simps(2) [of "{1,2}" "{{2}}"]
