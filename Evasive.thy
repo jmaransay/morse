@@ -91,24 +91,28 @@ text\<open>The function @{term restrict_top} takes a @{typ "'a ifex"}
   value to produce the corresponding subexpression. Otherwise, 
   it keeps the original @{term IF} expression.\<close>
 
-lemma restrict_height_le: "height (restrict_top k var val) \<le> height k"
+lemma height_restrict_le: "height (restrict_top k var val) \<le> height k"
   by (induction k, auto)
 
-lemma restrict_height_less: 
+lemma height_restrict_less:
   "ifex_top_var k = Some var \<Longrightarrow> height (restrict_top k var val) < height k"
   by (induction k, auto)
 
-lemma restrict_height_some_less:
+lemma height_restrict_some_less:
   "lowest_tops [i, t, e] = Some xa \<Longrightarrow>
   (height (restrict_top i xa val) + height (restrict_top t xa val) + height (restrict_top e xa val)) 
     < (height i + height t + height e)"
-  using restrict_height_le[of i xa val] restrict_height_le[of t xa val] restrict_height_le[of e xa val]
-  by (auto dest!: lowest_tops_cases restrict_height_less[of _ _ val])
+  using height_restrict_le[of i xa val] height_restrict_le[of t xa val] height_restrict_le[of e xa val]
+  by (auto dest!: lowest_tops_cases height_restrict_less[of _ _ val])
 
 (*lemma 
   "lowest_tops [i, t, e] = Some xa \<Longrightarrow> max (max (height (restrict_top i xa val)) (height (restrict_top t xa val))) (height (restrict_top e xa val))
   < max (max (height i) (height t)) (height e)"*)
   
+
+lemma height_IF:
+  "height (IF v t e) \<le> max (height t) (height e) + 1"
+  unfolding IFC_def by simp
 
 text\<open>The @{term IFC} function takes as parameters a variable and two
    @{typ "'a ifex"} expressions. If the expressions are the same,
@@ -128,7 +132,7 @@ lemma
   shows "t = Trueif \<or> t = Falseif"
   using assms height.elims by auto
 
-lemma "rit < i \<Longrightarrow>
+(*lemma "rit < i \<Longrightarrow>
     rif < i \<Longrightarrow>
     rtt \<le> t \<Longrightarrow>
     rtf \<le> t \<Longrightarrow>
@@ -234,45 +238,117 @@ using n proof (induct n arbitrary: i t e rule: less_induct)
     by (smt (verit, ccfv_threshold) i t e add.commute add.right_neutral height_0 ifex.simps(8) ifex.simps(9) max_0R option.simps(4) zero_less_one_class.zero_le_one)
 next
   case (Suc n)
-  
-lemma height_ifex_ite:
-  "height (ifex_ite i t e) \<le> max (max (height i) (height t)) (height e) + 1"
-proof (induction i t e rule: ifex_ite_induct)
-  case (Trueif i t e)
-  then show ?case by simp
+*)
+
+lemma
+  assumes l: "lowest_tops [i, t, e] = Some x"
+  shows "height ((ifex_ite (restrict_top i x True) (restrict_top t x True) (restrict_top e x True)))
+  \<le> height (ifex_ite i t e)" 
+  using l proof (induction i arbitrary: t e)
+  case Trueif
+  note i = Trueif
+  show ?case
+    using i proof (induction t)
+    case Trueif
+    note it = this
+    show ?case
+    using it proof (induction e arbitrary: x)
+      case Trueif
+      then show ?case
+        by (metis order_refl restrict_top.simps(2))
+    next
+      case Falseif
+      then show ?case
+        by (metis le_refl restrict_top.simps(2) restrict_top.simps(3))
+    next
+      case (IF x1 e1 e2)
+      fix l :: "'a ifex" and k :: "'a"
+      assume lw: "lowest_tops [Trueif, Trueif, l] = Some k"
+      then have "height (ifex_ite Trueif Trueif l) \<le> height l + 1"
+        using ifex_ite.simps [of Trueif Trueif l] 
+        using height_restrict_le height_IFC apply auto try
+      have rt: "restrict_top Trueif x True = Trueif" by simp
+      show ?case using IF unfolding rt
+        using i using height_restrict_le try apply auto try sorry
+    qed
+      show 
+    try by (metis order_refl restrict_top.simps(2))
 next
-  case (Falseif i t e)
-  then show ?case by simp
+  case Falseif
+  show ?case try by ((metis (mono_tags) le_refl restrict_top.simps(2) restrict_top.simps(3)))
 next
-  case (IF i t e x)
-  have ifex_rewr: "ifex_ite i t e = IFC x (ifex_ite (restrict_top i x True) (restrict_top t x True) (restrict_top e x True))
-           (ifex_ite (restrict_top i x False) (restrict_top t x False) (restrict_top e x False))"
-    by (subst ifex_ite.simps) (simp add: IF.hyps)
-  have "height (ifex_ite i t e) \<le>
-  height (IFC x (ifex_ite (restrict_top i x True) (restrict_top t x True) (restrict_top e x True))
-           (ifex_ite (restrict_top i x False) (restrict_top t x False) (restrict_top e x False)))"
-    unfolding ifex_rewr ..
-  also have "... \<le> max 
-            (height (ifex_ite (restrict_top i x True) (restrict_top t x True) (restrict_top e x True)))
-            (height (ifex_ite (restrict_top i x False) (restrict_top t x False) (restrict_top e x False))) 
-    + 1"
-    using height_IFC by metis
-  also have "... \<le> max 
-      ( max (max (height (restrict_top i x True)) (height (restrict_top t x True)))
-        (height (restrict_top e x True)) + 1 )
-      ( max (max (height (restrict_top i x False)) (height (restrict_top t x False)))
-        (height (restrict_top e x False)) + 1 )
-    + 1" using IF.IH [of True] IF.IH [of False] by auto
-  also have "... \<le> max (max (height i) (height t)) (height e) + 2"
-    using height_restrict_top apply auto
-    by (simp add: height_restrict_top le_max_iff_disj)+
-  finally show ?case sorry
+  case (IF x1 i1 i2)
+  then show ?case sorry
 qed
 
+  apply (induction i, induction t, induction e) 
+        apply (metis order_refl restrict_top.simps(2))
+       apply (metis le_refl restrict_top.simps(2) restrict_top.simps(3))
+  thm restrict_top.simps try
+
+
 lemma "height (mk_ifex f l) \<le> length l"
-proof (induct l arbitrary: f)
+proof (induction l arbitrary: f)
   case Nil
   then show ?case by simp
+next
+  case (Cons a l)
+  have "mk_ifex f (a # l) = 
+      ifex_ite 
+        (IF a Trueif Falseif) 
+        (mk_ifex (bf_restrict a True f) l)
+        (mk_ifex (bf_restrict a False f) l)" (is "mk_ifex f (a # l) = ifex_ite ?i ?t ?e")
+    using mk_ifex.simps (2) [of f a l] .
+  show ?case
+  proof (cases "lowest_tops [?i, ?t, ?e]")
+    case None then have False using lowest_tops.simps
+      by (metis option.discI)
+    thus ?thesis by simp
+  next
+    case (Some x)
+    have hIF: "height ?i = 1" by simp
+    then have hrIF: "height (restrict_top ?i a True) \<le> 1" by simp
+    have hTrue: "height ?t \<le> length l"
+      by (rule Cons.IH)
+    then have hrTrue: "height (restrict_top ?t a True) \<le> length l" 
+      using height_restrict_le by (rule xt1(6))
+    have hFalse: "height ?e \<le> length l"
+      by (rule Cons.IH)
+    then have hrFalse: "height (restrict_top ?e a False) \<le> length l" 
+      using height_restrict_le by (rule xt1(6))
+    show ?thesis
+    proof (cases "x = a")
+      case True
+      have "height (ifex_ite (restrict_top (IF a Trueif Falseif) a True)
+         (restrict_top (mk_ifex (bf_restrict a True f) l) a True)
+         (restrict_top (mk_ifex (bf_restrict a False f) l) a True)) \<le> length l"
+        using hrTrue hrFalse hrIF try
+      have "height (IFC a
+           (ifex_ite (restrict_top (IF a Trueif Falseif) a True)
+             (restrict_top (mk_ifex (bf_restrict a True f) l) a True)
+             (restrict_top (mk_ifex (bf_restrict a False f) l) a True))
+           (ifex_ite (restrict_top (IF a Trueif Falseif) a False)
+             (restrict_top (mk_ifex (bf_restrict a True f) l) a False)
+             (restrict_top (mk_ifex (bf_restrict a False f) l) a False))) \<le> length (a # l)"
+        using height_IFC
+      
+      show ?thesis 
+        unfolding mk_ifex.simps (2) [of f a l]
+        unfolding ifex_ite.simps (1) [of ?i ?t ?e]
+        using Some unfolding True apply auto
+        .  sorry
+    next
+      case False
+      then show ?thesis sorry
+    qed
+    thm Cons.IH
+  then show ?case sorry
+qed
+
+
+ proof (induction l arbitrary: f)
+  case Nil
+  then show ?case by simp              
 next
   case (Cons a l)
   assume hyp: "(\<And>f. height (mk_ifex f l) \<le> length l)"
@@ -280,6 +356,25 @@ next
        and lf: "height (mk_ifex (bf_restrict a False f) l) \<le> length l"
     using hyp [of "(bf_restrict a True f)"] and hyp [of "(bf_restrict a False f)"] .
   show ?case
+  proof (cases "lowest_tops
+            [IF a Trueif Falseif, mk_ifex (bf_restrict a True f) l,
+             mk_ifex (bf_restrict a False f) l]")
+    case None 
+    have False using None
+      using lowest_tops.simps(2) not_None_eq by blast
+    thus ?thesis by simp
+  next
+    case (Some x)
+    show ?thesis
+      apply (subst mk_ifex.simps (2))
+      apply (subst ifex_ite.simps)
+      unfolding Some using lt lf apply auto try
+    have "mk_ifex (bf_restrict a True f) l = undefined" try
+    show ?thesis
+      apply (subst mk_ifex.simps (2))
+      apply (subst ifex_ite.simps)
+      unfolding None apply (simp)
+      apply (simp add: None)
   proof (subst mk_ifex.simps (2), subst ifex_ite.simps) thm ifex_ite.simps
 
   
