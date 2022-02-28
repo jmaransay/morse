@@ -2163,6 +2163,94 @@ qed
 section\<open>Relationship between the notion of \emph{non evasive} 
   for ROBDD and simplicial complexes.\<close>
 
+text\<open>We first state some general results about the height of 
+   @{typ "'a ifex"} expressions.\<close>
+
+text\<open>The function @{term restrict_top} takes a @{typ "'a ifex"}
+  expression, a variable and a boolean. If the variable is at the
+  top of the @{term IF} expression then it uses the boolean 
+  value to produce the corresponding subexpression. Otherwise, 
+  it keeps the original @{term IF} expression.\<close>
+
+lemma height_restrict_le: "height (restrict_top k var val) \<le> height k"
+  by (induction k, auto)
+
+lemma height_restrict_less:
+  "ifex_top_var k = Some var \<Longrightarrow> height (restrict_top k var val) < height k"
+  by (induction k, auto)
+
+lemma height_restrict_some_less:
+  "lowest_tops [i, t, e] = Some xa \<Longrightarrow>
+  (height (restrict_top i xa val) + height (restrict_top t xa val) + height (restrict_top e xa val)) 
+    < (height i + height t + height e)"
+  using height_restrict_le[of i xa val] height_restrict_le[of t xa val] height_restrict_le[of e xa val]
+  by (auto dest!: lowest_tops_cases height_restrict_less[of _ _ val])
+
+lemma height_IF:
+  "height (IF v t e) \<le> max (height t) (height e) + 1"
+  unfolding IFC_def by simp
+
+text\<open>The @{term IFC} function takes as parameters a variable and two
+   @{typ "'a ifex"} expressions. If the expressions are the same,
+    then it returns either of them. Otherwise, it builds the
+   @{term "IF"} expression with the variable and the
+    two subtrees.\<close>
+
+lemma height_IFC:
+  "height (IFC v t e) \<le> max (height t) (height e) + 1"
+  unfolding IFC_def by simp
+
+lemma 
+  max_card_le_card_union:
+  "finite A \<Longrightarrow> finite B \<Longrightarrow> max (card A) (card B) \<le> card (A \<union> B)"
+  by (auto simp add: card_mono)+
+
+text\<open>If we assume that we have an @{typ "'a ifex"} which is 
+  @{term ifex_minimal} and @{term ifex_ordered}, then its height 
+  is less than or equal to its number of variables.\<close>
+
+lemma
+  height_ro_le_var_set:
+  assumes r: "ro_ifex i"
+  shows "height i \<le> card (ifex_var_set i)"
+  using r proof (induct i)
+  case Trueif
+  then show ?case by simp
+next
+  case Falseif
+  then show ?case by simp
+next
+  case (IF x1 i1 i2)
+  from IF.prems have roi1: "ro_ifex i1" and roi2: "ro_ifex i2" by simp+
+  have fi1: "finite (ifex_var_set i1)" and fi2: "finite (ifex_var_set i2)" by simp+
+  have ifx1i1i2: "ifex_var_set (IF x1 i1 i2) = {x1} \<union> ifex_var_set i1 \<union> ifex_var_set i2"
+    using IF.prems by simp
+  have "height (IF x1 i1 i2) \<le> 1 + max (height i1) (height i2)" by simp
+  also have "... \<le> 1 + max (card (ifex_var_set i1)) (card (ifex_var_set i2))"
+    using IF (1) [OF roi1] IF (2) [OF roi2] by auto
+  also have "... \<le> card (ifex_var_set (IF x1 i1 i2))" 
+    using roifex_var_not_in_subtree [OF IF.prems, of x1 i1 i2] 
+    unfolding ifx1i1i2
+    using max_card_le_card_union by auto
+  finally show ?case .
+qed
+
+corollary
+  height_mkifex_le_var_set:
+  fixes f vars
+  defines "l \<equiv> mk_ifex f vars"
+  shows "height l \<le> card (ifex_var_set l)"
+    using height_ro_le_var_set [OF mk_ifex_ro] unfolding l_def .
+
+definition boolfunc_to_vec :: "nat \<Rightarrow> (nat boolfunc) \<Rightarrow> (bool vec => bool)"
+  where "boolfunc_to_vec n f = (\<lambda>v. f (vec_index v))"
+
+lemma
+  assumes "mk_ifex f l = (IF x1 i1 i2)"
+  shows "link x1 (set l) (simplicial_complex_induced_by_monotone_boolean_function 
+    n (boolfunc_to_vec n f)) = i1"
+
+
 lemma
   shows "height (mk_ifex f l) \<le> length l"
 proof (induct "length l" arbitrary: l f) 
