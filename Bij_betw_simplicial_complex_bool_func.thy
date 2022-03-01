@@ -126,7 +126,7 @@ proof (unfold boolean_functions.monotone_bool_fun_def)
 qed
 
 lemma shows "(simplicial_complex_induced_by_monotone_boolean_function n) \<in> 
-          boolean_functions.monotone_bool_fun_set n 
+          boolean_functions.monotone_bool_fun_set n
           \<rightarrow> (simplicial_complex_set::nat set set set)"
 proof
   fix x::"bool vec \<Rightarrow> bool"
@@ -156,7 +156,9 @@ text\<open>Given a Boolean function @{term f}, if we build its associated
   we obtain @{term f}.
 
   The result holds for every Boolean function @{term f}
-  (the premise on @{term f} being monotone can be omitted).\<close>
+  (the premise on @{term f} being monotone can be omitted,
+  but then the set defined by the boolean function @{term f}
+  will no longer satisfy the definition of simplicial complex).\<close>
 
 lemma
   boolean_function_from_simplicial_complex_simplicial_complex_induced_by_monotone_boolean_function:

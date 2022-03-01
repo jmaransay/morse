@@ -2252,19 +2252,42 @@ corollary
 definition boolfunc_to_vec :: "nat \<Rightarrow> (nat boolfunc) \<Rightarrow> (bool vec => bool)"
   where "boolfunc_to_vec n f = (\<lambda>v. f (vec_index v))"
 
+context simplicial_complex
+begin
+
 lemma
-  assumes mk: "mk_ifex f [0..<n] = (IF x1 i1 i2)"
-  shows "link x1 {..<n} (simplicial_complex_induced_by_monotone_boolean_function 
-    n (boolfunc_to_vec n f)) = 
+  fixes f' :: "nat boolfunc"
+  defines "f \<equiv> boolfunc_to_vec n f'"
+  assumes f: "boolean_functions.monotone_bool_fun n f" 
+    and mk: "mk_ifex f' [0..<n] = (IF x1 i1 i2)"
+  shows "link x1 {..<n} (simplicial_complex_induced_by_monotone_boolean_function n f) = 
   (simplicial_complex_induced_by_monotone_boolean_function 
-    n (boolfunc_to_vec n (bf_restrict x1 False f)))"
-  using mk proof (induction n arbitrary: x1 i1 i2)
+    n (boolfunc_to_vec n (bf_restrict x1 False f')))"
+  using mk f_def proof (induction n arbitrary: x1 i1 i2)
   case 0
   then show ?case unfolding mk_ifex.simps
     by (metis ifex.distinct(3) ifex.distinct(5) mk_ifex.simps(1) upt_0)
 next
   case (Suc n)
-  then show ?case sorry
+  show ?case 
+  proof (cases "x1 < Suc n")
+    case False
+    have "link x1 {..<Suc n} (simplicial_complex_induced_by_monotone_boolean_function (Suc n) f) 
+        = {}" 
+      unfolding link_def 
+      using False 
+      unfolding Beads.simplices_def
+      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+      unfolding ceros_of_boolean_input_def by auto
+    have "simplicial_complex_induced_by_monotone_boolean_function (Suc n)
+     (boolfunc_to_vec (Suc n) (bf_restrict x1 False f')) = {}"
+      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+      unfolding boolfunc_to_vec_def using False 
+      unfolding ceros_of_boolean_input_def
+      unfolding bf_restrict_def using Suc (2) apply auto try
+      try
+    show ?thesis using False try
+      sorry
 qed
 
 lemma
