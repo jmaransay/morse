@@ -2236,6 +2236,13 @@ next
 qed
 
 corollary
+  height_ro_le_var:
+  assumes r: "ro_ifex i"
+  shows "height i \<le> length (ifex_vars i)"
+  using height_ro_le_var_set [OF r]
+  using card_length dual_order.trans by blast
+
+corollary
   height_mkifex_le_var_set:
   fixes f vars
   defines "l \<equiv> mk_ifex f vars"
@@ -2246,10 +2253,19 @@ definition boolfunc_to_vec :: "nat \<Rightarrow> (nat boolfunc) \<Rightarrow> (b
   where "boolfunc_to_vec n f = (\<lambda>v. f (vec_index v))"
 
 lemma
-  assumes "mk_ifex f l = (IF x1 i1 i2)"
-  shows "link x1 (set l) (simplicial_complex_induced_by_monotone_boolean_function 
-    n (boolfunc_to_vec n f)) = i1"
-
+  assumes mk: "mk_ifex f [0..<n] = (IF x1 i1 i2)"
+  shows "link x1 {..<n} (simplicial_complex_induced_by_monotone_boolean_function 
+    n (boolfunc_to_vec n f)) = 
+  (simplicial_complex_induced_by_monotone_boolean_function 
+    n (boolfunc_to_vec n (bf_restrict x1 False f)))"
+  using mk proof (induction n arbitrary: x1 i1 i2)
+  case 0
+  then show ?case unfolding mk_ifex.simps
+    by (metis ifex.distinct(3) ifex.distinct(5) mk_ifex.simps(1) upt_0)
+next
+  case (Suc n)
+  then show ?case sorry
+qed
 
 lemma
   shows "height (mk_ifex f l) \<le> length l"
