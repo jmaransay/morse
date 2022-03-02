@@ -4,6 +4,7 @@ theory Beads
     Boolean_functions
     Simplicial_complex
     Bij_betw_simplicial_complex_bool_func
+    ROBDD.BDT
     Evasive
 begin
 
@@ -385,7 +386,7 @@ text\<open>In our definition of @{term simplicial_complex.simplicial_complex}
   we used as set of vertexes @{term "{0..<n::nat}"}. Since the @{term link}
   and @{term cost} operations can remove any vertex, we introduce a more 
   general notion of simplicial complex where the set of vertexes can be any 
-  finite set of natural numbers.\<close>
+   set over a free type @{typ "'a"}.\<close>
 
 definition simplices :: "'a set \<Rightarrow> 'a set set"
   where "simplices V = Pow V"
@@ -2248,9 +2249,49 @@ corollary
   defines "l \<equiv> mk_ifex f vars"
   shows "height l \<le> card (ifex_var_set l)"
     using height_ro_le_var_set [OF mk_ifex_ro] unfolding l_def .
+text\<open>The following function maps a @{typ "'a boolfunc"} to a term of type 
+ @{typ "bool vec \<Rightarrow> bool"}.\<close>
 
 definition boolfunc_to_vec :: "nat \<Rightarrow> (nat boolfunc) \<Rightarrow> (bool vec => bool)"
   where "boolfunc_to_vec n f = (\<lambda>v. f (vec_index v))"
+
+text\<open>A property of @{term mk_ifex} and @{term "ifex_var_set"}. Maybe could 
+  be moved to file MkIfex.\<close>
+
+lemma
+  var_not_in_mk_ifex:
+  assumes x: "x \<notin> set l"
+  shows "x \<notin> ifex_var_set (mk_ifex f l)"
+  using x proof (induction l arbitrary: f)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a l) 
+  show ?case
+  proof (rule ccontr)
+    assume "\<not> x \<notin> ifex_var_set (mk_ifex f (a # l))"
+    hence x: "x \<in> ifex_var_set (mk_ifex f (a # l))" by simp
+    have x_n_a: "x \<noteq> a" using Cons (2) by simp
+    have x_n_l: "x \<notin> set l" using Cons.prems by auto
+    have rw: "mk_ifex f (a # l) = 
+    ifex_ite (IF a Trueif Falseif) 
+             (mk_ifex (bf_restrict a True f) l)
+             (mk_ifex (bf_restrict a False f) l)" 
+      using mk_ifex.simps (2) [of f a l] .
+    have x_in: "x \<in> ifex_var_set (IF a Trueif Falseif) 
+          \<or> x \<in> ifex_var_set (mk_ifex (bf_restrict a True f) l)
+          \<or> x \<in> ifex_var_set (mk_ifex (bf_restrict a False f) l)"
+      using x unfolding rw
+      using ifex_vars_subset by blast
+    have x_not_in_IF: "x \<notin> ifex_var_set (IF a Trueif Falseif)" 
+      using x_n_a by simp
+    moreover have x_not_in_true: "x \<notin> ifex_var_set (mk_ifex (bf_restrict a True f) l)"
+      using Cons.IH [OF x_n_l, of "(bf_restrict a True f)"] .
+    moreover have x_not_in_false: "x \<notin> ifex_var_set (mk_ifex (bf_restrict a False f) l)"
+      using Cons.IH [OF x_n_l, of "(bf_restrict a False f)"] .
+    ultimately show False using x_in by simp
+  qed
+qed
 
 context simplicial_complex
 begin
@@ -2258,12 +2299,12 @@ begin
 lemma
   fixes f' :: "nat boolfunc"
   defines "f \<equiv> boolfunc_to_vec n f'"
-  assumes f: "boolean_functions.monotone_bool_fun n f" 
+  assumes f: "boolean_functions.monotone_bool_fun n f"
     and mk: "mk_ifex f' [0..<n] = (IF x1 i1 i2)"
   shows "link x1 {..<n} (simplicial_complex_induced_by_monotone_boolean_function n f) = 
   (simplicial_complex_induced_by_monotone_boolean_function 
     n (boolfunc_to_vec n (bf_restrict x1 False f')))"
-  using mk f_def proof (induction n arbitrary: x1 i1 i2)
+  using mk f f_def proof (induction n arbitrary: x1 i1 i2)
   case 0
   then show ?case unfolding mk_ifex.simps
     by (metis ifex.distinct(3) ifex.distinct(5) mk_ifex.simps(1) upt_0)
@@ -2272,23 +2313,30 @@ next
   show ?case 
   proof (cases "x1 < Suc n")
     case False
-    have "link x1 {..<Suc n} (simplicial_complex_induced_by_monotone_boolean_function (Suc n) f) 
-        = {}" 
-      unfolding link_def 
-      using False 
-      unfolding Beads.simplices_def
-      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-      unfolding ceros_of_boolean_input_def by auto
-    have "simplicial_complex_induced_by_monotone_boolean_function (Suc n)
-     (boolfunc_to_vec (Suc n) (bf_restrict x1 False f')) = {}"
-      unfolding simplicial_complex_induced_by_monotone_boolean_function_def
-      unfolding boolfunc_to_vec_def using False 
-      unfolding ceros_of_boolean_input_def
-      unfolding bf_restrict_def using Suc (2) apply auto try
-      try
-    show ?thesis using False try
-      sorry
-qed
+    hence x1: "n < x1" by simp
+    have x1_not_in: "x1 \<notin> set [0..<Suc n]" using x1 by simp
+    from Suc (2) have False using var_not_in_mk_ifex [OF x1_not_in, of f'] by simp    
+    thus ?thesis by simp
+  next
+    case True
+    note x1_le_n = True
+    show ?thesis
+    proof (cases "n = 0")
+      case True hence x1: "x1 = 0" using x1_le_n by simp
+      fix var :: "nat" and K
+      have "link var {} K = ({} \<or> {{var}})" unfolding link_def Beads.simplices_def apply auto try
+      have empty: "\<And>x. x \<subseteq> {..<Suc 0} - {0} \<Longrightarrow> x = {}" by auto
+      show ?thesis unfolding x1 True
+        unfolding link_def 
+        unfolding Beads.simplices_def
+        unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+        unfolding ceros_of_boolean_input_def
+        unfolding f_def
+        unfolding boolfunc_to_vec_def
+        unfolding bf_restrict_def using empty apply auto
+       
+      using Suc
+    
 
 lemma
   shows "height (mk_ifex f l) \<le> length l"
