@@ -434,6 +434,7 @@ text\<open>The following result shows the coherence with our definition
   @{term simplicial_complex}.\<close>
 
 lemma
+  simplicial_complex_in_0_n:
   assumes s: "simplicial_complex.simplicial_complex n K"
   shows "simplicial_complex {0..<n} K"
   using s
@@ -2293,6 +2294,84 @@ next
   qed
 qed
 
+lemma
+  link_empty_set_vertex_in:
+  assumes v: "vertex_in_simplicial_complex v K"
+    and s: "simplicial_complex V K" 
+  shows "link v {} K = {{}}"
+  using s 
+  unfolding simplicial_complex_def
+  unfolding link_def
+  unfolding simplices_def 
+  using v 
+  unfolding vertex_in_simplicial_complex_def by auto
+
+lemma
+  link_empty_set_vertex_not_in:
+  assumes v: "\<not> vertex_in_simplicial_complex v K"
+    and s: "simplicial_complex V K" 
+  shows "link v {} K = {}"
+  using s 
+  unfolding simplicial_complex_def
+  unfolding link_def
+  unfolding simplices_def 
+  using v
+  unfolding vertex_in_simplicial_complex_def by auto
+
+lemma
+  link_empty_set_either: "link v {} K = {} \<or> link v {} K = {{}}"
+  unfolding link_def simplices_def by auto
+
+lemma 
+  cost_empty_set_either: "cost var {} K = {} \<or> cost var {} K = {{}}"
+  unfolding cost_def simplices_def by auto
+
+lemma
+  link_singleton_set_vertex_in:
+  assumes v: "vertex_in_simplicial_complex v K"
+    and s: "simplicial_complex V K" 
+  shows "link v {v} K = {{}}"
+  using s 
+  unfolding simplicial_complex_def
+  unfolding link_def
+  unfolding simplices_def 
+  using v
+  unfolding vertex_in_simplicial_complex_def by auto
+
+lemma
+  cost_singleton_set_vertex_in:
+  assumes v: "vertex_in_simplicial_complex v K"
+    and s: "simplicial_complex V K" 
+  shows "cost v {v} K = {{}}"
+  using s 
+  unfolding simplicial_complex_def
+  unfolding cost_def
+  unfolding simplices_def 
+  using v
+  unfolding vertex_in_simplicial_complex_def by auto
+
+lemma
+  link_singleton_set_vertex_not_in:
+  assumes v: "\<not> vertex_in_simplicial_complex v K"
+    and s: "simplicial_complex V K" 
+  shows "link v {v} K = {}"
+  using s 
+  unfolding simplicial_complex_def
+  unfolding link_def
+  unfolding simplices_def
+  using v
+  unfolding vertex_in_simplicial_complex_def by auto
+
+lemma
+  vertex_in_simplicial_complex_induced_by_boolean_function:
+  assumes v:
+    "vertex_in_simplicial_complex v (simplicial_complex_induced_by_monotone_boolean_function n f)"
+  shows "\<exists>w.  dim_vec w = n \<and> f w = True \<and> w $ v = False"
+  using v
+  unfolding vertex_in_simplicial_complex_def
+  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+  unfolding ceros_of_boolean_input_def by auto
+
 context simplicial_complex
 begin
 
@@ -2301,7 +2380,7 @@ lemma
   defines "f \<equiv> boolfunc_to_vec n f'"
   assumes f: "boolean_functions.monotone_bool_fun n f"
     and mk: "mk_ifex f' [0..<n] = (IF x1 i1 i2)"
-  shows "link x1 {..<n} (simplicial_complex_induced_by_monotone_boolean_function n f) = 
+  shows "link x1 {0..<n} (simplicial_complex_induced_by_monotone_boolean_function n f) = 
   (simplicial_complex_induced_by_monotone_boolean_function 
     n (boolfunc_to_vec n (bf_restrict x1 False f')))"
   using mk f f_def proof (induction n arbitrary: x1 i1 i2)
@@ -2323,17 +2402,45 @@ next
     show ?thesis
     proof (cases "n = 0")
       case True hence x1: "x1 = 0" using x1_le_n by simp
-      fix var :: "nat" and K
-      have "link var {} K = ({} \<or> {{var}})" unfolding link_def Beads.simplices_def apply auto try
+      note n_0 = True
+      have mn: "boolean_functions.monotone_bool_fun (Suc 0) f" using Suc (3) unfolding n_0 .
+      have l_t_1: "{0..<Suc 0} = {0}" by auto
+      show ?thesis
+      proof (cases "vertex_in_simplicial_complex 0 (simplicial_complex_induced_by_monotone_boolean_function (Suc 0) f)")
+        case True
+        from vertex_in_simplicial_complex_induced_by_boolean_function [OF True]
+        obtain w where dw: "dim_vec w = Suc 0" and fw: "f w = True" and w0: "w $ 0 = False" by auto      
+        have "link 0 {0..<Suc 0} (simplicial_complex_induced_by_monotone_boolean_function (Suc 0) f) = {{}}"
+          by (subst l_t_1, rule link_singleton_set_vertex_in [of _ _ "{0..<Suc 0}"], 
+              intro True, rule simplicial_complex_in_0_n)
+          (rule simplicial_complex.monotone_bool_fun_induces_simplicial_complex [OF mn])
+        have "ceros_of_boolean_input w \<in> simplicial_complex_induced_by_monotone_boolean_function (Suc n)
+            (boolfunc_to_vec (Suc n) (bf_restrict x1 False f'))"
+          unfolding n_0 x1
+          unfolding boolfunc_to_vec_def
+          unfolding bf_restrict_def
+          unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+          unfolding ceros_of_boolean_input_def using dw fw w0 
+          unfolding f_def boolfunc_to_vec_def apply auto
+          by (smt (verit, best) Collect_cong fun_upd_triv less_Suc0)
+          
+        show "Beads.simplicial_complex {..<Suc 0}
+              (simplicial_complex_induced_by_monotone_boolean_function (Suc 0) f)"
+            using simplicial_complex.monotone_bool_fun_induces_simplicial_complex [OF Suc (3)]
+            unfolding n_0 using simplicial_complex_in_0_n try
+          try find_theorems "simplicial_complex_induced_by_monotone_boolean_function"
       have empty: "\<And>x. x \<subseteq> {..<Suc 0} - {0} \<Longrightarrow> x = {}" by auto
       show ?thesis unfolding x1 True
-        unfolding link_def 
+        using link_empty_set_either [of 0]
+        unfolding link_def
         unfolding Beads.simplices_def
         unfolding simplicial_complex_induced_by_monotone_boolean_function_def
         unfolding ceros_of_boolean_input_def
         unfolding f_def
         unfolding boolfunc_to_vec_def
-        unfolding bf_restrict_def using empty apply auto
+        unfolding bf_restrict_def 
+        using empty 
+        using link_empty_set_either apply auto
        
       using Suc
     
