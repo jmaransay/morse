@@ -1589,12 +1589,14 @@ lemma
   by auto
 
 lemma
+  simplicial_complex_dimension_0_false:
   shows "simplicial_complex.boolean_function_from_simplicial_complex 0 {} = (\<lambda>x. False)"
   unfolding simplicial_complex.boolean_function_from_simplicial_complex_def
   unfolding simplicial_complex.bool_vec_set_from_simplice_set_def
   unfolding simplicial_complex.bool_vec_from_simplice_def by simp
 
 lemma
+  simplicial_complex_dimension_0_true:
   shows "simplicial_complex.boolean_function_from_simplicial_complex 0 {{}} =
     (\<lambda>x::bool vec. x = vec 0 (\<lambda>i. True))"
   unfolding simplicial_complex.boolean_function_from_simplicial_complex_def
@@ -2372,21 +2374,98 @@ lemma
   unfolding simplicial_complex_induced_by_monotone_boolean_function_def
   unfolding ceros_of_boolean_input_def by auto
 
+lemma
+  simplicial_complex_dimension_0_induced_by_f:
+  assumes f: "f (vec 0 v)"
+  shows "simplicial_complex_induced_by_monotone_boolean_function 0 f = {{}}"
+  using f
+  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+  unfolding ceros_of_boolean_input_def
+  by auto (metis dim_vec vec_of_dim_0)
+
+(*corollary
+  assumes v: "v = vec 0 (\<lambda>i. True)"
+    and f: "f v"
+  shows "simplicial_complex_induced_by_monotone_boolean_function 0 f = {{}}"
+  by (rule simplicial_complex_induced_by_true, subst v [symmetric]) (intro f)*)
+
+(*lemma
+  simplicial_complex_induced_by_true:
+  assumes f: "\<not> f (vec 0 (\<lambda>i. False))"
+  shows "simplicial_complex_induced_by_monotone_boolean_function 0 f = {}"
+  using f
+  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+  unfolding ceros_of_boolean_input_def 
+  by auto (metis dim_vec vec_of_dim_0)*)
+
+lemma
+  simplicial_complex_dimension_0_induced_by_not_f:
+  assumes f: "\<not> f (vec 0 v)"
+  shows "simplicial_complex_induced_by_monotone_boolean_function 0 f = {}"
+  using f
+  unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+  unfolding ceros_of_boolean_input_def
+  by auto (metis dim_vec vec_of_dim_0)
+
+lemma
+  simplicial_complex_induced_dimension_0:
+  "simplicial_complex_induced_by_monotone_boolean_function 0 f = {} \<or>
+  simplicial_complex_induced_by_monotone_boolean_function 0 f = {{}}"
+  by (meson simplicial_complex_dimension_0_induced_by_f simplicial_complex_dimension_0_induced_by_not_f)
+
 context simplicial_complex
 begin
 
+text\<open>It is relevant to note that @{term link} decreases 
+  the size of the simplicial complex in one, and so
+  does the simplicial complex on the right hand size 
+  of the following expression.\<close>
+
 lemma
   fixes f' :: "nat boolfunc"
-  defines "f \<equiv> boolfunc_to_vec n f'"
-  assumes f: "boolean_functions.monotone_bool_fun n f"
-    and mk: "mk_ifex f' [0..<n] = (IF x1 i1 i2)"
-  shows "link x1 {0..<n} (simplicial_complex_induced_by_monotone_boolean_function n f) = 
+  defines "f \<equiv> boolfunc_to_vec (Suc n) f'"
+  assumes f: "boolean_functions.monotone_bool_fun (Suc n) f"
+    and mk: "mk_ifex f' [0..<Suc n] = (IF x1 i1 i2)"
+  shows "link x1 {0..<Suc n} (simplicial_complex_induced_by_monotone_boolean_function (Suc n) f) = 
   (simplicial_complex_induced_by_monotone_boolean_function 
     n (boolfunc_to_vec n (bf_restrict x1 False f')))"
   using mk f f_def proof (induction n arbitrary: x1 i1 i2)
   case 0
+  have set_rw: "{0..< Suc 0} = {0}" by auto
+  show ?case
+  proof (cases "x1 = 0")
+    case True 
+    note x1_0 = True
+    have mn: "boolean_functions.monotone_bool_fun (Suc 0) f" using 0 (2) .
+    show ?thesis
+    proof (cases "vertex_in_simplicial_complex 0 (simplicial_complex_induced_by_monotone_boolean_function (Suc 0) f)")
+      case True
+      from vertex_in_simplicial_complex_induced_by_boolean_function [OF True]
+        obtain w where dw: "dim_vec w = Suc 0" and fw: "f w = True" and w0: "w $ 0 = False" by auto
+      have "link x1 {0..<Suc 0} (simplicial_complex_induced_by_monotone_boolean_function (Suc 0) f) = {{}}"
+        unfolding x1_0 set_rw
+      proof (rule link_singleton_set_vertex_in [of _ _ "{0..<Suc 0}"])
+        show "vertex_in_simplicial_complex 0
+            (simplicial_complex_induced_by_monotone_boolean_function (Suc 0) f)" using True .
+        show "Beads.simplicial_complex {0..<Suc 0} (simplicial_complex_induced_by_monotone_boolean_function (Suc 0) f)"
+          by (rule simplicial_complex_in_0_n)
+         (rule simplicial_complex.monotone_bool_fun_induces_simplicial_complex [OF 0 (2)])
+      qed
+      have "simplicial_complex_induced_by_monotone_boolean_function 0
+        (boolfunc_to_vec 0 (bf_restrict x1 False f')) = {{}}"
+        apply (rule simplicial_complex_dimension_0_induced_by_f [of _ "vec_index w"])
+        using True unfolding x1_0 unfolding f_def [symmetric]
+        unfolding simplicial_complex_induced_by_monotone_boolean_function_def
+        unfolding boolfunc_to_vec_def ceros_of_boolean_input_def bf_restrict_def
+        unfolding vertex_in_simplicial_complex_def using fw w0
+        apply auto try
+        by (subst l_t_1, rule link_singleton_set_vertex_in [of _ _ "{0..<Suc 0}"],
+              intro True, rule simplicial_complex_in_0_n)
+          (rule simplicial_complex.monotone_bool_fun_induces_simplicial_complex [OF mn])
+        unfolding set_rw True
+
   then show ?case unfolding mk_ifex.simps
-    by (metis ifex.distinct(3) ifex.distinct(5) mk_ifex.simps(1) upt_0)
+    (*by (metis ifex.distinct(3) ifex.distinct(5) mk_ifex.simps(1) upt_0)*)
 next
   case (Suc n)
   show ?case 
@@ -2409,11 +2488,13 @@ next
       proof (cases "vertex_in_simplicial_complex 0 (simplicial_complex_induced_by_monotone_boolean_function (Suc 0) f)")
         case True
         from vertex_in_simplicial_complex_induced_by_boolean_function [OF True]
-        obtain w where dw: "dim_vec w = Suc 0" and fw: "f w = True" and w0: "w $ 0 = False" by auto      
+        obtain w where dw: "dim_vec w = Suc 0" and fw: "f w = True" and w0: "w $ 0 = False" by auto
         have "link 0 {0..<Suc 0} (simplicial_complex_induced_by_monotone_boolean_function (Suc 0) f) = {{}}"
           by (subst l_t_1, rule link_singleton_set_vertex_in [of _ _ "{0..<Suc 0}"], 
               intro True, rule simplicial_complex_in_0_n)
           (rule simplicial_complex.monotone_bool_fun_induces_simplicial_complex [OF mn])
+        have "ceros_of_boolean_input w = {0}"
+          using dw fw w0 unfolding ceros_of_boolean_input_def by auto
         have "ceros_of_boolean_input w \<in> simplicial_complex_induced_by_monotone_boolean_function (Suc n)
             (boolfunc_to_vec (Suc n) (bf_restrict x1 False f'))"
           unfolding n_0 x1
