@@ -758,6 +758,7 @@ lemma conjI3: assumes "A" and "B" and "C" shows "A \<and> B \<and> C"
 lemma image_Un3: "f ` (A \<union> B \<union> C) = f ` A \<union> f ` B \<union> f `C" by auto
 
 lemma
+  simplicial_complex_link_induced_by_subfunction_0:
   assumes s: "simplicial_complex_mp_with_boolean_function n mp V K"
     and x: "x \<in> V"
     and mp: "mp j = x"
@@ -1017,6 +1018,7 @@ proof (rule)
 qed
 
 lemma
+  simplicial_complex_cost_induced_by_subfunction_1:
   assumes s: "simplicial_complex_mp_with_boolean_function n mp V K"
     and x: "x \<in> V"
     and mp: "mp j = x"
@@ -2413,6 +2415,137 @@ lemma
   simplicial_complex_induced_by_monotone_boolean_function 0 f = {{}}"
   by (meson simplicial_complex_dimension_0_induced_by_f simplicial_complex_dimension_0_induced_by_not_f)
 
+thm simplicial_complex_link_induced_by_subfunction_0
+
+text\<open>Some results about @{term vec_aug} and @{term vec_red}.\<close>
+
+lemma
+  vec_aug_l_index [simp]:
+  assumes "i < j"
+    and "j < dim_vec v"
+  shows "vec_aug v j b $ i = v $ i"
+  using assms unfolding vec_aug_def by auto
+
+lemma
+  vec_aug_index [simp]:
+  assumes "i = j"
+    and "j < dim_vec v"
+  shows "vec_aug v j b $ i = b"
+  using assms unfolding vec_aug_def by auto
+
+lemma
+  vec_aug_g_index [simp]:
+  assumes "j < i"
+    and "i < dim_vec v"
+  shows "vec_aug v j b $ i = v $ (i - 1)"
+  using assms unfolding vec_aug_def by simp
+
+lemma
+  vec_red_l_index [simp]:
+  assumes "i < j"
+    and "j < dim_vec v"
+  shows "vec_red v j $ i = v $ i"
+  using assms unfolding vec_red_def by auto
+
+lemma
+  vec_red_ge_index [simp]:
+  assumes "j \<le> i"
+    and "i < dim_vec v - 1"
+  shows "vec_red v j $ i = v $ (i + 1)"
+  using assms unfolding vec_red_def by simp
+
+lemma
+  assumes arr: "arr \<in> carrier_vec n"
+    and v: "v < n"
+  shows "(boolfunc_to_vec n (bf_restrict v False f)) arr
+    = (subfunction_0_dim (boolfunc_to_vec n f) v) (vec_red arr v)"
+  unfolding boolfunc_to_vec_def
+  unfolding bf_restrict_def
+  unfolding subfunction_0_dim_def
+proof (rule cong [of f f])
+  show "f = f" by simp
+  show "(\<lambda>i. vec_index arr i)(v := False) = (\<lambda>i. vec_index (vec_aug (vec_red arr v) v False) i)"
+  proof (rule ext)
+    fix i :: nat
+    show "((\<lambda>i. vec_index arr i)(v := False)) i =
+      (\<lambda>i. vec_index (vec_aug (vec_red arr v) v False) i) i"
+    proof (cases "i < v")
+      case True
+      show "((($) arr)(v := False)) i = vec_aug (vec_red arr v) v False $ i"
+        unfolding vec_aug_def vec_red_def dim_vec
+        using v arr True
+        unfolding carrier_vec_def by simp
+    next
+      case False note nilv = False
+      show "((\<lambda>i. vec_index arr i)(v := False)) i =
+        (\<lambda>i. vec_index (vec_aug (vec_red arr v) v False) i) i"
+      proof (cases "i = v")
+        case True
+        show ?thesis unfolding True 
+          unfolding vec_aug_def vec_red_def dim_vec
+          using v arr True
+          unfolding carrier_vec_def by simp
+      next
+        case False
+        hence vi: "v < i" using nilv by simp
+        have "((\<lambda>i. vec_index arr i)(v := False)) i = arr $ i" using vi by simp
+        have "(\<lambda>i. vec_index (vec_aug (vec_red arr v) v False) i) i = arr $ i"
+        proof-
+          have arr_g_0: "0 < dim_vec arr" using v arr unfolding carrier_vec_def by simp
+          have "vec (dim_vec arr - 1 + 1)
+     (\<lambda>i. if i < v then vec (dim_vec arr - 1) (\<lambda>i. if i < v then arr $ i else arr $ (i + 1)) $ i
+           else if i = v then False
+                else vec (dim_vec arr - 1) (\<lambda>i. if i < v then arr $ i else arr $ (i + 1)) $
+                     (i - 1)) = 
+                vec (dim_vec arr) (\<lambda>i. vec (dim_vec arr - 1) (\<lambda>i. arr $ (i + 1)) $ (i - 1))"
+            apply (intro eq_vecI)
+             prefer 2
+        apply (unfold dim_vec, simp add: arr_g_0) try
+        proof -
+          have "vec (dim_vec arr - 1) (\<lambda>i. if i < v then arr $ i else arr $ (i + 1)) $
+                     (i - 1) = (\<lambda>i. arr $ (i + 1)) (i - 1)"
+          using vi using index_vec find_theorems "vec_index"
+        have "vec_aug (vec_red arr v) v False $ i = arr $ i"
+          unfolding vec_aug_def vec_red_def dim_vec
+          using v arr vi
+          unfolding carrier_vec_def try
+        show ?thesis
+          unfolding vec_aug_def vec_red_def dim_vec
+          using v arr vi
+          unfolding carrier_vec_def try by simp
+
+      thus ?thesis
+        apply (rule vec_aug_l_index, intro True) using v arr 
+        unfolding vec_aug_def vec_red_def dim_vec apply auto 
+      show ?thesis
+        using vec_aug_l_index [symmetric]
+        using True apply simp
+        using True unfolding vec_aug_def vec_red_def dim_vec apply auto
+  show "(($) arr)(v := False) = ($) (vec_aug (vec_red arr v) v False)"
+    
+   apply (simp) using v arr unfolding carrier_vec_def apply auto apply (rule ext) 
+  apply auto
+  fix va
+  show "f ((($) va)(v := False)) =
+          f (($) (vec (dim_vec va + 1)
+                   (\<lambda>i. if i < v then va $ i else if i = v then False else va $ (i - 1))))"
+  proof (rule cong [of f f])
+    show "f = f" by simp
+    show "(($) va)(v := False) =
+    ($) (vec (dim_vec va + 1)
+          (\<lambda>i. if i < v then va $ i else if i = v then False else va $ (i - 1)))"
+    proof (rule ext)
+      fix x
+      show "((($) va)(v := False)) x =
+         vec (dim_vec va + 1)
+          (\<lambda>i. if i < v then va $ i else if i = v then False else va $ (i - 1)) $ x"
+      proof (cases "x < v")
+        case True show ?thesis using True try
+      term "(($) va)(v := False)"
+
+term subfunction_0_dim
+
+
 context simplicial_complex
 begin
 
@@ -2420,13 +2553,13 @@ text\<open>It is relevant to note that @{term link} decreases
   the size of the simplicial complex in one, and so
   does the simplicial complex on the right hand size 
   of the following expression.\<close>
-
+find_theorems (99) "link"
 lemma
   fixes f' :: "nat boolfunc"
   defines "f \<equiv> boolfunc_to_vec (Suc n) f'"
   assumes f: "boolean_functions.monotone_bool_fun (Suc n) f"
     and mk: "mk_ifex f' [0..<Suc n] = (IF x1 i1 i2)"
-  shows "link x1 {0..<Suc n} (simplicial_complex_induced_by_monotone_boolean_function (Suc n) f) = 
+  shows "link x1 {0..<Suc n} (simplicial_complex_induced_by_monotone_boolean_function (Suc n) f) =
   (simplicial_complex_induced_by_monotone_boolean_function 
     n (boolfunc_to_vec n (bf_restrict x1 False f')))"
   using mk f f_def proof (induction n arbitrary: x1 i1 i2)
