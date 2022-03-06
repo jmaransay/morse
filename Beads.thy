@@ -2455,6 +2455,16 @@ lemma
   using assms unfolding vec_red_def by simp
 
 lemma
+  vec_out_of_bounds:
+  fixes arr :: "'a vec"
+  defines "n \<equiv> dim_vec arr"
+  assumes arr: "n \<le> i"
+  shows "vec n v $ i = undef_vec (i - n)"
+    using arr
+    by (simp add: mk_vec_def vec.rep_eq vec_index.rep_eq)
+
+lemma
+  bf_restrict_false_subfunction_0:
   assumes arr: "arr \<in> carrier_vec n"
     and v: "v < n"
   shows "(boolfunc_to_vec n (bf_restrict v False f)) arr
@@ -2467,6 +2477,7 @@ proof (rule cong [of f f])
   show "(\<lambda>i. vec_index arr i)(v := False) = (\<lambda>i. vec_index (vec_aug (vec_red arr v) v False) i)"
   proof (rule ext)
     fix i :: nat
+    have n_arr: "n = dim_vec arr" using arr unfolding carrier_vec_def by simp
     show "((\<lambda>i. vec_index arr i)(v := False)) i =
       (\<lambda>i. vec_index (vec_aug (vec_red arr v) v False) i) i"
     proof (cases "i < v")
@@ -2488,60 +2499,110 @@ proof (rule cong [of f f])
       next
         case False
         hence vi: "v < i" using nilv by simp
-        have "((\<lambda>i. vec_index arr i)(v := False)) i = arr $ i" using vi by simp
-        have "(\<lambda>i. vec_index (vec_aug (vec_red arr v) v False) i) i = arr $ i"
-        proof-
-          have arr_g_0: "0 < dim_vec arr" using v arr unfolding carrier_vec_def by simp
-          have "vec (dim_vec arr - 1 + 1)
-     (\<lambda>i. if i < v then vec (dim_vec arr - 1) (\<lambda>i. if i < v then arr $ i else arr $ (i + 1)) $ i
-           else if i = v then False
-                else vec (dim_vec arr - 1) (\<lambda>i. if i < v then arr $ i else arr $ (i + 1)) $
-                     (i - 1)) = 
-                vec (dim_vec arr) (\<lambda>i. vec (dim_vec arr - 1) (\<lambda>i. arr $ (i + 1)) $ (i - 1))"
-            apply (intro eq_vecI)
-             prefer 2
-        apply (unfold dim_vec, simp add: arr_g_0) try
-        proof -
-          have "vec (dim_vec arr - 1) (\<lambda>i. if i < v then arr $ i else arr $ (i + 1)) $
-                     (i - 1) = (\<lambda>i. arr $ (i + 1)) (i - 1)"
-          using vi using index_vec find_theorems "vec_index"
-        have "vec_aug (vec_red arr v) v False $ i = arr $ i"
-          unfolding vec_aug_def vec_red_def dim_vec
-          using v arr vi
-          unfolding carrier_vec_def try
-        show ?thesis
-          unfolding vec_aug_def vec_red_def dim_vec
-          using v arr vi
-          unfolding carrier_vec_def try by simp
+        have "((\<lambda>i. vec_index arr i)(v := False)) i = vec_index arr i" using vi by simp
+        moreover have "(\<lambda>i. vec_index (vec_aug (vec_red arr v) v False) i) i = vec_index arr i"
+        proof (cases "i < n")
+          case True
+          then show ?thesis 
+            unfolding vec_aug_def vec_red_def dim_vec 
+            using vi nilv using arr carrier_vecD by auto
+        next
+          case False
+          have ig0: "0 < i" and da0: "0 < dim_vec arr"
+            using vi zero_less_iff_neq_zero v arr unfolding carrier_vec_def by simp+
+          have dvr: "dim_vec (vec_red arr v) + 1 = dim_vec arr" 
+            unfolding vec_red_def using da0 by simp
+          have "vec_aug (vec_red arr v) v False $ i = undef_vec (i - n)"
+            unfolding vec_aug_def
+            unfolding dvr
+            unfolding n_arr apply (rule vec_out_of_bounds) using False n_arr by simp
+          also have "... = (vec_index arr i)" 
+            using carrier_vecD [OF arr] False 
+            using mk_vec_def [of "n" "vec_index arr"] 
+            using vec.rep_eq [of n "vec_index arr"] vec_index.rep_eq [of "vec n (($) arr)"]
+            by (smt (verit, best) dim_vec eq_vecI snd_conv)
+          finally show ?thesis .
+        qed
+        ultimately show ?thesis by simp
+      qed
+    qed
+  qed
+qed
 
-      thus ?thesis
-        apply (rule vec_aug_l_index, intro True) using v arr 
-        unfolding vec_aug_def vec_red_def dim_vec apply auto 
-      show ?thesis
-        using vec_aug_l_index [symmetric]
-        using True apply simp
-        using True unfolding vec_aug_def vec_red_def dim_vec apply auto
-  show "(($) arr)(v := False) = ($) (vec_aug (vec_red arr v) v False)"
-    
-   apply (simp) using v arr unfolding carrier_vec_def apply auto apply (rule ext) 
-  apply auto
-  fix va
-  show "f ((($) va)(v := False)) =
-          f (($) (vec (dim_vec va + 1)
-                   (\<lambda>i. if i < v then va $ i else if i = v then False else va $ (i - 1))))"
-  proof (rule cong [of f f])
-    show "f = f" by simp
-    show "(($) va)(v := False) =
-    ($) (vec (dim_vec va + 1)
-          (\<lambda>i. if i < v then va $ i else if i = v then False else va $ (i - 1)))"
-    proof (rule ext)
-      fix x
-      show "((($) va)(v := False)) x =
-         vec (dim_vec va + 1)
-          (\<lambda>i. if i < v then va $ i else if i = v then False else va $ (i - 1)) $ x"
-      proof (cases "x < v")
-        case True show ?thesis using True try
-      term "(($) va)(v := False)"
+find_theorems subfunction_0_dim
+
+thm bf_restrict_false_subfunction_0
+
+lemma "simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function
+     (\<lambda>i. if i < j then mp i else mp (i + 1)) (V - {x}) (boolfunc_to_vec n (bf_restrict v False f)) =
+    link x V K"
+
+
+lemma
+  assumes arr: "arr \<in> carrier_vec n"
+    and v: "v < n"
+  shows "(boolfunc_to_vec n (bf_restrict v True f)) arr
+    = (subfunction_1_dim (boolfunc_to_vec n f) v) (vec_red arr v)"
+  unfolding boolfunc_to_vec_def
+  unfolding bf_restrict_def
+  unfolding subfunction_1_dim_def
+proof (rule cong [of f f])
+  show "f = f" by simp
+  show "(\<lambda>i. vec_index arr i)(v := True) = (\<lambda>i. vec_index (vec_aug (vec_red arr v) v True) i)"
+  proof (rule ext)
+    fix i :: nat
+    have n_arr: "n = dim_vec arr" using arr unfolding carrier_vec_def by simp
+    show "((\<lambda>i. vec_index arr i)(v := True)) i =
+      (\<lambda>i. vec_index (vec_aug (vec_red arr v) v True) i) i"
+    proof (cases "i < v")
+      case True
+      show "((($) arr)(v := True)) i = vec_aug (vec_red arr v) v True $ i"
+        unfolding vec_aug_def vec_red_def dim_vec
+        using v arr True
+        unfolding carrier_vec_def by simp
+    next
+      case False note nilv = False
+      show "((\<lambda>i. vec_index arr i)(v := True)) i =
+        (\<lambda>i. vec_index (vec_aug (vec_red arr v) v True) i) i"
+      proof (cases "i = v")
+        case True
+        show ?thesis unfolding True
+          unfolding vec_aug_def vec_red_def dim_vec
+          using v arr True
+          unfolding carrier_vec_def by simp
+      next
+        case False
+        hence vi: "v < i" using nilv by simp
+        have "((\<lambda>i. vec_index arr i)(v := True)) i = vec_index arr i" using vi by simp
+        moreover have "(\<lambda>i. vec_index (vec_aug (vec_red arr v) v True) i) i = vec_index arr i"
+        proof (cases "i < n")
+          case True
+          then show ?thesis 
+            unfolding vec_aug_def vec_red_def dim_vec 
+            using vi nilv using arr carrier_vecD by auto
+        next
+          case False
+          have ig0: "0 < i" and da0: "0 < dim_vec arr"
+            using vi zero_less_iff_neq_zero v arr unfolding carrier_vec_def by simp+
+          have dvr: "dim_vec (vec_red arr v) + 1 = dim_vec arr" 
+            unfolding vec_red_def using da0 by simp
+          have "vec_aug (vec_red arr v) v True $ i = undef_vec (i - n)"
+            unfolding vec_aug_def
+            unfolding dvr
+            unfolding n_arr apply (rule vec_out_of_bounds) using False n_arr by simp
+          also have "... = (vec_index arr i)" 
+            using carrier_vecD [OF arr] False
+            using mk_vec_def [of "n" "vec_index arr"] 
+            using vec.rep_eq [of n "vec_index arr"] vec_index.rep_eq [of "vec n (($) arr)"]
+            by (smt (verit, best) dim_vec eq_vecI snd_conv)
+          finally show ?thesis .
+        qed
+        ultimately show ?thesis by simp
+      qed
+    qed
+  qed
+qed
+
 
 term subfunction_0_dim
 
