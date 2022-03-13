@@ -2529,15 +2529,6 @@ proof (rule cong [of f f])
   qed
 qed
 
-find_theorems subfunction_0_dim
-
-thm bf_restrict_false_subfunction_0
-
-lemma "simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function
-     (\<lambda>i. if i < j then mp i else mp (i + 1)) (V - {x}) (boolfunc_to_vec n (bf_restrict v False f)) =
-    link x V K"
-
-
 lemma
   assumes arr: "arr \<in> carrier_vec n"
     and v: "v < n"
@@ -2602,6 +2593,26 @@ proof (rule cong [of f f])
     qed
   qed
 qed
+
+lemma
+  simplicial_complex_link_induced_by_subfunction_0:
+  assumes s: "simplicial_complex_mp_with_boolean_function n mp V K"
+    and x: "x \<in> V"
+    and mp: "mp j = x"
+    and j: "j < n"
+    and finite: "finite V"
+    and s_induced: "simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function
+      mp V (boolfunc_to_vec n f) = K"
+  shows "simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function
+    (\<lambda>i. if i < j then mp i else mp (i + 1)) (V - {x}) (subfunction_0_dim (boolfunc_to_vec n f) j) =
+    simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function
+     mp V (boolfunc_to_vec n (bf_restrict j False f))"
+  unfolding simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def [OF s, of "(boolfunc_to_vec n (bf_restrict j False f))"]
+  unfolding simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def
+  [OF simplicial_complex_mp_link [OF s x mp j]]
+proof
+
+
 
 
 term subfunction_0_dim
