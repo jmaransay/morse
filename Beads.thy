@@ -144,11 +144,18 @@ definition vec_aug :: "bool vec \<Rightarrow> nat \<Rightarrow> bool \<Rightarro
   (\<lambda>i. if i < k then r $ i else if i = k then b else r $ (i - 1))"
 
 lemma vec_aug_in_carrier:
-  assumes r: "r \<in> carrier_vec (m - 1)"  
+  assumes r: "r \<in> carrier_vec (m - 1)"
     and m_g_0: "0 < m"
   shows "vec_aug r k b \<in> carrier_vec m"
     using r unfolding vec_aug_def carrier_vec_def
     using m_g_0 by force
+
+corollary dim_vec_aug:
+  assumes r: "dim_vec r = m" 
+  shows "dim_vec (vec_aug r k b) = m + 1"
+  using vec_aug_in_carrier [of r k _ b] r
+  unfolding carrier_vec_def
+  by (simp add: vec_aug_def)
 
 definition vec_red :: "bool vec \<Rightarrow> nat \<Rightarrow> bool vec"
   where "vec_red r k = vec (dim_vec r - 1)
@@ -2460,8 +2467,7 @@ lemma
   defines "n \<equiv> dim_vec arr"
   assumes arr: "n \<le> i"
   shows "vec n v $ i = undef_vec (i - n)"
-    using arr
-    by (simp add: mk_vec_def vec.rep_eq vec_index.rep_eq)
+    using arr by (simp add: mk_vec_def vec.rep_eq vec_index.rep_eq)
 
 lemma
   bf_restrict_false_subfunction_0:
@@ -2529,7 +2535,25 @@ proof (rule cong [of f f])
   qed
 qed
 
+corollary
+  bf_restrict_false_subfunction_0_vec_aug:
+  assumes arr: "arr \<in> carrier_vec (n - 1)"
+    and v: "v < n"
+  shows "(boolfunc_to_vec n (bf_restrict v False f)) (vec_aug arr v False)
+    = (subfunction_0_dim (boolfunc_to_vec n f) v) arr"
+proof -
+  have arr_red: "arr = vec_red (vec_aug arr v False) v"
+    unfolding vec_aug_def vec_red_def dim_vec by auto
+  have dim_vec_aug:  "(vec_aug arr v False) \<in> carrier_vec n" 
+    using arr v vec_aug_in_carrier by force
+  have "(boolfunc_to_vec n (bf_restrict v False f)) (vec_aug arr v False)
+    = (subfunction_0_dim (boolfunc_to_vec n f) v) (vec_red (vec_aug arr v False) v)"
+    using bf_restrict_false_subfunction_0 [OF dim_vec_aug v] .
+  thus ?thesis using arr_red by simp
+qed
+
 lemma
+  bf_restrict_true_subfunction_1:
   assumes arr: "arr \<in> carrier_vec n"
     and v: "v < n"
   shows "(boolfunc_to_vec n (bf_restrict v True f)) arr
@@ -2594,8 +2618,25 @@ proof (rule cong [of f f])
   qed
 qed
 
+corollary
+  bf_restrict_true_subfunction_1_vec_aug:
+  assumes arr: "arr \<in> carrier_vec (n - 1)"
+    and v: "v < n"
+  shows "(boolfunc_to_vec n (bf_restrict v True f)) (vec_aug arr v True)
+    = (subfunction_1_dim (boolfunc_to_vec n f) v) arr"
+proof -
+  have arr_red: "arr = vec_red (vec_aug arr v True) v"
+    unfolding vec_aug_def vec_red_def dim_vec by auto
+  have dim_vec_aug:  "(vec_aug arr v True) \<in> carrier_vec n" 
+    using arr v vec_aug_in_carrier by force
+  have "(boolfunc_to_vec n (bf_restrict v True f)) (vec_aug arr v True)
+    = (subfunction_1_dim (boolfunc_to_vec n f) v) (vec_red (vec_aug arr v True) v)"
+    using bf_restrict_true_subfunction_1 [OF dim_vec_aug v] .
+  thus ?thesis using arr_red by simp
+qed
+
 lemma
-  simplicial_complex_link_induced_by_subfunction_0:
+  simplicial_complex_induced_by_subfunction_0_equal_bf_restrict:
   assumes s: "simplicial_complex_mp_with_boolean_function n mp V K"
     and x: "x \<in> V"
     and mp: "mp j = x"
@@ -2610,12 +2651,59 @@ lemma
   unfolding simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def [OF s, of "(boolfunc_to_vec n (bf_restrict j False f))"]
   unfolding simplicial_complex_mp_with_boolean_function.simplicial_complex_induced_by_monotone_boolean_function_def
   [OF simplicial_complex_mp_link [OF s x mp j]]
-proof
-
-
-
-
-term subfunction_0_dim
+proof (rule)
+  show "{y \<in> simplices (V - {x}).
+     \<exists>xa. dim_vec xa = card (V - {x}) \<and>
+          subfunction_0_dim (boolfunc_to_vec n f) j xa \<and>
+          simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input
+           (\<lambda>i. if i < j then mp i else mp (i + 1)) xa =
+          y}
+    \<subseteq> {y \<in> simplices V.
+        \<exists>x. dim_vec x = card V \<and>
+            boolfunc_to_vec n (bf_restrict j False f) x \<and>
+            simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp x = y}"
+  proof (rule)
+    fix xa
+    assume xa: "xa \<in> {y \<in> simplices (V - {x}).
+                \<exists>xa. dim_vec xa = card (V - {x}) \<and>
+                     subfunction_0_dim (boolfunc_to_vec n f) j xa \<and>
+                     simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input
+                      (\<lambda>i. if i < j then mp i else mp (i + 1)) xa = y}"
+    hence xas: "xa \<in> simplices (V - {x})" by simp 
+    from xa obtain xb where dimxb: "dim_vec xb = card (V - {x})" 
+                        and sub_xb :"subfunction_0_dim (boolfunc_to_vec n f) j xb"
+                        and xb_xa: "simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input
+                      (\<lambda>i. if i < j then mp i else mp (i + 1)) xb = xa" by auto
+    show "xa \<in> {y \<in> simplices V.
+                 \<exists>x. dim_vec x = card V \<and>
+                     boolfunc_to_vec n (bf_restrict j False f) x \<and>
+                     simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp x = y}"
+    proof (rule, intro conjI)
+      show "xa \<in> simplices V" using xas unfolding simplices_def by auto
+      show "\<exists>x. dim_vec x = card V \<and>
+          boolfunc_to_vec n (bf_restrict j False f) x \<and>
+          simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp x = xa"
+      proof (rule exI [of "_" "vec_aug xb j False"], intro conjI3)
+        show "dim_vec (vec_aug xb j False) = card V"
+          using dimxb
+          using dim_vec_aug [of xb _ j False]
+          by (metis One_nat_def add.right_neutral add_Suc_right card.remove local.finite x)
+        show "boolfunc_to_vec n (bf_restrict j False f) (vec_aug xb j False)"
+          using sub_xb
+          using dimxb j x
+          using bf_restrict_false_subfunction_0_vec_aug [of xb n j f]
+          by (metis bij_betw_same_card card_Diff_singleton card_atLeastLessThan carrier_dim_vec diff_zero s simplicial_complex_mp_with_boolean_function.mp)
+        show "simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input mp (vec_aug xb j False) = xa"
+          apply (unfold simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input_def [
+              OF s, of "(vec_aug xb j False)"])
+          using xb_xa
+          unfolding simplicial_complex_mp_with_boolean_function.ceros_of_boolean_input_def [
+              OF simplicial_complex_mp_link [OF s x mp j]] try
+          unfolding vec_aug_def 
+          unfolding dim_vec
+          using bf_restrict_false_subfunction_0
+          unfolding ceros_of_boolean_input_def
+      term subfunction_0_dim
 
 
 context simplicial_complex
