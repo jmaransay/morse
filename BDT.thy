@@ -54,18 +54,22 @@ inductive_set obdt :: "(nat set \<times> nat tree) set"
   where "({}, Leaf) \<in> obdt"
   | "(A, L) \<in> obdt \<Longrightarrow> (insert x A, (Node L x L)) \<in> obdt"
 
-inductive_set obdt_list :: "(nat list) set"
-  where "[] \<in> obdt_list"
-  | "A \<in> obdt_list \<Longrightarrow> x \<notin> set A \<Longrightarrow> Cons x A \<in> obdt_list"
+inductive_set obdt_list :: "(nat set \<times> nat list) set"
+  where "({}, []) \<in> obdt_list"
+  | "(A, l) \<in> obdt_list \<Longrightarrow> x \<notin> A \<Longrightarrow> (insert x A, Cons x l) \<in> obdt_list"
 
-lemma "[1] \<in> obdt_list"
+lemma "({1}, [1]) \<in> obdt_list"
   by (simp add: obdt_list.intros(1) obdt_list.intros(2))
 
-lemma "[1,1] \<notin> obdt_list"
-  by (metis list.distinct(1) list.sel(3) list.set_intros(1) nth_Cons_0 obdt_list.simps)
+lemma "({1}, [1,1]) \<notin> obdt_list"
+  by (metis (no_types, lifting) insert_absorb insert_eq_iff insert_not_empty not_Cons_self2 obdt_list.cases)
 
-lemma "[6,2,3,4,5,1] \<in> obdt_list"
-  by (simp add: obdt_list.intros(1) obdt_list.intros(2))
+lemma "({1,2,3},[3,2,1]) \<in> obdt_list"
+  using obdt_list.intros (1)
+  using obdt_list.intros (2) [of "{}" "[]" "1"
+  using obdt_list.intros (2) [of "{1}" "[1]" "2"]
+  using obdt_list.intros (2) [of "{1,2}" "[2,1]" "3"]
+  by (simp add: insert_commute obdt_list.intros(2))
 
 inductive_set obdt_set :: "(nat set) set"
   where "{} \<in> obdt_set"
@@ -123,6 +127,9 @@ lemma "({0,1,2}, {{1,2}}) \<in> cc_s"
 lemma "({0,1,2}, {{1},{2}}) \<in> cc_s"
   by (simp add: cc_s.intros(3) powerset_def)
 
+lemma cc_s_empty: "({}, A) \<in> cc_s \<Longrightarrow> A = {} \<or> A = {{}}"
+  by (metis Diff_insert_absorb Pow_empty cc_s.cases empty_iff insert_absorb powerset_def singleton_insert_inj_eq')
+
 definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "link x V K = {s. s \<in> powerset (V - {x}) \<and> s \<union> {x} \<in> K}"
 
@@ -132,7 +139,7 @@ definition cost :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Righta
 function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool list"
   where 
   "evaluation [] {} = [False]"
-  | "A \<noteq> {} \<Longrightarrow> evaluation [] A = [True]" 
+  | "A \<noteq> {} \<Longrightarrow> evaluation [] A = [True]"
   (*| "evaluation (Cons x []) {} = [False, False]"
   | "evaluation (Cons x []) {{}} = [True, False]"
   | "evaluation (Cons x []) {{},{x}} = [True, True]"*)
@@ -141,6 +148,55 @@ function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool li
   unfolding cost_def link_def powerset_def 
   by (auto) (meson neq_Nil_conv)
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). length V)", simp_all)
+qed
+
+instantiation list :: (ord) ord  
+begin
+
+definition "less_eq l m \<equiv> (length l \<le> length m) \<and> (\<forall>i<length l. l!i \<le> m!i)"
+
+definition "less l m \<equiv> (length l \<le> length m) \<and> (\<forall>i<length l. l!i < m!i)"
+
+instance
+proof
+
+qed
+
+lemma
+  assumes "finite X" and "(X, K) \<in> cc_s" and "(X, L) \<in> cc_s" and "K \<subseteq> L"
+   and "(X, l) \<in> obdt_list"
+ shows "evaluation l K \<le> evaluation l L"
+proof (cases "card X")
+  case 0
+  then have x: "X = {}" by (simp add: assms(1))
+  hence l: "l = []" and k: "K = {} \<or> K = {{}}" and L: "L = {} \<or> L = {{}}"
+    using assms (5)
+    using obdt_list.cases cc_s_empty [of K] cc_s_empty [of L] x
+    using assms (2) assms (3) by auto
+  show ?thesis 
+  proof (cases "K = {}")
+    case True note K = True
+    show ?thesis
+    proof (cases "L = {}")
+      case True
+      show ?thesis 
+        unfolding l K True evaluation.simps(1) 
+        using BDT.less_eq_list_def by fast
+    next
+      case False hence L: "L = {{}}" using L by fast
+      show ?thesis 
+        unfolding l K L evaluation.simps(1) 
+          using evaluation.simps(2) [of "{{}}"]
+          by (simp add: BDT.less_eq_list_def)
+      qed
+    next
+      case False hence K: "K = {{}}" using cc_s_empty assms(2) unfolding x by auto
+      hence L: "L = {{}}" using assms(4) using cc_s_empty assms(3) unfolding x by auto
+      show ?thesis unfolding l K L unfolding BDT.less_eq_list_def by simp
+    qed
+ next
+  case (Suc nat)
+  then show ?thesis sorry
 qed
 
 lemma "evaluation (Cons x []) {} = [False, False]" 
