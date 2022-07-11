@@ -129,6 +129,30 @@ definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Righta
 definition cost :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "cost x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K}"
 
+function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool list"
+  where 
+  "evaluation [] {} = [False]"
+  | "A \<noteq> {} \<Longrightarrow> evaluation [] A = [True]" 
+  (*| "evaluation (Cons x []) {} = [False, False]"
+  | "evaluation (Cons x []) {{}} = [True, False]"
+  | "evaluation (Cons x []) {{},{x}} = [True, True]"*)
+  | "evaluation (Cons x l) K = 
+        append (evaluation l (cost x (set l) K)) (evaluation l (link x (set l) K))"
+  unfolding cost_def link_def powerset_def 
+  by (auto) (meson neq_Nil_conv)
+termination proof (relation "Wellfounded.measure (\<lambda>(V,K). length V)", simp_all)
+qed
+
+lemma "evaluation (Cons x []) {} = [False, False]" 
+  unfolding evaluation.simps cost_def link_def by simp
+
+lemma "evaluation (Cons x []) {{}} = [True, False]" 
+  unfolding evaluation.simps cost_def link_def powerset_def by simp
+
+lemma "evaluation (Cons x []) {{},{x}} = [True, True]" 
+  unfolding evaluation.simps cost_def link_def powerset_def by simp
+
+
 
 function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool list"
   where "evaluation [] {} = [False]"
