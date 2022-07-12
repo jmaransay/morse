@@ -96,7 +96,13 @@ inductive_set cc :: "(nat set \<times> nat set set) set"
   | "({x}, {{}}) \<in> cc"
   | "({x}, {{},{x}}) \<in> cc"
   | "(A, {}) \<in> cc"
-  | "k \<subseteq> powerset A \<Longrightarrow> (A, k) \<in> cc"
+  | "A \<noteq> {} \<Longrightarrow> k \<subseteq> powerset A \<Longrightarrow> (A, k) \<in> cc"
+
+lemma "({}, {}) \<in> cc"
+  by (simp add: cc.intros(1) powerset_def)
+
+lemma "({}, {{}}) \<notin> cc"
+  by (simp add: cc.simps)
 
 lemma "({0}, {}) \<in> cc"
   by (rule cc.intros(2))
@@ -113,7 +119,7 @@ lemma "({0,1,2}, {{1},{2}}) \<in> cc"
 inductive_set cc_s :: "(nat set \<times> nat set set) set"
   where "({}, {}) \<in> cc_s"
   | "(A, {}) \<in> cc_s"
-  | "k \<subseteq> powerset A \<Longrightarrow> (A, k) \<in> cc_s"
+  | "A \<noteq> {} \<Longrightarrow> k \<subseteq> powerset A \<Longrightarrow> (A, k) \<in> cc_s"
 
 lemma "({0}, {}) \<in> cc_s" 
   by (rule cc_s.intros(2))
@@ -127,11 +133,11 @@ lemma "({0,1,2}, {{1,2}}) \<in> cc_s"
 lemma "({0,1,2}, {{1},{2}}) \<in> cc_s"
   by (simp add: cc_s.intros(3) powerset_def)
 
-lemma cc_s_empty: "({}, A) \<in> cc_s \<Longrightarrow> A = {} \<or> A = {{}}"
-  by (metis Diff_insert_absorb Pow_empty cc_s.cases empty_iff insert_absorb powerset_def singleton_insert_inj_eq')
+definition link_ext :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "link_ext x V K = {s. s \<in> powerset (V - {x}) \<and> s \<union> {x} \<in> K}"
 
 definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
-  where "link x V K = {s. s \<in> powerset (V - {x}) \<and> s \<union> {x} \<in> K}"
+  where "link x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K \<and> s \<union> {x} \<in> K}"
 
 definition cost :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "cost x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K}"
@@ -162,6 +168,54 @@ proof
 
 qed
 
+end
+
+lemma "powerset {} = {{}}" unfolding powerset_def by simp
+
+lemma "powerset {x} = {{},{x}}" unfolding powerset_def by auto
+
+lemma
+  powerset_singleton_cases:
+  assumes K: "K \<subseteq> powerset {x}"
+  shows "K = {} \<or> K = {{}} \<or> K = {{x}} \<or> K = {{},{x}}" 
+  using K
+  unfolding powerset_def
+  by (smt (verit, del_insts) Pow_singleton empty_subsetI insert_commute insert_subsetI subset_antisym subset_insert)
+
+lemma
+  assumes "finite X" and "K \<subseteq> powerset (X)" and "L \<subseteq> powerset (X)" 
+    and "K \<subseteq> L"
+   and "(X, l) \<in> obdt_list"
+ shows "evaluation l K \<le> evaluation l L"
+proof (cases "card X")
+  case 0
+  then have x: "X = {}" by (simp add: assms(1))
+  have l: "l = []"
+    using assms (5)
+    using obdt_list.cases x by auto
+  then have K: "K = {} \<or> K = {{}}" and L: "L = {} \<or> L = {{}}" 
+    using assms(2,3) unfolding x unfolding powerset_def by auto
+  show ?thesis
+  proof (cases "K = {}")
+    case True
+    show ?thesis unfolding l unfolding True using L
+      unfolding less_eq_list_def by auto
+  next
+    case False
+    hence "K = {{}}" and "L = {{}}" using L K assms (4) by blast+
+    thus ?thesis unfolding BDT.less_eq_list_def by simp
+  qed
+next
+  case Suc
+  fix n :: nat
+  assume card: "card X = Suc n"
+  show "evaluation l K \<le> evaluation l L"
+  proof (cases "n = 0")
+    case True
+    then obtain x where "X = {x}" using card
+      by (meson card_1_singleton_iff)
+    hence "K = {} \<or> K = {{}}"    
+
 lemma
   assumes "finite X" and "(X, K) \<in> cc_s" and "(X, L) \<in> cc_s" and "K \<subseteq> L"
    and "(X, l) \<in> obdt_list"
@@ -169,11 +223,12 @@ lemma
 proof (cases "card X")
   case 0
   then have x: "X = {}" by (simp add: assms(1))
-  hence l: "l = []" and k: "K = {} \<or> K = {{}}" and L: "L = {} \<or> L = {{}}"
+  have l: "l = []"
     using assms (5)
-    using obdt_list.cases cc_s_empty [of K] cc_s_empty [of L] x
-    using assms (2) assms (3) by auto
-  show ?thesis 
+    using obdt_list.cases x by auto
+  moreover have k: "K = {}" and L: "L = {}"
+    using assms(2,3) cc_s.cases x by blast+
+  ultimately show ?thesis unfolding l k L using BDT.less_eq_list_def by fast
   proof (cases "K = {}")
     case True note K = True
     show ?thesis
