@@ -139,11 +139,24 @@ definition link_ext :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Ri
 definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "link x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K \<and> s \<union> {x} \<in> K}"
 
+lemma link_empty [simp]: "link x V {} = {}" unfolding link_def powerset_def by simp
+
+lemma link_empty_singleton [simp]: "link x {} {{}} = {}" 
+  unfolding link_def powerset_def try by auto
+
+lemma link_nempty_singleton [simp]: 
+  "V \<noteq> {} \<Longrightarrow> link x V {{}} = {}" 
+  unfolding link_def powerset_def by simp
+
 definition cost :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "cost x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K}"
 
+lemma cost_empty [simp]: "cost x V {} = {}" unfolding cost_def powerset_def by simp
+
+lemma cost_singleton [simp]: "cost x V {{}} = {{}}" unfolding cost_def powerset_def by auto
+
 function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool list"
-  where 
+  where
   "evaluation [] {} = [False]"
   | "A \<noteq> {} \<Longrightarrow> evaluation [] A = [True]"
   (*| "evaluation (Cons x []) {} = [False, False]"
@@ -155,6 +168,9 @@ function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool li
   by (auto) (meson neq_Nil_conv)
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). length V)", simp_all)
 qed
+
+lemma length_evaluation_empty_list [simp]: "length (evaluation [] K) = 1" 
+  by (cases "K = {}", simp_all)
 
 instantiation list :: (ord) ord  
 begin
@@ -212,9 +228,108 @@ next
   show "evaluation l K \<le> evaluation l L"
   proof (cases "n = 0")
     case True
-    then obtain x where "X = {x}" using card
+    then obtain x where x: "X = {x}" using card
       by (meson card_1_singleton_iff)
-    hence "K = {} \<or> K = {{}}"    
+    have l: "l = [x]" using assms (5) unfolding x
+      by (metis assms(5) insert_absorb insert_eq_iff insert_not_empty obdt_list.cases x)
+    from x have K_cases: "K = {} \<or> K = {{}} \<or> K = {{x}} \<or> K = {{}, {x}}"
+      using powerset_singleton_cases [of K x] assms(2) by simp
+    from x have L_cases: "L = {} \<or> L = {{}} \<or> L = {{x}} \<or> L = {{}, {x}}" 
+      using powerset_singleton_cases [of L x] assms(3) by simp
+    show ?thesis
+    proof (cases "K = {}")
+      case True note K = True
+      have lhs: "evaluation l K = [False, False]" 
+        unfolding l True evaluation.simps by simp
+      show ?thesis
+      proof (cases "L = {}")
+        case True show ?thesis unfolding l K True
+          by (simp add: less_eq_list_def)
+      next
+        case False note L = False
+        show ?thesis 
+        proof (cases "L = {{}}")
+          case True show ?thesis unfolding l True K less_eq_list_def
+            by (simp add: nth_Cons')
+        next
+          case False note L' = False
+          show ?thesis
+          proof (cases "L = {{x}}")
+            case True show ?thesis 
+              unfolding l True K less_eq_list_def evaluation.simps 
+                cost_def link_def powerset_def 
+              by auto (metis diff_Suc_1 less_Suc0 less_SucE nth_Cons')
+          next
+            case False hence L: "L = {{},{x}}" using L L' L_cases by simp
+            show ?thesis 
+              unfolding l L K
+              unfolding evaluation.simps less_eq_list_def
+              by auto (metis diff_Suc_1 less_Suc0 less_SucE nth_Cons')
+          qed
+        qed
+      qed
+    next
+    case False note K_nempty = False
+    show ?thesis
+    proof (cases "K = {{}}")
+      case True note K = True 
+      hence L_cases: "L = {{}} \<or> L = {{x}} \<or> L = {{},{x}}" 
+        using assms (4) using L_cases by auto 
+      show ?thesis
+      proof (cases "L = {{}}")
+        case True
+        show ?thesis unfolding K True less_eq_list_def by simp
+      next
+        case False note L = False
+        hence L_cases: "L = {{x}} \<or> L = {{},{x}}" using L_cases by simp
+        show ?thesis
+        proof (cases "L = {{x}}")
+          case True
+          show ?thesis unfolding True K l evaluation.simps 
+            apply auto
+            using K True assms(4) by blast
+        next
+          case False hence L: "L = {{},{x}}" using L_cases by simp
+          show ?thesis 
+            unfolding L K l evaluation.simps less_eq_list_def 
+            unfolding cost_def link_def powerset_def
+            by auto (simp add: nth_Cons')
+        qed
+      qed
+    next
+      case False note K_nsingleton = False
+      hence "K = {{x}} \<or> K = {{},{x}}" using K_cases K_nempty by simp
+      show ?thesis
+      proof (cases "K = {{x}}")
+        case True note K = True
+        hence L_cases: "L = {{x}} \<or> L = {{},{x}}" using L_cases assms (4)
+          by auto
+        show ?thesis 
+        proof (cases "L = {{x}}")
+          case True
+          show ?thesis unfolding K True l
+            by (meson less_eq_list_def linorder_linear)
+        next
+          case False hence L: "L = {{},{x}}" using L_cases by simp
+          show ?thesis 
+            unfolding l K L less_eq_list_def evaluation.simps
+            unfolding link_def cost_def powerset_def
+            using evaluation.simps
+            by auto (simp add: nth_Cons')
+        qed
+      next
+        case False
+        hence K: "K = {{},{x}}" using K_cases K_nempty K_nsingleton by simp
+        hence L: "L = {{},{x}}" using assms (4) L_cases by auto
+        show ?thesis unfolding K L l less_eq_list_def by auto
+      qed
+    qed
+  qed
+next
+  case False note n = False
+  show ?thesis
+
+
 
 lemma
   assumes "finite X" and "(X, K) \<in> cc_s" and "(X, L) \<in> cc_s" and "K \<subseteq> L"
