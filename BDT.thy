@@ -116,10 +116,43 @@ lemma "({0,1,2}, {{1,2}}) \<in> cc"
 lemma "({0,1,2}, {{1},{2}}) \<in> cc"
   by (simp add: cc.intros(6) powerset_def)
 
+definition pow_closed :: "'a set set \<Rightarrow> bool"
+  where "pow_closed S \<equiv> (\<forall>s\<in>S. \<forall>s'\<subseteq>s. s'\<in> S)"
+
+value "pow_closed {{True, False},{True},{False},{}}"
+
+lemma
+  assumes "pow_closed S" and "s \<in> S" and "s' \<subseteq> s"
+  shows "s' \<in> S"
+  using assms(1,2,3) pow_closed_def by blast
+  
+
 inductive_set cc_s :: "(nat set \<times> nat set set) set"
   where "({}, {}) \<in> cc_s"
   | "(A, {}) \<in> cc_s"
-  | "A \<noteq> {} \<Longrightarrow> k \<subseteq> powerset A \<Longrightarrow> (A, k) \<in> cc_s"
+  | "A \<noteq> {} \<Longrightarrow> K \<subseteq> powerset A \<Longrightarrow> pow_closed K \<Longrightarrow> (A, K) \<in> cc_s"
+
+lemma
+  cc_s_closed:
+  assumes "s \<subseteq> s'" and "(A, K) \<in> cc_s" and "s' \<in> K"
+  shows "s \<in> K"
+proof (cases "A = {}")
+  case True show ?thesis
+    using True assms(2) assms(3) cc_s.simps by force
+next
+  case False note A = False
+  show ?thesis
+  proof (cases "K = {}")
+    case True
+    then show ?thesis using assms by blast
+  next
+    case False
+    from cc_s.simps [of A K]
+    have "pow_closed K" using False A
+      using assms(2) by presburger
+    then show ?thesis using assms (1,3) unfolding pow_closed_def by auto
+  qed
+qed
 
 lemma "({0}, {}) \<in> cc_s" 
   by (rule cc_s.intros(2))
@@ -127,17 +160,75 @@ lemma "({0}, {}) \<in> cc_s"
 lemma "({0,1,2}, {}) \<in> cc_s" 
   by (rule cc_s.intros(2))
 
-lemma "({0,1,2}, {{1,2}}) \<in> cc_s" 
-  by (simp add: cc_s.intros(3) powerset_def)
+lemma "({0,1,2}, {{1},{}}) \<in> cc_s" 
+  by (rule cc_s.intros(3) [of "{0,1,2}" "{{1},{}}"], simp, unfold powerset_def, auto,
+      unfold pow_closed_def, auto)
 
-lemma "({0,1,2}, {{1},{2}}) \<in> cc_s"
-  by (simp add: cc_s.intros(3) powerset_def)
+lemma "({0,1,2}, {{1},{2},{}}) \<in> cc_s"
+  by (rule cc_s.intros(3) [of "{0,1,2}" "{{1},{2},{}}"], simp, unfold powerset_def, auto,
+      unfold pow_closed_def, auto)
+
+lemma "({0,1,2}, {{1,2},{1},{2},{}}) \<in> cc_s"
+  by (rule cc_s.intros(3) [of "{0,1,2}" "{{1,2},{1},{2},{}}"], simp, unfold powerset_def, auto,
+      unfold pow_closed_def, auto)
 
 definition link_ext :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "link_ext x V K = {s. s \<in> powerset (V - {x}) \<and> s \<union> {x} \<in> K}"
 
+lemma link_ext_mono:
+  assumes "K \<subseteq> L"
+  shows "link_ext x V K \<subseteq> link_ext x V L"
+  using assms unfolding link_ext_def powerset_def by auto
+
 definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "link x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K \<and> s \<union> {x} \<in> K}"
+
+lemma link_intro [intro]: 
+  "y \<in> powerset (V - {x}) \<Longrightarrow> y \<in> K \<Longrightarrow> y \<union> {x} \<in> K \<Longrightarrow> y \<in> link x V K"
+  using link_def by simp
+
+lemma link_mono:
+  assumes "K \<subseteq> L"
+  shows "link x V K \<subseteq> link x V L"
+  using assms unfolding link_def powerset_def by auto
+
+lemma link_subset_link_ext:
+  "link x V K \<subseteq> link_ext x V K"
+  unfolding link_def link_ext_def by auto
+
+lemma
+  cc_s_link_eq_link_ext:
+  assumes cc: "(V, K) \<in> cc_s" and x: "x \<in> V" 
+  shows "link x V K = link_ext x V K"
+proof
+  show "link x V K \<subseteq> link_ext x V K" using link_subset_link_ext .
+  show "link_ext x V K \<subseteq> link x V K"
+  proof
+    fix y assume y: "y \<in> link_ext x V K"
+    from y have y: "y \<in> powerset (V - {x})" and yu: "y \<union> {x} \<in> K"
+      unfolding link_ext_def by auto
+    show "y \<in> link x V K" 
+    proof (intro link_intro)
+      show "y \<in> powerset (V - {x})" using y .
+      show "y \<union> {x} \<in> K" using yu .
+      show "y \<in> K" 
+      proof (rule cc_s_closed [of _ "y \<union> {x}" V])
+        show "y \<subseteq> y \<union> {x}" by auto
+        show "(V, K) \<in> cc_s" by (rule assms (1))
+        show "y \<union> {x} \<in> K" by (rule yu)
+      qed
+    qed
+  qed
+qed
+
+lemma
+  link_eq_link_ext_cc_s:
+  assumes link_eq: "link x V K = link_ext x V K" 
+    and x: "x \<in> V" and K: "K \<subseteq> powerset V"
+  shows "(V, K) \<in> cc_s"
+proof (intro cc_s.intros)
+  show ?thesis 
+    sorry
 
 lemma link_empty [simp]: "link x V {} = {}" unfolding link_def powerset_def by simp
 
