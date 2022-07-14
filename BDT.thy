@@ -224,11 +224,52 @@ qed
 lemma
   link_eq_link_ext_cc_s:
   assumes link_eq: "link x V K = link_ext x V K" 
-    and x: "x \<in> V" and K: "K \<subseteq> powerset V"
+    and x: "x \<in> V" and finite: "finite V" and K: "K \<subseteq> powerset V"
   shows "(V, K) \<in> cc_s"
 proof (intro cc_s.intros)
-  show ?thesis 
+  show "V \<noteq> {}" using x by fast
+  show "K \<subseteq> powerset V" using K .
+  show "pow_closed K" 
+  proof (unfold pow_closed_def, safe)
+    fix s s'
+    assume s: "s \<in> K" and s': "s' \<subseteq> s"
+    hence finite_s: "finite s" and finite_s': "finite s'" 
+      using K finite unfolding powerset_def
+      by (meson Pow_iff finite_subset in_mono)+
+    from s'  finite_s  finite_s' obtain s''
+      where s'_dif: "s' = s - s''" and s_inter: "s' \<inter> s'' = {}" 
+        and finite_s'': "finite s''"
+      by auto
+    show "s' \<in> K"
+      using s s'_dif s_inter finite_s''
+    proof (induct "card (s'')" arbitrary: s'' s' s)
+      case 0 hence "s'' = {}" by simp
+      then show ?case using s "0.prems" by simp
+    next
+      case (Suc xa)
+      then obtain A x
+        where s''_def: "s'' = A \<union> {x}" and card_A: "card A = xa"
+          and "s' = s - s''" and "s' \<inter> s'' = {}" and "finite s''"
+        by (metis Un_commute Un_insert_right card_Suc_eq sup_bot.left_neutral)
+      
+      from Suc.hyps (1) [of A s "s' \<union> {x}"] have "s' \<union> {x} \<in> K"
+        apply auto
+      have ""
+      then show ?case sorry
+    qed
+      case True
+      hence "s - {x} \<in> link_ext x V K" 
+        unfolding link_ext_def powerset_def using s
+        using K in_mono insert_Diff powerset_def by fastforce
+      hence "s - {x} \<in> link x V K" using link_eq by fast
+      then have "s' - {x} \<in> link x V K" unfolding link_def powerset_def
+        using s' try
+        show ?thesis unfolding link_def
+      using link_eq unfolding link_def
+  show ?thesis
     sorry
+qed
+qed
 
 lemma link_empty [simp]: "link x V {} = {}" unfolding link_def powerset_def by simp
 
