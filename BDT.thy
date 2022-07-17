@@ -132,6 +132,30 @@ inductive_set cc_s :: "(nat set \<times> nat set set) set"
   | "(A, {}) \<in> cc_s"
   | "A \<noteq> {} \<Longrightarrow> K \<subseteq> powerset A \<Longrightarrow> pow_closed K \<Longrightarrow> (A, K) \<in> cc_s"
 
+lemma cc_s_simplices:
+  assumes cc_s: "(V, K) \<in> cc_s" and x: "x \<in> K"
+  shows "x \<in> powerset V"
+proof (cases "V = {}")
+  case True hence k: "K = {}" using cc_s
+    by (simp add: cc_s.simps)
+  show ?thesis unfolding True powerset_def using x k
+    by simp
+next
+  case False note V = False
+  show ?thesis
+  proof (cases "K = {}")
+    case True
+    then show ?thesis using V x by simp
+  next
+    case False
+    then show ?thesis 
+      using V False  
+      using cc_s.simps [of V K]
+      unfolding powerset_def pow_closed_def
+      using cc_s x by blast
+  qed
+qed
+
 lemma
   cc_s_closed:
   assumes "s \<subseteq> s'" and "(A, K) \<in> cc_s" and "s' \<in> K"
@@ -175,10 +199,43 @@ lemma "({0,1,2}, {{1,2},{1},{2},{}}) \<in> cc_s"
 definition link_ext :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "link_ext x V K = {s. s \<in> powerset (V - {x}) \<and> s \<union> {x} \<in> K}"
 
+lemma link_ext_empty [simp]: "link_ext x V {} = {}"
+  by (simp add: link_ext_def)
+
 lemma link_ext_mono:
   assumes "K \<subseteq> L"
   shows "link_ext x V K \<subseteq> link_ext x V L"
   using assms unfolding link_ext_def powerset_def by auto
+
+lemma
+  assumes k: "(V, K) \<in> cc_s"
+  shows "(V - {x}, link_ext x V K) \<in> cc_s"
+proof (cases "x \<in> V")
+  case False
+  then have "V - {x} = V" by fast
+  from False have l: "link_ext x V K = {}" 
+    using cc_s_simplices [OF k] using k
+    unfolding link_ext_def powerset_def by auto
+  show ?thesis 
+    unfolding l 
+    using cc_s.intros (2) [of "V - {x}"] .
+next
+  case True note x = True
+  show ?thesis
+  proof (cases "V = {x}")
+    case True
+    have v: "V - {x} = {}" unfolding True by fast
+    have l: "link_ext x V K = {{}} \<or> link_ext x V K = {}" 
+      unfolding True unfolding link_ext_def powerset_def by auto
+    show ?thesis unfolding v using l apply auto using True unfolding link_ext_def powerset_def
+      apply auto
+  next
+    case False
+    then show ?thesis sorry
+  qed
+  
+  proof (rule )
+  
 
 definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "link x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K \<and> s \<union> {x} \<in> K}"
