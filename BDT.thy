@@ -236,8 +236,9 @@ next
     show ?thesis 
       unfolding True 
       using l
-      unfolding link_ext_def powerset_def apply simp try
+      unfolding link_ext_def powerset_def apply simp
       by (smt (verit, best) Collect_cong Collect_empty_eq Diff_insert_absorb Pow_empty Pow_iff Pow_singleton cc_s.simps insert_Diff1 pow_closed_def powerset_def singletonD singletonI singleton_insert_inj_eq' subset_insert_iff v)
+  next
        apply auto using True unfolding link_ext_def powerset_def
       apply auto
   next
