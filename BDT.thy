@@ -66,7 +66,7 @@ lemma "({1}, [1,1]) \<notin> obdt_list"
 
 lemma "({1,2,3},[3,2,1]) \<in> obdt_list"
   using obdt_list.intros (1)
-  using obdt_list.intros (2) [of "{}" "[]" "1"
+  using obdt_list.intros (2) [of "{}" "[]" "1"]
   using obdt_list.intros (2) [of "{1}" "[1]" "2"]
   using obdt_list.intros (2) [of "{1,2}" "[2,1]" "3"]
   by (simp add: insert_commute obdt_list.intros(2))
@@ -210,7 +210,44 @@ lemma link_ext_mono:
   shows "link_ext x V K \<subseteq> link_ext x V L"
   using assms unfolding link_ext_def powerset_def by auto
 
-
+lemma
+  assumes v: "(V, K) \<in> cc_s"
+  shows "(V, {s. insert x s \<in> K}) \<in> cc_s"
+proof (cases "x \<in> V")
+  case False
+  have "{s. insert x s \<in> K} = {}" 
+  proof (rule cc_s.cases [OF v])
+    assume "V = {}" and "K = {}"
+    thus "{s. insert x s \<in> K} = {}" by simp
+  next
+    fix A assume "V = A" and "K = {}"
+    thus "{s. insert x s \<in> K} = {}" by simp
+  next
+    fix A L
+    assume v: "V = A" and k: "K = L" and "A \<noteq> {}" and l: "L \<subseteq> powerset A"
+      and "pow_closed L" 
+    show "{s. insert x s \<in> K} = {}" 
+      using False v k l unfolding powerset_def by auto
+  qed
+  thus ?thesis using cc_s.intros (1,2) by simp
+next
+  case True
+  show ?thesis
+  proof (rule cc_s.intros (3))
+    show "V \<noteq> {}" using True by fast
+    show "{s. insert x s \<in> K} \<subseteq> powerset V" 
+      using v True cc_s.intros (3) [of V K]
+      using cc_s_simplices powerset_def by auto
+    show "pow_closed {s. insert x s \<in> K}"
+    proof -  
+      have "pow_closed K" 
+        using v True cc_s.intros (3) [of V K]
+        by (simp add: cc_s_closed pow_closed_def)
+      thus ?thesis unfolding pow_closed_def
+        by auto (meson insert_mono)
+    qed
+  qed
+qed
 
 lemma
   assumes k: "(V, K) \<in> cc_s"
@@ -233,17 +270,17 @@ next
     have l: "link_ext x V K = {{}} \<or> link_ext x V K = {}" 
       unfolding True unfolding link_ext_def powerset_def
       by auto (metis singleton_insert_inj_eq)
-    show ?thesis 
+    show ?thesis
       unfolding True 
       using l
       unfolding link_ext_def powerset_def apply simp
       by (smt (verit, best) Collect_cong Collect_empty_eq Diff_insert_absorb Pow_empty Pow_iff Pow_singleton cc_s.simps insert_Diff1 pow_closed_def powerset_def singletonD singletonI singleton_insert_inj_eq' subset_insert_iff v)
   next
-       apply auto using True unfolding link_ext_def powerset_def
-      apply auto
-  next
     case False
-    then show ?thesis sorry
+    show ?thesis
+      using x k False
+      unfolding link_ext_def powerset_def apply auto try
+      sorry
   qed
   
   proof (rule )
