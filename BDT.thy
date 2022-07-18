@@ -197,7 +197,10 @@ lemma "({0,1,2}, {{1,2},{1},{2},{}}) \<in> cc_s"
       unfold pow_closed_def, auto)
 
 definition link_ext :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
-  where "link_ext x V K = {s. s \<in> powerset (V - {x}) \<and> s \<union> {x} \<in> K}"
+  where "link_ext x V K = {s. s \<in> powerset V \<and> x \<notin> s \<and> insert x s \<in> K}"
+
+(*definition link_ext :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "link_ext x V K = {s. s \<in> powerset (V - {x}) \<and> s \<union> {x} \<in> K}"*)
 
 lemma link_ext_empty [simp]: "link_ext x V {} = {}"
   by (simp add: link_ext_def)
@@ -207,18 +210,20 @@ lemma link_ext_mono:
   shows "link_ext x V K \<subseteq> link_ext x V L"
   using assms unfolding link_ext_def powerset_def by auto
 
+
+
 lemma
   assumes k: "(V, K) \<in> cc_s"
-  shows "(V - {x}, link_ext x V K) \<in> cc_s"
+  shows "(V, link_ext x V K) \<in> cc_s"
 proof (cases "x \<in> V")
   case False
   then have "V - {x} = V" by fast
   from False have l: "link_ext x V K = {}" 
     using cc_s_simplices [OF k] using k
     unfolding link_ext_def powerset_def by auto
-  show ?thesis 
-    unfolding l 
-    using cc_s.intros (2) [of "V - {x}"] .
+  show ?thesis
+    unfolding l
+    using cc_s.intros (2) [of "V"] .
 next
   case True note x = True
   show ?thesis
@@ -226,8 +231,14 @@ next
     case True
     have v: "V - {x} = {}" unfolding True by fast
     have l: "link_ext x V K = {{}} \<or> link_ext x V K = {}" 
-      unfolding True unfolding link_ext_def powerset_def by auto
-    show ?thesis unfolding v using l apply auto using True unfolding link_ext_def powerset_def
+      unfolding True unfolding link_ext_def powerset_def
+      by auto (metis singleton_insert_inj_eq)
+    show ?thesis 
+      unfolding True 
+      using l
+      unfolding link_ext_def powerset_def apply simp try
+      by (smt (verit, best) Collect_cong Collect_empty_eq Diff_insert_absorb Pow_empty Pow_iff Pow_singleton cc_s.simps insert_Diff1 pow_closed_def powerset_def singletonD singletonI singleton_insert_inj_eq' subset_insert_iff v)
+       apply auto using True unfolding link_ext_def powerset_def
       apply auto
   next
     case False
