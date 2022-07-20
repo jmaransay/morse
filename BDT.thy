@@ -156,6 +156,10 @@ next
   qed
 qed
 
+corollary cc_s_subset:
+  assumes cc_s: "(V, K) \<in> cc_s"
+  shows "K \<subseteq> powerset V" using cc_s_simplices [OF cc_s] by auto
+
 lemma
   cc_s_closed:
   assumes "s \<subseteq> s'" and "(A, K) \<in> cc_s" and "s' \<in> K"
@@ -211,6 +215,7 @@ lemma link_ext_mono:
   using assms unfolding link_ext_def powerset_def by auto
 
 lemma
+  link_ext_cc:
   assumes v: "(V, K) \<in> cc_s"
   shows "(V, {s. insert x s \<in> K}) \<in> cc_s"
 proof (cases "x \<in> V")
@@ -249,48 +254,49 @@ next
   qed
 qed
 
-lemma
-  assumes k: "(V, K) \<in> cc_s"
+corollary
+  link_ext_cc_s:
+  assumes v: "(V, K) \<in> cc_s"
   shows "(V, link_ext x V K) \<in> cc_s"
-proof (cases "x \<in> V")
-  case False
-  then have "V - {x} = V" by fast
-  from False have l: "link_ext x V K = {}" 
-    using cc_s_simplices [OF k] using k
-    unfolding link_ext_def powerset_def by auto
-  show ?thesis
-    unfolding l
-    using cc_s.intros (2) [of "V"] .
+proof (cases "V = {}")
+  case True
+  show ?thesis using v unfolding True link_ext_def powerset_def
+    by (simp add: cc_s.simps)
 next
-  case True note x = True
+  case False note vne = False
   show ?thesis
-  proof (cases "V = {x}")
-    case True
-    have v: "V - {x} = {}" unfolding True by fast
-    have l: "link_ext x V K = {{}} \<or> link_ext x V K = {}" 
-      unfolding True unfolding link_ext_def powerset_def
-      by auto (metis singleton_insert_inj_eq)
-    show ?thesis
-      unfolding True 
-      using l
-      unfolding link_ext_def powerset_def apply simp
-      by (smt (verit, best) Collect_cong Collect_empty_eq Diff_insert_absorb Pow_empty Pow_iff Pow_singleton cc_s.simps insert_Diff1 pow_closed_def powerset_def singletonD singletonI singleton_insert_inj_eq' subset_insert_iff v)
-  next
+  proof (cases "x \<in> V")
     case False
-    show ?thesis
-      using x k False
-      unfolding link_ext_def powerset_def apply auto try
-      sorry
+    show ?thesis 
+      using False cc_s_subset [OF v] 
+      unfolding link_ext_def powerset_def
+      using cc_s.simps by auto
+  next
+    case True
+    show ?thesis unfolding link_ext_def
+    proof (rule cc_s.intros (3))
+      show "V \<noteq> {}" using True by fast
+      show "{s \<in> powerset V. x \<notin> s \<and> insert x s \<in> K} \<subseteq> powerset V"
+        using True unfolding powerset_def by auto
+      from v have pcK: "pow_closed K" 
+        using cc_s.simps True
+        by (meson cc_s_closed pow_closed_def)
+      show "pow_closed {s \<in> powerset V. x \<notin> s \<and> insert x s \<in> K}"
+        using pcK
+        unfolding pow_closed_def powerset_def
+        by auto (meson insert_mono)
+    qed
   qed
-  
-  proof (rule )
-  
+qed
+
+(*definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "link x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K \<and> s \<union> {x} \<in> K}"*)
 
 definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
-  where "link x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K \<and> s \<union> {x} \<in> K}"
+  where "link x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K \<and> insert x s \<in> K}"
 
 lemma link_intro [intro]: 
-  "y \<in> powerset (V - {x}) \<Longrightarrow> y \<in> K \<Longrightarrow> y \<union> {x} \<in> K \<Longrightarrow> y \<in> link x V K"
+  "y \<in> powerset (V - {x}) \<Longrightarrow> y \<in> K \<Longrightarrow> insert x y \<in> K \<Longrightarrow> y \<in> link x V K"
   using link_def by simp
 
 lemma link_mono:
@@ -300,49 +306,95 @@ lemma link_mono:
 
 lemma link_subset_link_ext:
   "link x V K \<subseteq> link_ext x V K"
-  unfolding link_def link_ext_def by auto
+  unfolding link_def link_ext_def powerset_def by auto
 
 lemma
   cc_s_link_eq_link_ext:
-  assumes cc: "(V, K) \<in> cc_s" and x: "x \<in> V" 
+  assumes cc: "(V, K) \<in> cc_s" 
   shows "link x V K = link_ext x V K"
 proof
   show "link x V K \<subseteq> link_ext x V K" using link_subset_link_ext .
   show "link_ext x V K \<subseteq> link x V K"
   proof
     fix y assume y: "y \<in> link_ext x V K"
-    from y have y: "y \<in> powerset (V - {x})" and yu: "y \<union> {x} \<in> K"
-      unfolding link_ext_def by auto
-    show "y \<in> link x V K" 
+    from y have y: "y \<in> powerset (V - {x})" and yu: "insert x y \<in> K"
+      unfolding link_ext_def powerset_def by auto
+    show "y \<in> link x V K"
     proof (intro link_intro)
       show "y \<in> powerset (V - {x})" using y .
-      show "y \<union> {x} \<in> K" using yu .
+      show "insert x y \<in> K" using yu .
       show "y \<in> K" 
-      proof (rule cc_s_closed [of _ "y \<union> {x}" V])
-        show "y \<subseteq> y \<union> {x}" by auto
+      proof (rule cc_s_closed [of _ "insert x y" V])
+        show "y \<subseteq> insert x y" by auto
         show "(V, K) \<in> cc_s" by (rule assms (1))
-        show "y \<union> {x} \<in> K" by (rule yu)
+        show "insert x y \<in> K" using yu .
       qed
     qed
   qed
 qed
 
 lemma
+  assumes v: "(V,K) \<in> cc_s" and x: "x \<in> V"
+  shows "(V, {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}) \<in> cc_s"
+proof (cases "V = {}")
+  case True then have False using x by fast
+  thus ?thesis by fast
+next
+  case False
+  show ?thesis
+  proof (rule cc_s.intros (3))
+    show "V \<noteq> {}" using False by fast
+    have "K \<subseteq> powerset V" using cc_s_subset [OF v] .
+    thus "{s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K} \<subseteq> powerset V" by auto
+    have "pow_closed K" using v
+      by (simp add: cc_s_closed pow_closed_def)
+    then show "pow_closed {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}"
+      unfolding pow_closed_def by auto (meson insert_mono)
+  qed
+qed
+
+lemma
+  assumes v: "(V, {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}) \<in> cc_s"
+    and x: "x \<notin> V"
+  shows "(insert x V,K) \<in> cc_s" 
+proof (rule cc_s.intros (3))
+  show "insert x V \<noteq> {}" by fast
+  have "{s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K} \<subseteq> powerset V" using cc_s_subset [OF v] .
+  thus " K \<subseteq> powerset (insert x V)" using x unfolding powerset_def apply auto try
+proof (cases "V = {}")
+  case True then have False using x by fast
+  thus ?thesis by fast
+next
+  case False
+  show ?thesis
+  proof (rule cc_s.intros (3))
+    show "V \<noteq> {}" using False by fast
+    have "K \<subseteq> powerset V" using cc_s_subset [OF v] .
+    thus "{s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K} \<subseteq> powerset V" by auto
+    have "pow_closed K" using v
+      by (simp add: cc_s_closed pow_closed_def)
+    then show "pow_closed {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}"
+      unfolding pow_closed_def by auto (meson insert_mono)
+  qed
+qed
+
+   
+lemma
   link_eq_link_ext_cc_s:
-  assumes link_eq: "link x V K = link_ext x V K" 
-    and x: "x \<in> V" and finite: "finite V" and K: "K \<subseteq> powerset V"
+  assumes link_eq: "\<forall>x\<in>V. link x V K = link_ext x V K" 
+    and finite: "finite V" and K: "K \<subseteq> powerset V"
   shows "(V, K) \<in> cc_s"
 proof (intro cc_s.intros)
   show "V \<noteq> {}" using x by fast
   show "K \<subseteq> powerset V" using K .
-  show "pow_closed K" 
+  show "pow_closed K"
   proof (unfold pow_closed_def, safe)
     fix s s'
     assume s: "s \<in> K" and s': "s' \<subseteq> s"
     hence finite_s: "finite s" and finite_s': "finite s'" 
       using K finite unfolding powerset_def
       by (meson Pow_iff finite_subset in_mono)+
-    from s'  finite_s  finite_s' obtain s''
+    from s' finite_s  finite_s' obtain s''
       where s'_dif: "s' = s - s''" and s_inter: "s' \<inter> s'' = {}" 
         and finite_s'': "finite s''"
       by auto
@@ -357,9 +409,11 @@ proof (intro cc_s.intros)
         where s''_def: "s'' = A \<union> {x}" and card_A: "card A = xa"
           and "s' = s - s''" and "s' \<inter> s'' = {}" and "finite s''"
         by (metis Un_commute Un_insert_right card_Suc_eq sup_bot.left_neutral)
-      
+
+
+
       from Suc.hyps (1) [of A s "s' \<union> {x}"] have "s' \<union> {x} \<in> K"
-        apply auto
+        apply auto try
       have ""
       then show ?case sorry
     qed
