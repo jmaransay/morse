@@ -160,6 +160,13 @@ corollary cc_s_subset:
   assumes cc_s: "(V, K) \<in> cc_s"
   shows "K \<subseteq> powerset V" using cc_s_simplices [OF cc_s] by auto
 
+corollary cc_s_finite_simplices:
+  assumes cc_s: "(V, K) \<in> cc_s" 
+    and x: "x \<in> K" and f: "finite V"
+  shows "finite x"
+  using cc_s_simplices [OF cc_s x] 
+  unfolding powerset_def using f using finite_subset [of x V] by auto
+
 lemma
   cc_s_closed:
   assumes "s \<subseteq> s'" and "(A, K) \<in> cc_s" and "s' \<in> K"
@@ -352,6 +359,75 @@ next
       unfolding pow_closed_def by auto (meson insert_mono)
   qed
 qed
+
+definition closed_remove_element :: "nat set set \<Rightarrow> bool"
+  where "closed_remove_element K = (\<forall>c\<in>K. \<forall>x\<in>c. c - {x} \<in> K)"
+
+lemma
+  cc_s_closed_remove_element:
+  assumes cc_s: "(V, K) \<in> cc_s"
+  shows "closed_remove_element K"
+proof (unfold closed_remove_element_def, rule, rule)
+  fix c x
+  assume c: "c \<in> K" and x: "x \<in> c"
+  then have v: "V \<noteq> {}" using cc_s
+    using cc_s.cases by blast
+  have "pow_closed K" 
+    using cc_s c cc_s.cases by blast
+  then show "c - {x} \<in> K" using c unfolding pow_closed_def by simp
+qed
+
+lemma
+  closed_remove_element_cc_s:
+  assumes v: "V \<noteq> {}"
+    and f: "finite V"
+    and k: "K \<subseteq> powerset V" 
+    and cre: "closed_remove_element K"
+  shows "(V, K) \<in> cc_s"
+proof
+  show "V \<noteq> {}" using v .
+  show "K \<subseteq> powerset V" using k .
+  show "pow_closed K"
+  proof (unfold pow_closed_def, safe)
+    fix s s'
+    assume s: "s \<in> K" and s's: "s' \<subseteq> s"
+    have fs: "finite s" using s f k unfolding powerset_def
+      by (meson PowD finite_subset in_mono)
+    have fs': "finite s'" by (rule finite_subset [OF s's fs])
+    show "s' \<in> K"
+    using s's fs' fs s proof (induct "card (s - s')" arbitrary: s s')
+      case 0 fix s :: "nat set" and s' :: "nat set"
+      assume eq: "0 = card (s - s')" and subset: "s' \<subseteq> s" 
+        and fs': "finite s'" and fs: "finite s" and s: "s \<in> K"
+      have "s' = s" using eq subset fs by simp 
+      thus "s' \<in> K" using s by fast
+    next
+      case (Suc n)
+      fix s'
+      assume hyp: "\<And>s s'. n = card (s - s') \<Longrightarrow> s' \<subseteq> s \<Longrightarrow> finite s' \<Longrightarrow> finite s \<Longrightarrow> s \<in> K \<Longrightarrow> s' \<in> K"
+        and suc: "Suc n = card (s - s')" and subset: "s' \<subseteq> s" and fs': "finite s'"
+        and fs: "finite s" and s: "s \<in> K" 
+      from suc obtain x where xs: "x \<in> s" and xs': "x \<notin> s'"
+        by (metis Diff_eq_empty_iff card_0_eq finite_Diff fs old.nat.distinct(2) subsetI)
+      have s's: "s - s' = insert x ((s - {x}) - s')" using xs xs' by auto
+      have card: "card ((s - {x}) - s') = n"
+         using suc fs' fs xs xs'
+        by (metis Diff_insert2 card_Diff_insert diff_Suc_1)
+      show "s' \<in> K"
+      proof (rule hyp [of "s - {x}"])
+       show "n = card (s - {x} - s')" using card by safe
+       show "s' \<subseteq> s - {x}" using subset xs xs' by auto
+       show "finite s'" using fs' .
+       show "finite (s - {x})" using fs by simp
+       show "s - {x} \<in> K" using cre s xs unfolding closed_remove_element_def by simp
+     qed
+   qed
+ qed
+qed
+
+lemma 
+  assumes "K \<subseteq> powerset V"
+  shows "closed_remove_element K"
 
 lemma
   assumes v: "(V, {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}) \<in> cc_s"
