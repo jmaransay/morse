@@ -425,89 +425,34 @@ proof
  qed
 qed
 
-lemma 
-  assumes "K \<subseteq> powerset V"
-  shows "closed_remove_element K"
-
 lemma
-  assumes v: "(V, {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}) \<in> cc_s"
-    and x: "x \<notin> V"
-  shows "(insert x V,K) \<in> cc_s" 
-proof (rule cc_s.intros (3))
-  show "insert x V \<noteq> {}" by fast
-  have "{s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K} \<subseteq> powerset V" using cc_s_subset [OF v] .
-  thus " K \<subseteq> powerset (insert x V)" using x unfolding powerset_def apply auto try
-proof (cases "V = {}")
-  case True then have False using x by fast
-  thus ?thesis by fast
-next
-  case False
-  show ?thesis
-  proof (rule cc_s.intros (3))
-    show "V \<noteq> {}" using False by fast
-    have "K \<subseteq> powerset V" using cc_s_subset [OF v] .
-    thus "{s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K} \<subseteq> powerset V" by auto
-    have "pow_closed K" using v
-      by (simp add: cc_s_closed pow_closed_def)
-    then show "pow_closed {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}"
-      unfolding pow_closed_def by auto (meson insert_mono)
+  link_eq_link_ext_cc_s:
+  assumes v: "V \<noteq> {}"
+    and f: "finite V"
+    and k: "K \<subseteq> powerset V"
+    and l: "\<forall>x\<in>V. link x V K = link_ext x V K"
+  shows cc: "(V, K) \<in> cc_s"
+proof (rule closed_remove_element_cc_s)
+  show "V \<noteq> {}" using v .
+  show "finite V" using f .
+  show "K \<subseteq> powerset V" using k .
+  show "closed_remove_element K"
+  proof (unfold closed_remove_element_def, rule, rule)
+    fix c x
+    assume c: "c \<in> K" and x: "x \<in> c"
+    have xn: "x \<notin> c - {x}" and xv: "x \<in> V"
+      using c k powerset_def x by auto
+    have "c - {x} \<in> link_ext x V K"
+      using c x xn k 
+      unfolding link_ext_def powerset_def 
+      using insert_absorb [OF x] by auto
+    hence "c - {x} \<in> link x V K" using l xv by simp
+    thus "c - {x} \<in> K" unfolding link_def by simp
   qed
 qed
 
-   
-lemma
-  link_eq_link_ext_cc_s:
-  assumes link_eq: "\<forall>x\<in>V. link x V K = link_ext x V K" 
-    and finite: "finite V" and K: "K \<subseteq> powerset V"
-  shows "(V, K) \<in> cc_s"
-proof (intro cc_s.intros)
-  show "V \<noteq> {}" using x by fast
-  show "K \<subseteq> powerset V" using K .
-  show "pow_closed K"
-  proof (unfold pow_closed_def, safe)
-    fix s s'
-    assume s: "s \<in> K" and s': "s' \<subseteq> s"
-    hence finite_s: "finite s" and finite_s': "finite s'" 
-      using K finite unfolding powerset_def
-      by (meson Pow_iff finite_subset in_mono)+
-    from s' finite_s  finite_s' obtain s''
-      where s'_dif: "s' = s - s''" and s_inter: "s' \<inter> s'' = {}" 
-        and finite_s'': "finite s''"
-      by auto
-    show "s' \<in> K"
-      using s s'_dif s_inter finite_s''
-    proof (induct "card (s'')" arbitrary: s'' s' s)
-      case 0 hence "s'' = {}" by simp
-      then show ?case using s "0.prems" by simp
-    next
-      case (Suc xa)
-      then obtain A x
-        where s''_def: "s'' = A \<union> {x}" and card_A: "card A = xa"
-          and "s' = s - s''" and "s' \<inter> s'' = {}" and "finite s''"
-        by (metis Un_commute Un_insert_right card_Suc_eq sup_bot.left_neutral)
-
-
-
-      from Suc.hyps (1) [of A s "s' \<union> {x}"] have "s' \<union> {x} \<in> K"
-        apply auto try
-      have ""
-      then show ?case sorry
-    qed
-      case True
-      hence "s - {x} \<in> link_ext x V K" 
-        unfolding link_ext_def powerset_def using s
-        using K in_mono insert_Diff powerset_def by fastforce
-      hence "s - {x} \<in> link x V K" using link_eq by fast
-      then have "s' - {x} \<in> link x V K" unfolding link_def powerset_def
-        using s' try
-        show ?thesis unfolding link_def
-      using link_eq unfolding link_def
-  show ?thesis
-    sorry
-qed
-qed
-
-lemma link_empty [simp]: "link x V {} = {}" unfolding link_def powerset_def by simp
+lemma link_empty [simp]: "link x V {} = {}" 
+  unfolding link_def powerset_def by simp
 
 lemma link_empty_singleton [simp]: "link x {} {{}} = {}" 
   unfolding link_def powerset_def try by auto
@@ -519,9 +464,20 @@ lemma link_nempty_singleton [simp]:
 definition cost :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "cost x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K}"
 
-lemma cost_empty [simp]: "cost x V {} = {}" unfolding cost_def powerset_def by simp
+lemma cost_empty [simp]: "cost x V {} = {}" 
+  unfolding cost_def powerset_def by simp
 
-lemma cost_singleton [simp]: "cost x V {{}} = {{}}" unfolding cost_def powerset_def by auto
+lemma cost_singleton [simp]: "cost x V {{}} = {{}}" 
+  unfolding cost_def powerset_def by auto
+
+lemma cost_mono:
+  assumes "K \<subseteq> L"
+  shows "cost x V K \<subseteq> cost x V L"
+  using assms unfolding cost_def powerset_def by auto
+
+lemma link_subset_cost:
+  shows "link x V K \<subseteq> cost x V K"
+  unfolding link_def cost_def powerset_def by auto
 
 function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool list"
   where
@@ -537,8 +493,22 @@ function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool li
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). length V)", simp_all)
 qed
 
-lemma length_evaluation_empty_list [simp]: "length (evaluation [] K) = 1" 
+lemma length_evaluation_empty_list [simp]: 
+  shows "length (evaluation [] K) = 1" 
   by (cases "K = {}", simp_all)
+
+lemma length_evaluation_eq:
+  shows "length (evaluation l K) = length (evaluation l L)"
+proof (induct l arbitrary: K L)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a l)
+  show ?case unfolding evaluation.simps
+    using Cons.hyps [of "(cost a (set l) K)" "(cost a (set l) L)"]
+    using Cons.hyps [of "(link a (set l) K)" "(link a (set l) L)"] 
+    by simp
+qed
 
 instantiation list :: (ord) ord  
 begin
@@ -567,138 +537,189 @@ lemma
   by (smt (verit, del_insts) Pow_singleton empty_subsetI insert_commute insert_subsetI subset_antisym subset_insert)
 
 lemma
-  assumes "finite X" and "K \<subseteq> powerset (X)" and "L \<subseteq> powerset (X)" 
-    and "K \<subseteq> L"
-   and "(X, l) \<in> obdt_list"
- shows "evaluation l K \<le> evaluation l L"
-proof (cases "card X")
-  case 0
-  then have x: "X = {}" by (simp add: assms(1))
-  have l: "l = []"
-    using assms (5)
-    using obdt_list.cases x by auto
-  then have K: "K = {} \<or> K = {{}}" and L: "L = {} \<or> L = {{}}" 
-    using assms(2,3) unfolding x unfolding powerset_def by auto
-  show ?thesis
-  proof (cases "K = {}")
-    case True
-    show ?thesis unfolding l unfolding True using L
-      unfolding less_eq_list_def by auto
-  next
-    case False
-    hence "K = {{}}" and "L = {{}}" using L K assms (4) by blast+
-    thus ?thesis unfolding BDT.less_eq_list_def by simp
-  qed
-next
-  case Suc
-  fix n :: nat
-  assume card: "card X = Suc n"
-  show "evaluation l K \<le> evaluation l L"
-  proof (cases "n = 0")
-    case True
-    then obtain x where x: "X = {x}" using card
-      by (meson card_1_singleton_iff)
-    have l: "l = [x]" using assms (5) unfolding x
-      by (metis assms(5) insert_absorb insert_eq_iff insert_not_empty obdt_list.cases x)
-    from x have K_cases: "K = {} \<or> K = {{}} \<or> K = {{x}} \<or> K = {{}, {x}}"
-      using powerset_singleton_cases [of K x] assms(2) by simp
-    from x have L_cases: "L = {} \<or> L = {{}} \<or> L = {{x}} \<or> L = {{}, {x}}" 
-      using powerset_singleton_cases [of L x] assms(3) by simp
-    show ?thesis
-    proof (cases "K = {}")
-      case True note K = True
-      have lhs: "evaluation l K = [False, False]" 
-        unfolding l True evaluation.simps by simp
-      show ?thesis
-      proof (cases "L = {}")
-        case True show ?thesis unfolding l K True
-          by (simp add: less_eq_list_def)
-      next
-        case False note L = False
-        show ?thesis 
-        proof (cases "L = {{}}")
-          case True show ?thesis unfolding l True K less_eq_list_def
-            by (simp add: nth_Cons')
-        next
-          case False note L' = False
-          show ?thesis
-          proof (cases "L = {{x}}")
-            case True show ?thesis 
-              unfolding l True K less_eq_list_def evaluation.simps 
-                cost_def link_def powerset_def 
-              by auto (metis diff_Suc_1 less_Suc0 less_SucE nth_Cons')
-          next
-            case False hence L: "L = {{},{x}}" using L L' L_cases by simp
-            show ?thesis 
-              unfolding l L K
-              unfolding evaluation.simps less_eq_list_def
-              by auto (metis diff_Suc_1 less_Suc0 less_SucE nth_Cons')
-          qed
-        qed
-      qed
+  less_eq_list_append:
+  assumes le1: "length l1 = length l2" and le2: "length l3 = length l4"
+    and leq1: "l1 \<le> l2" and leq2: "l3 \<le> l4"
+  shows "l1 @ l3 \<le> l2 @ l4"
+proof (unfold less_eq_list_def, rule)
+  show "length (l1 @ l3) \<le> length (l2 @ l4)" using le1 le2 by simp
+  show "\<forall>i<length (l1 @ l3). (l1 @ l3) ! i \<le> (l2 @ l4) ! i" 
+  proof (safe)
+    fix i assume i: "i < length (l1 @ l3)"
+    show "(l1 @ l3) ! i \<le> (l2 @ l4) ! i"
+    proof (cases "i < length l1")
+      case True 
+      thus ?thesis using leq1 le1
+        by (simp add: less_eq_list_def nth_append)
     next
-    case False note K_nempty = False
-    show ?thesis
-    proof (cases "K = {{}}")
-      case True note K = True 
-      hence L_cases: "L = {{}} \<or> L = {{x}} \<or> L = {{},{x}}" 
-        using assms (4) using L_cases by auto 
-      show ?thesis
-      proof (cases "L = {{}}")
-        case True
-        show ?thesis unfolding K True less_eq_list_def by simp
-      next
-        case False note L = False
-        hence L_cases: "L = {{x}} \<or> L = {{},{x}}" using L_cases by simp
-        show ?thesis
-        proof (cases "L = {{x}}")
-          case True
-          show ?thesis unfolding True K l evaluation.simps 
-            apply auto
-            using K True assms(4) by blast
-        next
-          case False hence L: "L = {{},{x}}" using L_cases by simp
-          show ?thesis 
-            unfolding L K l evaluation.simps less_eq_list_def 
-            unfolding cost_def link_def powerset_def
-            by auto (simp add: nth_Cons')
-        qed
-      qed
-    next
-      case False note K_nsingleton = False
-      hence "K = {{x}} \<or> K = {{},{x}}" using K_cases K_nempty by simp
-      show ?thesis
-      proof (cases "K = {{x}}")
-        case True note K = True
-        hence L_cases: "L = {{x}} \<or> L = {{},{x}}" using L_cases assms (4)
-          by auto
-        show ?thesis 
-        proof (cases "L = {{x}}")
-          case True
-          show ?thesis unfolding K True l
-            by (meson less_eq_list_def linorder_linear)
-        next
-          case False hence L: "L = {{},{x}}" using L_cases by simp
-          show ?thesis 
-            unfolding l K L less_eq_list_def evaluation.simps
-            unfolding link_def cost_def powerset_def
-            using evaluation.simps
-            by auto (simp add: nth_Cons')
-        qed
-      next
-        case False
-        hence K: "K = {{},{x}}" using K_cases K_nempty K_nsingleton by simp
-        hence L: "L = {{},{x}}" using assms (4) L_cases by auto
-        show ?thesis unfolding K L l less_eq_list_def by auto
-      qed
+      case False hence "length l1 \<le> i" by simp
+      thus ?thesis 
+        unfolding nth_append 
+        using le1
+        using leq2 le2 i unfolding less_eq_list_def by auto
     qed
   qed
+qed
+
+lemma
+  evaluation_mono:
+  assumes k: "K \<subseteq> powerset V" and l: "L \<subseteq> powerset V" 
+    and kl: "K \<subseteq> L"
+    (*and "(X, l) \<in> obdt_list"*)
+ shows "evaluation l K \<le> evaluation l L"
+using kl proof (induction l arbitrary: K L)
+  case Nil
+  then show ?case 
+    using kl using evaluation.simps (1,2)
+    unfolding less_eq_list_def
+    by (metis One_nat_def bot.extremum_uniqueI le_boolE length_evaluation_empty_list less_Suc0 linorder_linear nth_Cons_0)
 next
-  case False note n = False
+  case (Cons a l K L)
+  note kl = Cons.prems
+  show ?case
+  proof (unfold evaluation.simps, rule less_eq_list_append)
+  show "length (evaluation l (cost a (set l) K)) = length (evaluation l (cost a (set l) L))"
+    and "length (evaluation l (link a (set l) K)) = length (evaluation l (link a (set l) L))"
+    using length_evaluation_eq by simp_all
+  show "evaluation l (cost a (set l) K) \<le> evaluation l (cost a (set l) L)"
+    using Cons.IH [OF cost_mono [OF kl, of a "set l"]] .
+  show "evaluation l (link a (set l) K) \<le> evaluation l (link a (set l) L)"
+    using Cons.IH [OF link_mono [OF kl, of a "set l"]] .
+  qed
+qed
+
+lemma
+  append_eq_same_length:
+  assumes mleq: "m1 @ m2 = l1 @ l2" 
+    and lm: "length m1 = length m2" and ll: "length l1 = length l2"
+  shows "m1 = l1" and "m2 = l2"
+  using append_eq_conv_conj [of "m1" "m2" "l1 @ l2"]
+  using mleq lm ll by force+
+
+corollary evaluation_cost_link:
+  assumes e: "evaluation l K = l1 @ l2" 
+    and l :"length l1 = length l2"  
+  shows "l2 \<le> l1"
+proof (cases l)
+  case Nil 
+  have False
+  proof (cases "K = {}")
+    case True show False
+      using e unfolding Nil True
+      unfolding evaluation.simps (1) 
+      using l
+      by (metis Nil_is_append_conv append_eq_Cons_conv length_0_conv list.discI)
+  next
+    case False show False
+    using e False unfolding Nil
+    unfolding evaluation.simps (2) [OF False]
+    using l
+    by (metis Nil_is_append_conv append_eq_Cons_conv length_0_conv list.discI)
+  qed
+  thus ?thesis by fast
+next
+  case (Cons a l') note la = Cons
+  have l1: "l1 = evaluation l' (cost a (set l') K)" 
+  proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (cost a (set l') K)" "evaluation l' (link a (set l') K)"])
+    show "l1 @ l2 = evaluation l' (cost a (set l') K) @ evaluation l' (link a (set l') K)"
+      using e [symmetric] unfolding la unfolding evaluation.simps (3) .
+    show "length l1 = length l2" using l .
+    show "length (evaluation l' (cost a (set l') K)) = length (evaluation l' (link a (set l') K))"
+      using length_evaluation_eq [of "l'" "(cost a (set l') K)" "(link a (set l') K)"] .
+  qed
+  have l2: "l2 = evaluation l' (link a (set l') K)" 
+  proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (cost a (set l') K)" "evaluation l' (link a (set l') K)"])
+    show "l1 @ l2 = evaluation l' (cost a (set l') K) @ evaluation l' (link a (set l') K)"
+      using e [symmetric] unfolding la unfolding evaluation.simps (3) .
+    show "length l1 = length l2" using l .
+    show "length (evaluation l' (cost a (set l') K)) = length (evaluation l' (link a (set l') K))"
+      using length_evaluation_eq [of "l'" "(cost a (set l') K)" "(link a (set l') K)"] .
+  qed
   show ?thesis
+    unfolding l1 l2
+  proof (rule evaluation_mono [of _ "set l'"])
+    show "cost a (set l') K \<subseteq> powerset (set l')" unfolding cost_def powerset_def by auto
+    show "link a (set l') K \<subseteq> powerset (set l')" unfolding link_def powerset_def by auto
+    show "link a (set l') K \<subseteq> cost a (set l') K" by (rule link_subset_cost)
+  qed
+qed
+
+inductive_set not_evaders :: "(bool list) set"
+  where (*"[False, False] \<in> not_evaders"
+  | "[True, True] \<in> not_evaders"
+  |*) "l1 = l2 \<Longrightarrow> l1 @ l2 \<in> not_evaders"
+  | "l1 \<in> not_evaders \<Longrightarrow> l2 \<in> not_evaders \<Longrightarrow> length l1 = length l2 \<Longrightarrow> l1 @ l2 \<in> not_evaders"
+
+lemma "[False, False] \<in> not_evaders"
+  by (metis append_eq_Cons_conv not_evaders.simps)
+
+lemma "[True, True] \<in> not_evaders"
+  by (metis append_eq_Cons_conv not_evaders.simps)
+
+lemma true_evader: "[True] \<notin> not_evaders"
+  by (smt (verit, best) Cons_eq_append_conv append_is_Nil_conv length_0_conv not_Cons_self2 not_evaders.cases)
+
+lemma false_evader: "[False] \<notin> not_evaders"
+  by (smt (verit, best) Cons_eq_append_conv append_is_Nil_conv length_0_conv not_Cons_self2 not_evaders.cases)
+
+lemma "[True, False] \<notin> not_evaders"
+proof (rule ccontr, safe)
+  assume "[True, False] \<in> not_evaders"
+  show False
+    using not_evaders.cases [of "[True, False]"] true_evader false_evader
+    by (smt (verit, ccfv_threshold) \<open>[True, False] \<in> not_evaders\<close> append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
+qed
+
+lemma "[False, True] \<notin> not_evaders"
+proof (rule ccontr, safe)
+  assume "[False, True] \<in> not_evaders"
+  show False
+    using not_evaders.cases [of "[False, True]"] true_evader false_evader
+    by (smt (verit, ccfv_threshold) \<open>[False, True] \<in> not_evaders\<close> append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
+qed
+
+
+(*definition join_vertices :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set"
+  where "join_vertices V V' = (V \<union> V')"
+
+definition join_simplices :: "'a set set \<Rightarrow> 'a set set \<Rightarrow> 'a set set"
+  where "join_simplices K K' = (K \<union> K' \<union> {x. \<exists>y\<in>K. \<exists>y'\<in>K'. x = y \<union> y'})"
+
+definition cone_vertices :: "'a \<Rightarrow> 'a set \<Rightarrow> 'a set"
+  where "cone_vertices n V = join_vertices {n} V"
+
+definition cone_simplices :: "'a \<Rightarrow> 'a set set \<Rightarrow> 'a set set"
+  where "cone_simplices n K = join_simplices {{},{n}} K"*)
+
+definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+  where "cone X K = (\<exists>x\<in>X. \<exists>T. (X - {x}, T) \<in> cc_s \<and> K = T \<union> {s. \<exists>k\<in>K. s = insert x k})"
+
+lemma
+  assumes k: "K \<subseteq> powerset X" 
+    and c: "cone X K" and x: "X \<noteq> {}" and f: "finite X"
+  shows "evaluation l K \<in> not_evaders"
+proof (cases "K = {}")
+  case True note ke = True
+  show ?thesis
+  proof (cases "l = []")
+    case True
+    show ?thesis unfolding ke True 
+      unfolding evaluation.simps (1) using not_evaders.simps try
+    
+    unfolding True using evaluation.simps using not_evaders.simps
 
 
 
+
+
+    try
+      show "l2 = evaluation l' (link a (set l') K)
+      using e unfolding la
+      unfolding evaluation.simps (3) using l
+      using length_evaluation_eq [of "l'" "(cost a (set l') K)" "(link a (set l') K)"]
+      by (smt (z3) add.commute add.right_neutral add_le_same_cancel1 append_eq_append_conv append_eq_append_conv2 dual_order.eq_iff e evaluation.simps(3) la le_cases3 le_zero_eq length_append)
+    show ?thesis
+      
 lemma
   assumes "finite X" and "(X, K) \<in> cc_s" and "(X, L) \<in> cc_s" and "K \<subseteq> L"
    and "(X, l) \<in> obdt_list"
