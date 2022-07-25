@@ -487,7 +487,7 @@ function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool li
   | "evaluation (Cons x []) {{}} = [True, False]"
   | "evaluation (Cons x []) {{},{x}} = [True, True]"*)
   | "evaluation (Cons x l) K = 
-        append (evaluation l (cost x (set l) K)) (evaluation l (link x (set l) K))"
+        append (evaluation l (link x (set l) K)) (evaluation l (cost x (set l) K))"
   unfolding cost_def link_def powerset_def 
   by (auto) (meson neq_Nil_conv)
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). length V)", simp_all)
@@ -565,7 +565,7 @@ lemma
   evaluation_mono:
   assumes k: "K \<subseteq> powerset V" and l: "L \<subseteq> powerset V" 
     and kl: "K \<subseteq> L"
-    (*and "(X, l) \<in> obdt_list"*)
+    (*and "(V, l) \<in> obdt_list"*)
  shows "evaluation l K \<le> evaluation l L"
 using kl proof (induction l arbitrary: K L)
   case Nil
@@ -578,8 +578,8 @@ next
   note kl = Cons.prems
   show ?case
   proof (unfold evaluation.simps, rule less_eq_list_append)
-  show "length (evaluation l (cost a (set l) K)) = length (evaluation l (cost a (set l) L))"
-    and "length (evaluation l (link a (set l) K)) = length (evaluation l (link a (set l) L))"
+  show "length (evaluation l (link a (set l) K)) = length (evaluation l (link a (set l) L))"
+    and "length (evaluation l (cost a (set l) K)) = length (evaluation l (cost a (set l) L))"
     using length_evaluation_eq by simp_all
   show "evaluation l (cost a (set l) K) \<le> evaluation l (cost a (set l) L)"
     using Cons.IH [OF cost_mono [OF kl, of a "set l"]] .
@@ -599,7 +599,7 @@ lemma
 corollary evaluation_cost_link:
   assumes e: "evaluation l K = l1 @ l2" 
     and l :"length l1 = length l2"  
-  shows "l2 \<le> l1"
+  shows "l1 \<le> l2"
 proof (cases l)
   case Nil 
   have False
@@ -619,21 +619,21 @@ proof (cases l)
   thus ?thesis by fast
 next
   case (Cons a l') note la = Cons
-  have l1: "l1 = evaluation l' (cost a (set l') K)" 
-  proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (cost a (set l') K)" "evaluation l' (link a (set l') K)"])
-    show "l1 @ l2 = evaluation l' (cost a (set l') K) @ evaluation l' (link a (set l') K)"
+  have l1: "l1 = evaluation l' (link a (set l') K)"
+  proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (link a (set l') K)" "evaluation l' (cost a (set l') K)"])
+    show "l1 @ l2 = evaluation l' (link a (set l') K) @ evaluation l' (cost a (set l') K)"
       using e [symmetric] unfolding la unfolding evaluation.simps (3) .
     show "length l1 = length l2" using l .
-    show "length (evaluation l' (cost a (set l') K)) = length (evaluation l' (link a (set l') K))"
-      using length_evaluation_eq [of "l'" "(cost a (set l') K)" "(link a (set l') K)"] .
+    show "length (evaluation l' (link a (set l') K)) = length (evaluation l' (cost a (set l') K))"
+      using length_evaluation_eq [of "l'" "(link a (set l') K)" "(cost a (set l') K)"] .
   qed
-  have l2: "l2 = evaluation l' (link a (set l') K)" 
-  proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (cost a (set l') K)" "evaluation l' (link a (set l') K)"])
-    show "l1 @ l2 = evaluation l' (cost a (set l') K) @ evaluation l' (link a (set l') K)"
+  have l2: "l2 = evaluation l' (cost a (set l') K)"
+  proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (link a (set l') K)" "evaluation l' (cost a (set l') K)"])
+    show "l1 @ l2 = evaluation l' (link a (set l') K) @ evaluation l' (cost a (set l') K)"
       using e [symmetric] unfolding la unfolding evaluation.simps (3) .
     show "length l1 = length l2" using l .
-    show "length (evaluation l' (cost a (set l') K)) = length (evaluation l' (link a (set l') K))"
-      using length_evaluation_eq [of "l'" "(cost a (set l') K)" "(link a (set l') K)"] .
+    show "length (evaluation l' (link a (set l') K)) = length (evaluation l' (cost a (set l') K))"
+      using length_evaluation_eq [of "l'" "(link a (set l') K)" "(cost a (set l') K)"] .
   qed
   show ?thesis
     unfolding l1 l2
@@ -649,6 +649,9 @@ inductive_set not_evaders :: "(bool list) set"
   | "[True, True] \<in> not_evaders"
   |*) "l1 = l2 \<Longrightarrow> l1 @ l2 \<in> not_evaders"
   | "l1 \<in> not_evaders \<Longrightarrow> l2 \<in> not_evaders \<Longrightarrow> length l1 = length l2 \<Longrightarrow> l1 @ l2 \<in> not_evaders"
+
+lemma "[] \<in> not_evaders"
+  by (metis eq_Nil_appendI not_evaders.simps)
 
 lemma "[False, False] \<in> not_evaders"
   by (metis append_eq_Cons_conv not_evaders.simps)
@@ -678,27 +681,62 @@ proof (rule ccontr, safe)
     by (smt (verit, ccfv_threshold) \<open>[False, True] \<in> not_evaders\<close> append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
 qed
 
-
-(*definition join_vertices :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set"
-  where "join_vertices V V' = (V \<union> V')"
-
-definition join_simplices :: "'a set set \<Rightarrow> 'a set set \<Rightarrow> 'a set set"
-  where "join_simplices K K' = (K \<union> K' \<union> {x. \<exists>y\<in>K. \<exists>y'\<in>K'. x = y \<union> y'})"
-
-definition cone_vertices :: "'a \<Rightarrow> 'a set \<Rightarrow> 'a set"
-  where "cone_vertices n V = join_vertices {n} V"
-
-definition cone_simplices :: "'a \<Rightarrow> 'a set set \<Rightarrow> 'a set set"
-  where "cone_simplices n K = join_simplices {{},{n}} K"*)
-
 definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+  where "cone X K = (\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t})"
+
+(*definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where "cone X K = (\<exists>x\<in>X. \<exists>T. (X - {x}, T) \<in> cc_s \<and> K = T \<union> {s. \<exists>k\<in>K. s = insert x k})"
+*)
+
+lemma
+  cone_cost_eq_link:
+  assumes x: "x \<in> X" 
+    and cs: "T \<subseteq> powerset (X - {x})" 
+    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  shows "cost x V K = link x V K"
+proof
+  show "link x V K \<subseteq> cost x V K" by (rule link_subset_cost) 
+  show "cost x V K \<subseteq> link x V K"
+    unfolding kt
+    unfolding cost_def link_def powerset_def by auto
+qed
+
+(*The following property only holds assuming that K is a simplicial complex*)
+(*lemma
+  assumes x: "x \<in> X"
+    and cs: "T \<subseteq> powerset (X - {x})" 
+    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  shows "cost x V K = T"
+proof
+  show "cost x V K \<subseteq> T" using cs unfolding cost_def powerset_def kt by auto
+  show "T \<subseteq> cost x V K"
+    unfolding kt
+    unfolding cost_def powerset_def try by auto
+qed*)
+
+lemma
+  assumes x: "x \<in> X" 
+    and cs: "T \<subseteq> powerset (X - {x})" 
+    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  shows "cost y V K = {s. \<exists>t\<in>T. s = insert x t}"
+proof
 
 lemma
   assumes k: "K \<subseteq> powerset X" 
     and c: "cone X K" and x: "X \<noteq> {}" and f: "finite X"
   shows "evaluation l K \<in> not_evaders"
-proof (cases "K = {}")
+proof -
+  from c obtain x :: nat and T :: "nat set set"
+    where x: "x \<in> X" and cs: "T \<subseteq> powerset (X - {x})" and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
+    unfolding cone_def by auto
+  show ?thesis
+  proof (cases "T = {}")
+    case True
+    have k: "K = {}" using kt unfolding True by simp
+    show ?thesis unfolding k try
+    show ?thesis using kt unfolding True
+
+  proof (cases "K = {}")
   case True note ke = True
   show ?thesis
   proof (cases "l = []")
