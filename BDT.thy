@@ -684,6 +684,13 @@ qed
 definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where "cone X K = (\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t})"
 
+lemma 
+  cone_disjoint:
+  assumes "cone X K" and "x \<in> X" and t: "T \<subseteq> powerset (X - {x})"
+   and "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  shows "T \<inter> {s. \<exists>t\<in>T. s = insert x t} = {}"
+  using t unfolding powerset_def by auto
+
 (*definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where "cone X K = (\<exists>x\<in>X. \<exists>T. (X - {x}, T) \<in> cc_s \<and> K = T \<union> {s. \<exists>k\<in>K. s = insert x k})"
 *)
@@ -715,11 +722,153 @@ proof
 qed*)
 
 lemma
-  assumes x: "x \<in> X" 
-    and cs: "T \<subseteq> powerset (X - {x})" 
+  cost_cone_eq:
+  assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
+    and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
-  shows "cost y V K = {s. \<exists>t\<in>T. s = insert x t}"
+  shows "cost y V K = (cost y (V - {x}) T) \<union> {s. \<exists>t\<in>(cost y (V - {x}) T). s = insert x t}"
 proof
+  show "cost y V K \<subseteq> cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}"
+  proof
+    fix xa
+    assume xa: "xa \<in> cost y V K"
+    show "xa \<in> cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}"
+    proof (cases "x \<in> xa")
+      case False
+      from xa and False have "xa \<in> T" and "xa \<in> Pow (V - {x} - {y})" 
+        unfolding kt cost_def powerset_def by auto
+      thus ?thesis unfolding cost_def powerset_def  by simp
+    next
+      case True note xxa = True
+      show ?thesis
+      proof (cases "xa \<in> T")
+        case True
+        with xxa obtain xa'
+          where "xa' \<in> Pow (V - {x} - {y})" and "xa' \<in> T" and "xa = insert x xa'"
+          using cs powerset_def by auto
+        thus ?thesis unfolding cost_def powerset_def by auto
+      next
+        case False
+        with xxa and xa and cs obtain t
+          where xapow: "xa \<in> Pow (V - {y})" and xainsert: "xa = insert x t" 
+            and tT: "t \<in> T" and tpow: "t \<in> Pow (V - {x} - {y})"
+          unfolding kt cost_def powerset_def by blast
+        thus ?thesis unfolding cost_def powerset_def by auto
+      qed
+    qed
+  qed
+  show "cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t} \<subseteq> cost y V K"
+    unfolding kt cost_def powerset_def using x xy by auto
+qed
+
+lemma
+  link_cone_eq:
+  assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
+    and cs: "T \<subseteq> powerset (V - {x})" 
+    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  shows "link y V K = (link y (V - {x}) T) \<union> {s. \<exists>t\<in>(link y (V - {x}) T). s = insert x t}"
+  unfolding link_def [of y V K]
+  unfolding link_def [of y "V - {x}" T]
+  
+proof
+  show "link y (V - {x}) T \<union> {s. \<exists>t\<in>link y (V - {x}) T. s = insert x t} \<subseteq> link y V K"
+    unfolding kt link_def powerset_def using x xy by auto
+  show "link y V K \<subseteq> link y (V - {x}) T \<union> {s. \<exists>t\<in>link y (V - {x}) T. s = insert x t}"
+  proof
+    fix xa
+    assume xa: "xa \<in> link y V K"
+    show "xa \<in> link y (V - {x}) T \<union> {s. \<exists>t\<in>link y (V - {x}) T. s = insert x t}"
+    proof (cases "x \<in> xa")
+      case False
+      from xa and False have xak: "xa \<in> K" and iyxa: "insert y xa \<in> K" and xapow: "xa \<in> Pow (V - {x} - {y})" 
+        unfolding link_def powerset_def by auto
+      from xak have xat: "xa \<in> T" unfolding kt using False by auto
+      from iyxa have iyxat: "insert y xa \<in> T" unfolding kt using False xy by auto
+      show ?thesis unfolding link_def powerset_def kt using xat iyxat xapow by simp
+    next
+      case True note xxa = True
+      have "xa \<in> {s. \<exists>t\<in>link y (V - {x}) T. s = insert x t}"
+      proof
+        have xap: "xa \<in> Pow (V - {y})" and xak: "xa \<in> K" and iyxa: "insert y xa \<in> K"
+          using xa unfolding link_def powerset_def by auto
+        obtain t where "t \<in> Pow (V - {x} - {y})" (*and "t \<in> T" 
+          and "insert y t \<in> T" and*) "xa = insert x t"
+          using xy (*cs*) True xap unfolding link_def powerset_def
+          by (metis Diff_empty PowD PowI insertCI insert_Diff subset_Diff_insert subset_insert_iff x)
+        have "t \<in> T" try
+        thus ?thesis by simp
+      proof (cases "xa \<in> T")
+        case True
+        with xxa obtain xa'
+          where "xa' \<in> Pow (V - {x} - {y})" and "xa' \<in> T" and "xa = insert x xa'"
+            and "insert y xa' \<in> T"
+          using cs unfolding powerset_def by auto
+        thus ?thesis unfolding link_def powerset_def by auto
+      next
+        case False
+        with xxa and xa and cs obtain t
+          where xapow: "xa \<in> Pow (V - {y})" and xainsert: "xa = insert x t" 
+            and tT: "t \<in> T" and tpow: "t \<in> Pow (V - {x} - {y})"
+          unfolding kt link_def powerset_def by blast
+        thus ?thesis unfolding link_def powerset_def try by auto
+      qed
+    qed
+  qed
+qed
+
+
+lemma
+  link_cone_eq:
+  assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
+    and cs: "T \<subseteq> powerset (V - {x})" 
+    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  shows "link y V K = (link y (V - {x}) T) \<union> {s. \<exists>t\<in>(link y (V - {x}) T). s = insert x t}"
+  unfolding kt link_def powerset_def 
+proof
+  show "{s \<in> Pow (V - {x} - {y}). s \<in> T \<and> insert y s \<in> T} \<union>
+    {s. \<exists>t\<in>{s \<in> Pow (V - {x} - {y}). s \<in> T \<and> insert y s \<in> T}. s = insert x t}
+    \<subseteq> {s \<in> Pow (V - {y}).
+        s \<in> T \<union> {s. \<exists>t\<in>T. s = insert x t} \<and> insert y s \<in> T \<union> {s. \<exists>t\<in>T. s = insert x t}}"
+    using x xy by auto
+  show "{s \<in> Pow (V - {y}).
+     s \<in> T \<union> {s. \<exists>t\<in>T. s = insert x t} \<and> insert y s \<in> T \<union> {s. \<exists>t\<in>T. s = insert x t}}
+    \<subseteq> {s \<in> Pow (V - {x} - {y}). s \<in> T \<and> insert y s \<in> T} \<union>
+       {s. \<exists>t\<in>{s \<in> Pow (V - {x} - {y}). s \<in> T \<and> insert y s \<in> T}. s = insert x t}"
+  proof
+    fix xa
+    assume xa: "xa \<in> {s \<in> Pow (V - {y}).
+                s \<in> T \<union> {s. \<exists>t\<in>T. s = insert x t} \<and>
+                insert y s \<in> T \<union> {s. \<exists>t\<in>T. s = insert x t}}"
+    show "xa \<in> {s \<in> Pow (V - {x} - {y}). s \<in> T \<and> insert y s \<in> T} \<union>
+                {s. \<exists>t\<in>{s \<in> Pow (V - {x} - {y}). s \<in> T \<and> insert y s \<in> T}. s = insert x t}"
+    proof (cases "x \<in> xa")
+      case False
+      from xa and False have "xa \<in> T" and "xa \<in> Pow (V - {y})" by auto
+      thus ?thesis by simp
+    next
+      case True note xxa = True
+      show ?thesis
+      proof (cases "xa \<in> T")
+        case True
+        with xxa obtain xa'
+          where "xa' \<in> Pow (V - {x} - {y})" and "xa' \<in> T" and "xa = insert x xa'"
+          using cs powerset_def by auto
+        thus ?thesis by auto
+      next
+        case False
+        with xxa and xa obtain t
+          where xapow: "xa \<in> Pow (V - {y})" and xainsert: "xa = insert x t" and tT: "t \<in> T"
+          by auto
+        then have tpow: "t \<in> Pow (V - {x} - {y})"
+          by (metis Diff_insert PowD PowI cs insert_iff powerset_def subset_Diff_insert subset_iff)
+        show ?thesis 
+          using xapow xainsert tT tpow by auto
+      qed
+    qed
+  qed
+qed
+
+
 
 lemma
   assumes k: "K \<subseteq> powerset X" 
