@@ -743,9 +743,9 @@ proof
       show ?thesis
       proof (cases "xa \<in> T")
         case True
-        with xxa obtain xa'
+        obtain xa'
           where "xa' \<in> Pow (V - {x} - {y})" and "xa' \<in> T" and "xa = insert x xa'"
-          using cs powerset_def by auto
+          using cs True xxa unfolding powerset_def by auto
         thus ?thesis unfolding cost_def powerset_def by auto
       next
         case False
@@ -767,9 +767,40 @@ lemma
     and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
   shows "link y V K = (link y (V - {x}) T) \<union> {s. \<exists>t\<in>(link y (V - {x}) T). s = insert x t}"
+proof
+  show "link y (V - {x}) T \<union> {s. \<exists>t\<in>link y (V - {x}) T. s = insert x t} \<subseteq> link y V K"
+    unfolding kt link_def powerset_def using x xy by auto
+  show "link y V K \<subseteq> link y (V - {x}) T \<union> {s. \<exists>t\<in>link y (V - {x}) T. s = insert x t}"
   unfolding link_def [of y V K]
   unfolding link_def [of y "V - {x}" T]
-  
+  proof
+    fix xa
+    assume "xa \<in> {s \<in> powerset (V - {y}). s \<in> K \<and> insert y s \<in> K}"
+    hence xap: "xa \<in> powerset (V - {y})" and xak: "xa \<in> K" and iyxa: "insert y xa \<in> K" by auto
+    show "xa \<in> {s \<in> powerset (V - {x} - {y}). s \<in> T \<and> insert y s \<in> T} \<union>
+           {s. \<exists>t\<in>{s \<in> powerset (V - {x} - {y}). s \<in> T \<and> insert y s \<in> T}. s = insert x t}"
+    proof (cases "x \<in> xa")
+      case False note xnxa = False
+      hence xapxy: "xa \<in> powerset (V - {x} - {y})" using xap xy unfolding powerset_def by auto
+      moreover have "xa \<in> T" using xak kt False by auto
+      moreover have "insert y xa \<in> T"
+      proof (cases "insert y xa \<in> T")
+        case True then show ?thesis by simp
+      next
+        case False with iyxa and kt have "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}"
+          by simp
+        then have "False" using xnxa
+          using xy by blast
+        thus ?thesis by (rule ccontr)
+      qed
+      ultimately have "xa \<in> {s \<in> powerset (V - {x} - {y}). s \<in> T \<and> insert y s \<in> T}"
+        by auto
+      thus ?thesis by fast
+    next
+    proof
+      hence xapxy: "xa \<in> powerset (V - {x} - {y})" using xap xy unfolding powerset_def by auto
+      
+
 proof
   show "link y (V - {x}) T \<union> {s. \<exists>t\<in>link y (V - {x}) T. s = insert x t} \<subseteq> link y V K"
     unfolding kt link_def powerset_def using x xy by auto
