@@ -84,6 +84,10 @@ next
     by (metis card_Suc_eq length_0_conv length_Cons neq_Nil_conv obdt_list.simps)
 qed
 
+lemma obdt_list_coherent:
+  assumes al: "(A, l) \<in> obdt_list" (*and f: "finite A"*)
+  shows "A = set l" using al by (induct, simp_all)
+
 inductive_set obdt_set :: "(nat set) set"
   where "{} \<in> obdt_set"
   | "A \<in> obdt_set \<Longrightarrow> x \<notin> A \<Longrightarrow> (insert x A) \<in> obdt_set"
@@ -499,8 +503,9 @@ function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool li
   (*| "evaluation (Cons x []) {} = [False, False]"
   | "evaluation (Cons x []) {{}} = [True, False]"
   | "evaluation (Cons x []) {{},{x}} = [True, True]"*)
-  | "evaluation (Cons x l) K = 
-        append (evaluation l (link x (set l) K)) (evaluation l (cost x (set l) K))"
+  | "evaluation (x # l) K =
+          (evaluation l (link x (set (x # l)) K)) @ 
+          (evaluation l (cost x (set (x # l)) K))"
   unfolding cost_def link_def powerset_def 
   by (auto) (meson neq_Nil_conv)
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). length V)", simp_all)
@@ -518,8 +523,8 @@ proof (induct l arbitrary: K L)
 next
   case (Cons a l)
   show ?case unfolding evaluation.simps
-    using Cons.hyps [of "(cost a (set l) K)" "(cost a (set l) L)"]
-    using Cons.hyps [of "(link a (set l) K)" "(link a (set l) L)"] 
+    using Cons.hyps [of "(cost a (set (a # l)) K)" "(cost a (set (a # l)) L)"]
+    using Cons.hyps [of "(link a (set (a # l)) K)" "(link a (set (a # l)) L)"] 
     by simp
 qed
 
@@ -591,13 +596,13 @@ next
   note kl = Cons.prems
   show ?case
   proof (unfold evaluation.simps, rule less_eq_list_append)
-  show "length (evaluation l (link a (set l) K)) = length (evaluation l (link a (set l) L))"
-    and "length (evaluation l (cost a (set l) K)) = length (evaluation l (cost a (set l) L))"
+  show "length (evaluation l (link a (set (a # l)) K)) = length (evaluation l (link a (set (a # l)) L))"
+    and "length (evaluation l (cost a (set (a # l)) K)) = length (evaluation l (cost a (set (a # l)) L))"
     using length_evaluation_eq by simp_all
-  show "evaluation l (cost a (set l) K) \<le> evaluation l (cost a (set l) L)"
-    using Cons.IH [OF cost_mono [OF kl, of a "set l"]] .
-  show "evaluation l (link a (set l) K) \<le> evaluation l (link a (set l) L)"
-    using Cons.IH [OF link_mono [OF kl, of a "set l"]] .
+  show "evaluation l (cost a (set (a # l)) K) \<le> evaluation l (cost a (set (a # l)) L)"
+    using Cons.IH [OF cost_mono [OF kl, of a "set (a # l)"]] .
+  show "evaluation l (link a (set (a # l)) K) \<le> evaluation l (link a (set (a # l)) L)"
+    using Cons.IH [OF link_mono [OF kl, of a "set (a # l)"]] .
   qed
 qed
 
@@ -632,28 +637,28 @@ proof (cases l)
   thus ?thesis by fast
 next
   case (Cons a l') note la = Cons
-  have l1: "l1 = evaluation l' (link a (set l') K)"
-  proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (link a (set l') K)" "evaluation l' (cost a (set l') K)"])
-    show "l1 @ l2 = evaluation l' (link a (set l') K) @ evaluation l' (cost a (set l') K)"
+  have l1: "l1 = evaluation l' (link a (set (a # l')) K)"
+  proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (link a (set (a # l')) K)" "evaluation l' (cost a (set (a # l')) K)"])
+    show "l1 @ l2 = evaluation l' (link a (set (a # l')) K) @ evaluation l' (cost a (set (a # l')) K)"
       using e [symmetric] unfolding la unfolding evaluation.simps (3) .
     show "length l1 = length l2" using l .
-    show "length (evaluation l' (link a (set l') K)) = length (evaluation l' (cost a (set l') K))"
-      using length_evaluation_eq [of "l'" "(link a (set l') K)" "(cost a (set l') K)"] .
+    show "length (evaluation l' (link a (set (a # l')) K)) = length (evaluation l' (cost a (set (a # l')) K))"
+      using length_evaluation_eq [of "l'" "link a (set (a # l')) K" "cost a (set (a # l')) K"] .
   qed
-  have l2: "l2 = evaluation l' (cost a (set l') K)"
-  proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (link a (set l') K)" "evaluation l' (cost a (set l') K)"])
-    show "l1 @ l2 = evaluation l' (link a (set l') K) @ evaluation l' (cost a (set l') K)"
+  have l2: "l2 = evaluation l' (cost a (set (a # l')) K)"
+  proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (link a (set (a # l')) K)" "evaluation l' (cost a (set (a # l')) K)"])
+    show "l1 @ l2 = evaluation l' (link a (set (a # l')) K) @ evaluation l' (cost a (set (a # l')) K)"
       using e [symmetric] unfolding la unfolding evaluation.simps (3) .
     show "length l1 = length l2" using l .
-    show "length (evaluation l' (link a (set l') K)) = length (evaluation l' (cost a (set l') K))"
-      using length_evaluation_eq [of "l'" "(link a (set l') K)" "(cost a (set l') K)"] .
+    show "length (evaluation l' (link a (set (a # l')) K)) = length (evaluation l' (cost a (set (a # l')) K))"
+      using length_evaluation_eq [of "l'" "(link a (set (a # l')) K)" "(cost a (set (a # l')) K)"] .
   qed
   show ?thesis
     unfolding l1 l2
-  proof (rule evaluation_mono [of _ "set l'"])
-    show "cost a (set l') K \<subseteq> powerset (set l')" unfolding cost_def powerset_def by auto
-    show "link a (set l') K \<subseteq> powerset (set l')" unfolding link_def powerset_def by auto
-    show "link a (set l') K \<subseteq> cost a (set l') K" by (rule link_subset_cost)
+  proof (rule evaluation_mono [of _ "set (a # l')"])
+    show "cost a (set (a # l')) K \<subseteq> powerset (set (a # l'))" unfolding cost_def powerset_def by auto
+    show "link a (set (a # l')) K \<subseteq> powerset (set (a # l'))" unfolding link_def powerset_def by auto
+    show "link a (set (a # l')) K \<subseteq> cost a (set (a # l')) K" by (rule link_subset_cost)
   qed
 qed
 
@@ -736,7 +741,7 @@ qed*)
 
 lemma
   cost_cone_eq:
-  assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
+  assumes x: "x \<in> V" (*and y: "y \<in> V"*) and xy: "x \<noteq> y"
     and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
   shows "cost y V K = (cost y (V - {x}) T) \<union> {s. \<exists>t\<in>(cost y (V - {x}) T). s = insert x t}"
@@ -776,8 +781,8 @@ qed
 
 lemma
   link_cone_eq:
-  assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
-    and c: "cone V K"
+  assumes x: "x \<in> V" (*and y: "y \<in> V"*) and xy: "x \<noteq> y"
+    (*and c: "cone V K"*)
     and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
   shows "link y V K = (link y (V - {x}) T) \<union> {s. \<exists>t\<in>(link y (V - {x}) T). s = insert x t}"
@@ -819,8 +824,8 @@ proof
       moreover have t: "t \<in> T"
       proof (cases "xa \<in> T")
         case True
-        have "xa \<notin> {s. \<exists>t\<in>T. s = insert x t}"
-          using cone_disjoint [OF c x cs kt] True by auto
+        have "xa \<notin> {s. \<exists>t\<in>T. s = insert x t}" 
+          using x cs kt True unfolding powerset_def by auto
         then have False using xai True by auto
         then show ?thesis by (rule ccontr)
       next
@@ -835,7 +840,7 @@ proof
           using cs xxa unfolding powerset_def by auto
         thus ?thesis by (rule ccontr)
       next
-        case False 
+        case False
         (*with xai iyxa kt have "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}" by simp
         with xai xap xnt show ?thesis
           unfolding powerset_def try*)
@@ -863,68 +868,90 @@ proof -
     thus ?case by (rule ccontr)
   next
     case (Suc n)
-    from Suc.prems (4) obtain x :: nat and T :: "nat set set"
-    where x: "x \<in> X" and cs: "T \<subseteq> powerset (X - {x})" and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
-    unfolding cone_def by auto
-    (*from Suc.hyps (2)
-    obtain x X' where X: "X = insert x X'" and "card X' = n" and "x \<notin> X'"
-      by (metis card_Suc_eq)*)
-    from Suc.prems Suc.hyps (2)
-    obtain y l' where l: "l = y # l'" using obdt_list_length_coherent [OF Suc.prems (3)] try
-      by (metis card_0_eq length_0_conv neq_Nil_conv)
+    obtain x :: nat and T :: "nat set set"
+      where x: "x \<in> X" and cs: "T \<subseteq> powerset (X - {x})"
+        and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
+      using Suc.prems (4) unfolding cone_def by auto
+    obtain y l' where l: "l = y # l'" and y: "y \<in> X"
+      using Suc.prems Suc.hyps (2) obdt_list_length_coherent [OF Suc.prems (3)]
+      by (metis insert_iff obdt_list.cases)
     show ?case
-      unfolding l unfolding evaluation.simps (3)
-      unfolding kt
+      unfolding l 
+      unfolding evaluation.simps (3) 
+      unfolding l [symmetric] 
+      unfolding obdt_list_coherent [OF Suc.prems (3), symmetric]
     proof (cases "x = y")
       case True
-      have cl_eq: "cost x (set l') K = link x (set l') K"
+      have cl_eq: "cost x X K = link x X K"
         by (rule cone_cost_eq_link [of x X T], rule x, rule cs, rule kt)
-      show "evaluation l' (link y (set l') (T \<union> {s. \<exists>k\<in>T. s = insert x k})) @
-            evaluation l' (cost y (set l') (T \<union> {s. \<exists>k\<in>T. s = insert x k}))
+      show "evaluation l' (link y X K) @
+            evaluation l' (cost y X K)
             \<in> not_evaders"
-        unfolding kt [symmetric] using True using cl_eq
+        using True using cl_eq unfolding l [symmetric]
         using not_evaders.intros(1) by presburger
     next
       case False
-      have "link y X K = link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t}"
+      have crw: "cost y X K = cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t}"
+      proof (rule cost_cone_eq)
+        show "x \<in> X" using x .
+        show "x \<noteq> y" using False .
+        show "T \<subseteq> powerset (X - {x})" using cs .
+        show "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" using kt .
+      qed            
+      have lrw: "link y X K = link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t}"
       proof (rule link_cone_eq)
-        show "evaluation l' (link y (set l') (T \<union> {s. \<exists>k\<in>T. s = insert x k})) @
-            evaluation l' (cost y (set l') (T \<union> {s. \<exists>k\<in>T. s = insert x k}))
-            \<in> not_evaders"
-        using link_cone_eq cost_cone_eq
+        show "x \<in> X" using x .
+        show "x \<noteq> y" using False .
+        show "T \<subseteq> powerset (X - {x})" using cs .
+        show "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" using kt .
+      qed
+      show "evaluation l' (link y X K) @ evaluation l' (cost y X K) \<in> not_evaders"
+        unfolding crw lrw
+      proof (rule not_evaders.intros(2))
+        show "evaluation l' (link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t}) \<in> not_evaders"
+        proof (rule Suc.hyps (1) [of "X - {y}"])
+          show "n = card (X - {y})" using Suc.hyps (2) y x False by simp
+          show "X - {y} \<noteq> {}" using x False by auto
+          show "finite (X - {y})" using Suc.prems (2) by simp
+          show "(X - {y}, l') \<in> obdt_list" 
+            using Suc.prems (3) using l y Suc.prems (1)
+            by (metis Diff_insert_absorb list.inject obdt_list.cases)
+          show "cone (X - {y}) (link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t})"
+            unfolding cone_def
+          proof (intro bexI [of _ x] exI [of _ "link y (X - {x}) T"], rule conjI)
+            show "link y (X - {x}) T \<subseteq> powerset (X - {y} - {x})"
+              unfolding link_def powerset_def by auto
+            show "link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t} =
+                  link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t}" ..
+            show "x \<in> X - {y}" using x False by simp
+          qed
+        qed
+        show "evaluation l' (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t}) \<in> not_evaders"
+        proof (rule Suc.hyps (1) [of "X - {y}"])
+          show "n = card (X - {y})" using Suc.hyps (2) y x False by simp
+          show "X - {y} \<noteq> {}" using x False by auto
+          show "finite (X - {y})" using Suc.prems (2) by simp
+          show "(X - {y}, l') \<in> obdt_list" 
+            using Suc.prems (3) using l y Suc.prems (1)
+            by (metis Diff_insert_absorb list.inject obdt_list.cases)
+          show "cone (X - {y}) (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t})"
+            unfolding cone_def
+          proof (intro bexI [of _ x] exI [of _ "cost y (X - {x}) T"], rule conjI)
+            show "cost y (X - {x}) T \<subseteq> powerset (X - {y} - {x})"
+              unfolding cost_def powerset_def by auto
+            show "cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t} =
+                  cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t}" ..
+            show "x \<in> X - {y}" using x False by simp
+          qed
+        qed
+        show "length (evaluation l' (link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t})) =
+              length (evaluation l' (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t}))"
+          using length_evaluation_eq .
+      qed
+    qed
+  qed
+qed
 
-        using cone_cost_eq_link
-    hence l: "l = []" using xl using obdt_list.simps [of X l] by auto
-    thus ?thesis unfolding l try
-      using assms(3) x by blast
-    case True
-    have k: "K = {}" using kt unfolding True by simp
-    show ?thesis unfolding k try
-    
-    show ?thesis using kt unfolding True
-
-  proof (cases "K = {}")
-  case True note ke = True
-  show ?thesis
-  proof (cases "l = []")
-    case True
-    show ?thesis unfolding ke True 
-      unfolding evaluation.simps (1) using not_evaders.simps try
-    
-    unfolding True using evaluation.simps using not_evaders.simps
-
-
-
-
-
-    try
-      show "l2 = evaluation l' (link a (set l') K)
-      using e unfolding la
-      unfolding evaluation.simps (3) using l
-      using length_evaluation_eq [of "l'" "(cost a (set l') K)" "(link a (set l') K)"]
-      by (smt (z3) add.commute add.right_neutral add_le_same_cancel1 append_eq_append_conv append_eq_append_conv2 dual_order.eq_iff e evaluation.simps(3) la le_cases3 le_zero_eq length_append)
-    show ?thesis
-      
 lemma
   assumes "finite X" and "(X, K) \<in> cc_s" and "(X, L) \<in> cc_s" and "K \<subseteq> L"
    and "(X, l) \<in> obdt_list"
