@@ -854,6 +854,7 @@ proof
 qed
 
 lemma
+  evaluation_cone_not_evaders:
   assumes k: "K \<subseteq> powerset X"
     and c: "cone X K" and X: "X \<noteq> {}" and f: "finite X" and xl: "(X, l) \<in> obdt_list"
   shows "evaluation l K \<in> not_evaders"
@@ -884,8 +885,7 @@ proof -
       case True
       have cl_eq: "cost x X K = link x X K"
         by (rule cone_cost_eq_link [of x X T], rule x, rule cs, rule kt)
-      show "evaluation l' (link y X K) @
-            evaluation l' (cost y X K)
+      show "evaluation l' (link y X K) @ evaluation l' (cost y X K)
             \<in> not_evaders"
         using True using cl_eq unfolding l [symmetric]
         using not_evaders.intros(1) by presburger
@@ -897,7 +897,7 @@ proof -
         show "x \<noteq> y" using False .
         show "T \<subseteq> powerset (X - {x})" using cs .
         show "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" using kt .
-      qed            
+      qed
       have lrw: "link y X K = link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t}"
       proof (rule link_cone_eq)
         show "x \<in> X" using x .
@@ -913,7 +913,7 @@ proof -
           show "n = card (X - {y})" using Suc.hyps (2) y x False by simp
           show "X - {y} \<noteq> {}" using x False by auto
           show "finite (X - {y})" using Suc.prems (2) by simp
-          show "(X - {y}, l') \<in> obdt_list" 
+          show "(X - {y}, l') \<in> obdt_list"
             using Suc.prems (3) using l y Suc.prems (1)
             by (metis Diff_insert_absorb list.inject obdt_list.cases)
           show "cone (X - {y}) (link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t})"
@@ -951,6 +951,38 @@ proof -
     qed
   qed
 qed
+
+section\<open>Cero collapsible sets.\<close>
+
+function cero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+  where
+ "cero_collapsible {} {} = False"
+ (*| "K \<noteq> {} \<Longrightarrow> cero_collapsible {} K = False"*)
+ | "finite V \<Longrightarrow> cero_collapsible V K =
+    (\<exists>x\<in>V. cone (V - {x}) (link x V K) \<and> cero_collapsible (V - {x}) (cost x V K))"
+ | "\<not> finite V \<Longrightarrow> cero_collapsible V K = False"
+  unfolding link_def cost_def by (meson surj_pair) auto
+termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
+  show "wf (measure (\<lambda>(V, K). card V))" by simp
+  fix m :: nat and V :: "nat set" and K :: "nat set set" and x :: "nat"
+  assume f: "finite V" and x: "x \<in> V"
+  show "((V - {x}, cost x V K), V, K) \<in> measure (\<lambda>(V, K). card V)"
+    using f x by auto (metis card_gt_0_iff diff_Suc_less empty_iff)
+qed
+
+lemma
+  assumes x: "X = {x}"
+  shows "cero_collapsible X {}"
+proof -
+  have f: "finite X" using x by simp
+  show ?thesis
+    unfolding cero_collapsible.simps (2) [OF f, of "{}"]
+    apply (rule bexI [of _ x])
+    unfolding x apply simp
+    try
+
+
+
 
 lemma
   assumes "finite X" and "(X, K) \<in> cc_s" and "(X, L) \<in> cc_s" and "K \<subseteq> L"
