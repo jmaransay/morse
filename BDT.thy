@@ -972,7 +972,7 @@ function cero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bo
   | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> cero_collapsible V K = False"
   | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> cero_collapsible V K = True"
   | "2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> cero_collapsible V K =
-    (\<exists>x\<in>V. cone (V - {x}) (link x V K) \<and> cero_collapsible (V - {x}) (cost x V K))"
+    (\<exists>x\<in>V. cone (V - {x}) (link_ext x V K) \<and> cero_collapsible (V - {x}) (cost x V K))"
   | "\<not> finite V \<Longrightarrow> cero_collapsible V K = False"
   unfolding link_def cost_def
 proof -
@@ -1116,7 +1116,7 @@ lemma
       unfolding cone_def by simp
 qed*)
 
-lemma 
+lemma
   evaluation_empty_set_not_evaders:
   assumes a: "A \<noteq> []"
   shows "evaluation A {} \<in> not_evaders"
@@ -1149,7 +1149,11 @@ next
     by (unfold X, intro exI [of _ "x # A'"],
         intro obdt_list.intros(2), intro x'a', intro xx')
 qed
-  
+
+lemma "cone (X - {x}) (link_ext x X K) \<Longrightarrow> cone (X - {x}) (link x X K)"
+  unfolding cone_def link_def link_ext_def powerset_def
+  try
+
 lemma
   assumes k: "K \<subseteq> powerset X"
     and x: "X \<noteq> {}" and f: "finite X" and cc: "cero_collapsible X K"
@@ -1181,7 +1185,7 @@ next
       hence cardx: "2 \<le> card X"
         using Suc.hyps(2) by linarith
       from Suc.prems (4) False Suc.prems (2)
-      obtain x where x: "x \<in> X" and cl: "cone (X - {x}) (link x X K)" 
+      obtain x where x: "x \<in> X" and cl: "cone (X - {x}) (link_ext x X K)" 
         and ccc: "cero_collapsible (X - {x}) (cost x X K)" and xxne: "X - {x} \<noteq> {}"
         using cero_collapsible.simps (7) [OF cardx kne]
         (*using cero_collapsible.simps (4) [OF Suc.prems (3) Suc.prems (2) kne]*)
@@ -1199,11 +1203,21 @@ next
     then obtain B where xxb: "(X - {x}, B) \<in> obdt_list" 
       and ec: "evaluation B (cost x X K) \<in> not_evaders" by auto
     from cl obtain y T where y: "y \<in> X - {x}" and t: "T \<subseteq> powerset (X - {x} - {y})" 
-      and lc: "link x X K = T \<union> {s. \<exists>t\<in>T. s = insert y t}" unfolding cone_def
+      and lc: "link_ext x X K = T \<union> {s. \<exists>t\<in>T. s = insert y t}" unfolding cone_def
       using x xxne by auto
-    have el: "evaluation B (link x X K) \<in> not_evaders"
+    have el: "evaluation B (link_ext x X K) \<in> not_evaders"
     proof (rule evaluation_cone_not_evaders)
-      show "link x X K \<subseteq> powerset (X - {x})" unfolding link_def powerset_def by auto
+      show "link_ext x X K \<subseteq> powerset (X - {x})" 
+        unfolding link_ext_def powerset_def by auto
+      show "cone (X - {x}) (link_ext x X K)" using cl .
+      show "X - {x} \<noteq> {}" using y by blast
+      show "finite (X - {x})" using Suc.prems(3) by blast
+      show "(X - {x}, B) \<in> obdt_list" using xxb .
+    qed
+    have el2: "evaluation B (link x X K) \<in> not_evaders"
+    proof (rule evaluation_cone_not_evaders)
+      show "link x X K \<subseteq> powerset (X - {x})" 
+        unfolding link_def powerset_def by auto
       show "cone (X - {x}) (link x X K)" using cl .
       show "X - {x} \<noteq> {}" using y by blast
       show "finite (X - {x})" using Suc.prems(3) by blast
