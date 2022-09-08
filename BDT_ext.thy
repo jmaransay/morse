@@ -501,6 +501,12 @@ lemma link_subset_cost:
   shows "link x V K \<subseteq> cost x V K"
   unfolding link_def cost_def powerset_def by auto
 
+text\<open>The following result does not hold for @{thm link_ext_def}\<close>
+
+(*lemma link_ext_subset_cost:
+  shows "link_ext x V K \<subseteq> cost x V K"
+  unfolding link_ext_def cost_def powerset_def try by auto*)
+
 lemma
   link_cost_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
@@ -620,7 +626,9 @@ lemma
   using append_eq_conv_conj [of "m1" "m2" "l1 @ l2"]
   using mleq lm ll by force+
 
-corollary evaluation_cost_link:
+text\<open>The following result does not hold for @{thm link_ext_def}\<close>
+
+(*corollary evaluation_cost_link_ext:
   assumes e: "evaluation l K = l1 @ l2" 
     and l :"length l1 = length l2"  
   shows "l1 \<le> l2"
@@ -666,7 +674,7 @@ next
     show "link_ext a (set (a # l')) K \<subseteq> powerset (set (a # l'))" unfolding link_def powerset_def by auto
     show "link_ext a (set (a # l')) K \<subseteq> cost a (set (a # l')) K" by (rule link_subset_cost)
   qed
-qed
+qed*)
 
 section\<open>Lists of Boolean elements with no evaders\<close>
 
@@ -741,6 +749,26 @@ proof
   show "cost x V K \<subseteq> link x V K"
     unfolding kt
     unfolding cost_def link_def powerset_def by auto
+qed
+
+text\<open>The following result does hold for @{thm link_ext_def}, 
+  but the proof is different than for @{thm link_def} 
+  because in general it is no longer true that 
+  @{term "link_ext x V K \<subseteq> cost x V K"}\<close>
+
+lemma
+  cone_cost_eq_link_ext:
+  assumes x: "x \<in> X" 
+    and cs: "T \<subseteq> powerset (X - {x})" 
+    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  shows "cost x V K = link_ext x V K"
+proof
+  show "link_ext x V K \<subseteq> cost x V K"
+    using assms unfolding link_ext_def cost_def powerset_def
+    by auto (metis Diff_insert_absorb PowD in_mono mk_disjoint_insert)
+  show "cost x V K \<subseteq> link_ext x V K"
+    unfolding kt
+    unfolding cost_def link_ext_def powerset_def by auto
 qed
 
 lemma
@@ -856,6 +884,68 @@ proof
   qed
 qed
 
+text\<open>Under the given circumstances, @{term link_ext} of a cone is a cone.\<close>
+
+lemma
+  link_ext_cone_eq:
+  assumes x: "x \<in> V" (*and y: "y \<in> V"*) and xy: "x \<noteq> y"
+    and cs: "T \<subseteq> powerset (V - {x})" 
+    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  shows "link_ext y V K = (link_ext y (V - {x}) T) \<union> {s. \<exists>t\<in>(link_ext y (V - {x}) T). s = insert x t}"
+proof
+  show "link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t} \<subseteq> link_ext y V K"
+    unfolding kt link_ext_def powerset_def using x xy by auto
+  show "link_ext y V K \<subseteq> link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}"
+  unfolding link_ext_def [of y V K]
+  unfolding link_ext_def [of y "V - {x}" T]
+  proof
+    fix xa
+    assume "xa \<in> {s \<in> powerset V. y \<notin> s \<and> insert y s \<in> K}"
+    hence xap: "xa \<in> powerset V" and xak: "y \<notin> xa" and iyxa: "insert y xa \<in> K" by auto
+    show "xa \<in> {s \<in> powerset (V - {x}). y \<notin> s \<and> insert y s \<in> T} \<union>
+                {s. \<exists>t\<in>{s \<in> powerset (V - {x}). y \<notin> s \<and> insert y s \<in> T}.
+                       s = insert x t}"
+    proof (cases "x \<in> xa")
+      case False note xnxa = False
+      hence xapxy: "xa \<in> powerset (V - {x})" using xap xy unfolding powerset_def by auto
+      moreover have "y \<notin> xa" using xak .
+      moreover have "insert y xa \<in> T"
+      proof (cases "insert y xa \<in> T")
+        case True then show ?thesis by simp
+      next
+        case False with iyxa and kt have "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}"
+          by simp
+        then have "False" using xnxa
+          using xy by blast
+        thus ?thesis by (rule ccontr)
+      qed
+      ultimately have "xa \<in> {s \<in> powerset (V - {x}). y \<notin> s \<and> insert y s \<in> T}"
+        by auto
+      thus ?thesis by fast
+    next
+      case True note xxa = True
+      then obtain t where xai: "xa = insert x t" and xnt: "x \<notin> t" 
+        using Set.set_insert [OF True] by auto
+      have "t \<in> powerset (V - {x})" 
+        using xap xai xnt unfolding powerset_def by auto
+      moreover have t: "y \<notin> xa" using xak .
+      moreover have "insert y t \<in> T"
+      proof (cases "insert y xa \<in> T")
+        case True then have False
+          using cs xxa unfolding powerset_def by auto
+        thus ?thesis by (rule ccontr)
+      next
+        case False
+        with xai iyxa kt have "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}" by simp
+        with xai xap xnt kt show ?thesis
+          unfolding powerset_def
+          by auto (metis (full_types) Diff_insert_absorb False insert_absorb insert_commute insert_iff xak)
+      qed
+      ultimately show ?thesis using xai by auto
+    qed
+  qed
+qed
+
 lemma
   evaluation_cone_not_evaders:
   assumes k: "K \<subseteq> powerset X"
@@ -886,9 +976,9 @@ proof -
       unfolding obdt_list_coherent [OF Suc.prems (3), symmetric]
     proof (cases "x = y")
       case True
-      have cl_eq: "cost x X K = link x X K"
-        by (rule cone_cost_eq_link [of x X T], rule x, rule cs, rule kt)
-      show "evaluation l' (link y X K) @ evaluation l' (cost y X K)
+      have cl_eq: "cost x X K = link_ext x X K"
+        by (rule cone_cost_eq_link_ext [of x X T], rule x, rule cs, rule kt)
+      show "evaluation l' (link_ext y X K) @ evaluation l' (cost y X K)
             \<in> not_evaders"
         using True using cl_eq unfolding l [symmetric]
         using not_evaders.intros(1) by presburger
@@ -901,17 +991,17 @@ proof -
         show "T \<subseteq> powerset (X - {x})" using cs .
         show "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" using kt .
       qed
-      have lrw: "link y X K = link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t}"
-      proof (rule link_cone_eq)
+      have lrw: "link_ext y X K = link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t}"
+      proof (rule link_ext_cone_eq)
         show "x \<in> X" using x .
         show "x \<noteq> y" using False .
         show "T \<subseteq> powerset (X - {x})" using cs .
         show "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" using kt .
       qed
-      show "evaluation l' (link y X K) @ evaluation l' (cost y X K) \<in> not_evaders"
+      show "evaluation l' (link_ext y X K) @ evaluation l' (cost y X K) \<in> not_evaders"
         unfolding crw lrw
       proof (rule not_evaders.intros(2))
-        show "evaluation l' (link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t}) \<in> not_evaders"
+        show "evaluation l' (link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t}) \<in> not_evaders"
         proof (rule Suc.hyps (1) [of "X - {y}"])
           show "n = card (X - {y})" using Suc.hyps (2) y x False by simp
           show "X - {y} \<noteq> {}" using x False by auto
@@ -919,12 +1009,12 @@ proof -
           show "(X - {y}, l') \<in> obdt_list"
             using Suc.prems (3) using l y Suc.prems (1)
             by (metis Diff_insert_absorb list.inject obdt_list.cases)
-          show "cone (X - {y}) (link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t})"
-          proof (rule cone_not_empty, intro bexI [of _ x] exI [of _ "link y (X - {x}) T"], rule conjI)
-            show "link y (X - {x}) T \<subseteq> powerset (X - {y} - {x})"
-              unfolding link_def powerset_def by auto
-            show "link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t} =
-                  link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t}" ..
+          show "cone (X - {y}) (link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t})"
+          proof (rule cone_not_empty, intro bexI [of _ x] exI [of _ "link_ext y (X - {x}) T"], rule conjI)
+            show "link_ext y (X - {x}) T \<subseteq> powerset (X - {y} - {x})"
+              unfolding link_ext_def powerset_def by auto
+            show "link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t} =
+                  link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t}" ..
             show "x \<in> X - {y}" using x False by simp
           qed
         qed
@@ -933,7 +1023,7 @@ proof -
           show "n = card (X - {y})" using Suc.hyps (2) y x False by simp
           show "X - {y} \<noteq> {}" using x False by auto
           show "finite (X - {y})" using Suc.prems (2) by simp
-          show "(X - {y}, l') \<in> obdt_list" 
+          show "(X - {y}, l') \<in> obdt_list"
             using Suc.prems (3) using l y Suc.prems (1)
             by (metis Diff_insert_absorb list.inject obdt_list.cases)
           show "cone (X - {y}) (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t})"
@@ -945,7 +1035,7 @@ proof -
             show "x \<in> X - {y}" using x False by simp
           qed
         qed
-        show "length (evaluation l' (link y (X - {x}) T \<union> {s. \<exists>t\<in>link y (X - {x}) T. s = insert x t})) =
+        show "length (evaluation l' (link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t})) =
               length (evaluation l' (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t}))"
           using length_evaluation_eq .
       qed
@@ -953,114 +1043,11 @@ proof -
   qed
 qed
 
-section\<open>Cero collapsible sets\<close>
-
-function cero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where
-  "V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> cero_collapsible V K = True"
-  | "V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> cero_collapsible V K = False"
-  | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> cero_collapsible V K = True"
-  | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> cero_collapsible V K = True"
-  | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> cero_collapsible V K = False"
-  | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> cero_collapsible V K = True"
-  | "2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> cero_collapsible V K =
-    (\<exists>x\<in>V. cone (V - {x}) (link x V K) \<and> cero_collapsible (V - {x}) (cost x V K))"
-  | "\<not> finite V \<Longrightarrow> cero_collapsible V K = False"
-  unfolding link_def cost_def
-proof -
-  fix P :: "bool" and x :: "(nat set \<times> nat set set)"
-  assume ee: "(\<And>V K. V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and ene: "(\<And>V K. V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)" 
-      and se: "(\<And>V xa K. V = {xa} \<Longrightarrow> K = {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and sc: "(\<And>V xa K. V = {xa} \<Longrightarrow> K = {{}, {xa}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)" 
-      and sn: "(\<And>V xa K. V = {xa} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{}, {xa}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and e2: "(\<And>V K. 2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and en2: "(\<And>V K. 2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and inf: "(\<And>V K. infinite V \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-  show P
-  proof (cases "finite (fst x)")
-    case False
-    show P
-      by (rule inf [of "fst x" "snd x"], intro False) auto
-  next
-    case True note finitex = True
-    show P
-    proof (cases "fst x = {}")
-      case True note ve = True
-      show P
-      proof (cases "snd x = {{}}")
-        case True
-        show P
-          by (rule ee [of "fst x" "snd x"], intro ve, intro True) simp
-      next
-        case False
-        show P
-          by (rule ene [of "fst x" "snd x"], intro ve, intro False) simp
-      qed
-    next
-      case False note vne = False
-      show P
-      proof (cases "card (fst x) = 1")
-        case True then obtain xa where f: "fst x = {xa}" by (rule card_1_singletonE)
-        show P
-        proof (cases "snd x = {}")
-          case True
-          show P
-            by (rule se [of "fst x" xa "snd x"], intro f, intro True) simp
-          next
-          case False note kne = False
-          show P
-          proof (cases "snd x = {{},{xa}}")
-            case True
-            show P
-              by (rule sc [of "fst x" xa "snd x"], intro f, intro True) simp
-          next
-            case False
-            show P
-              by (rule sn [of "fst x" xa "snd x"], intro f, intro kne, intro False) simp
-          qed
-        qed
-      next
-        case False
-        have card2: "2 \<le> card (fst x)" using finitex vne False
-          by (metis One_nat_def Suc_1 card_gt_0_iff le_SucE not_less not_less_eq_eq)
-        show P
-        proof (cases "snd x = {}")
-          case True
-          show P
-            by (rule e2 [of "fst x" "snd x"], intro card2, intro True) simp
-        next
-          case False
-          show P
-            by (rule en2 [of "fst x" "snd x"], intro card2, intro False) simp
-        qed
-      qed
-    qed
-  qed
-qed (auto)
-termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
-  show "wf (measure (\<lambda>(V, K). card V))" by simp
-  fix V :: "nat set" and K :: "nat set set" and x :: "nat"
-  assume c: "2 \<le> card V" and k: "K \<noteq> {}" and x: "x \<in> V"
-  show "((V - {x}, cost x V K), V, K) \<in> measure (\<lambda>(V, K). card V)"
-    using c k x by simp
-qed
-
-lemma
-  shows "cero_collapsible {x} {}"
-  using cero_collapsible.simps (2) [of "{}"] by simp
-
-lemma
-  shows "\<not> cero_collapsible {x} {{}}" by simp
-
 lemma "link x {x} {{}, {x}} = {{}}"
   unfolding link_def powerset_def by auto
 
 lemma cost_singleton2: "cost x {x} {{}, {x}} = {{}}" 
   unfolding cost_def powerset_def by auto
-
-lemma
-  shows "cero_collapsible {x} {{}, {x}}" by simp
 
 lemma
   evaluation_empty_set_not_evaders:
@@ -1071,7 +1058,7 @@ proof -
     by (meson neq_Nil_conv)
   show ?thesis 
     unfolding xl unfolding evaluation.simps (3) 
-    unfolding link_empty cost_empty
+    unfolding link_ext_empty cost_empty
     by (rule not_evaders.intros(1), rule refl)
 qed
 
@@ -1094,137 +1081,6 @@ next
   show ?case 
     by (unfold X, intro exI [of _ "x # A'"],
         intro obdt_list.intros(2), intro x'a', intro xx')
-qed
-
-lemma
-  cero_collapsible_implies_not_evaders:
-  assumes k: "K \<subseteq> powerset X"
-    and x: "X \<noteq> {}" and f: "finite X" and cc: "cero_collapsible X K"
-  shows "\<exists>A. (X, A) \<in> obdt_list \<and> evaluation A K \<in> not_evaders"
-using k x f cc proof (induct "card X" arbitrary: X K)
-  case 0 with f have "X = {}" by simp
-  with "0.prems" (2) have False by fast
-  thus ?case by (rule ccontr)
-next
-  case (Suc n)
-  show ?case
-  proof (cases "K = {}")
-    case True
-    obtain A where xa: "(X, A) \<in> obdt_list" 
-      using finite_set_obdt_list [OF Suc.prems (3)] by auto
-    show ?thesis
-    proof (intro exI [of _ A], rule conjI)
-      show "(X, A) \<in> obdt_list" using xa .
-      show "evaluation A K \<in> not_evaders"
-      unfolding True
-      using evaluation.simps (3)
-      by (metis Suc.prems(2) empty_set evaluation_empty_set_not_evaders obdt_list_coherent xa)
-  qed
-  next
-    case False note kne = False
-    show ?thesis
-    proof (cases "card X = 1")
-      case False
-      hence cardx: "2 \<le> card X"
-        using Suc.hyps(2) by linarith
-      from Suc.prems (4) False Suc.prems (2)
-      obtain x where x: "x \<in> X" and cl: "cone (X - {x}) (link x X K)" 
-        and ccc: "cero_collapsible (X - {x}) (cost x X K)" and xxne: "X - {x} \<noteq> {}"
-        using cero_collapsible.simps (7) [OF cardx kne]
-        (*using cero_collapsible.simps (4) [OF Suc.prems (3) Suc.prems (2) kne]*)
-        by (metis One_nat_def Suc.prems(3) card.empty card_Suc_Diff1)
-    have "\<exists>A. (X - {x}, A) \<in> obdt_list \<and> evaluation A (cost x X K) \<in> not_evaders"
-    proof (rule Suc.hyps (1))
-      show "n = card (X - {x})" using x using Suc.hyps (2) by simp
-      show "cost x X K \<subseteq> powerset (X - {x})" unfolding cost_def powerset_def by auto
-      show "X - {x} \<noteq> {}"
-        using False Suc.hyps (2) using cardx by (intro xxne)
-        (*by (metis ccc cero_collapsible.simps(1) cero_collapsible.simps(3) finite.emptyI)*)
-      show "finite (X - {x})" using Suc.prems (3) by simp
-      show "cero_collapsible (X - {x}) (cost x X K)" using ccc .
-    qed
-    then obtain B where xxb: "(X - {x}, B) \<in> obdt_list" 
-      and ec: "evaluation B (cost x X K) \<in> not_evaders" by auto
-    from cl obtain y T where y: "y \<in> X - {x}" and t: "T \<subseteq> powerset (X - {x} - {y})" 
-      and lc: "link x X K = T \<union> {s. \<exists>t\<in>T. s = insert y t}" unfolding cone_def
-      using x xxne by auto
-    have el: "evaluation B (link x X K) \<in> not_evaders"
-    proof (rule evaluation_cone_not_evaders)
-      show "link x X K \<subseteq> powerset (X - {x})" 
-        unfolding link_def powerset_def by auto
-      show "cone (X - {x}) (link x X K)" using cl .
-      show "X - {x} \<noteq> {}" using y by blast
-      show "finite (X - {x})" using Suc.prems(3) by blast
-      show "(X - {x}, B) \<in> obdt_list" using xxb .
-    qed
-    have el2: "evaluation B (link x X K) \<in> not_evaders"
-    proof (rule evaluation_cone_not_evaders)
-      show "link x X K \<subseteq> powerset (X - {x})" 
-        unfolding link_def powerset_def by auto
-      show "cone (X - {x}) (link x X K)" using cl .
-      show "X - {x} \<noteq> {}" using y by blast
-      show "finite (X - {x})" using Suc.prems(3) by blast
-      show "(X - {x}, B) \<in> obdt_list" using xxb .
-    qed
-    show ?thesis
-    proof (rule exI [of _ "x # B"], rule conjI)
-      show "(X, x # B) \<in> obdt_list" using xxb x
-        by (metis DiffE insert_Diff obdt_list.intros(2) singletonI)
-      show "evaluation (x # B) K \<in> not_evaders"
-        unfolding evaluation.simps (3)
-      proof (rule not_evaders.intros (2))
-        show "evaluation B (link x (set (x # B)) K) \<in> not_evaders" 
-          using el
-          using \<open>(X, x # B) \<in> obdt_list\<close> obdt_list_coherent by blast
-        show "evaluation B (cost x (set (x # B)) K) \<in> not_evaders"
-          using ec
-          using \<open>(X, x # B) \<in> obdt_list\<close> obdt_list_coherent by blast
-        show "length (evaluation B (link x (set (x # B)) K)) =
-          length (evaluation B (cost x (set (x # B)) K))" by (rule length_evaluation_eq)
-      qed
-    qed
-  next
-    case True
-    then obtain x where X: "X = {x}" by (rule card_1_singletonE)
-    show "\<exists>A. (X, A) \<in> obdt_list \<and> evaluation A K \<in> not_evaders"
-    proof (unfold X, intro exI [of _ "[x]"], rule conjI)
-      show "({x}, [x]) \<in> obdt_list"
-        by (simp add: obdt_list.intros(1) obdt_list.intros(2))
-      show "evaluation [x] K \<in> not_evaders"
-      proof -
-        from kne and Suc.prems (1)
-        have k_cases: "K = {{}} \<or> K = {{}, {x}} \<or> K = {{x}}"
-          unfolding X powerset_def
-          by (metis Suc.prems(1) X powerset_singleton_cases)
-        show ?thesis
-        proof (cases "K = {{}}")
-          case True note kee = True
-          have False
-            using Suc.prems(4) unfolding True X by auto
-          thus ?thesis by (rule ccontr)
-        next
-          case False note knee = False
-          show ?thesis
-          proof (cases "K = {{}, {x}}")
-            case True note kex = True
-            show ?thesis
-              using Suc.prems (4)
-              unfolding True X
-              unfolding evaluation.simps link_def cost_def powerset_def 
-              using not_evaders.intros [of "[True]"] by simp
-          next
-            case False
-            have kx: "K = {{x}}" using False kne knee k_cases by simp
-            have False
-              using Suc.prems(4) 
-              unfolding X kx using cero_collapsible.simps (5) [of "{x}" x K] by simp
-            thus ?thesis by simp
-            qed
-          qed
-        qed
-      qed
-    qed
-  qed
 qed
 
 section\<open>Cero collapsible sets, based on @{thm link_ext_def}\<close>
@@ -1332,40 +1188,6 @@ lemma "link_ext x {x} {{}, {x}} = {{}}"
 lemma
   shows "cero_collapsible_ext {x} {{}, {x}}" by simp
 
-lemma "a @ b \<in> not_evaders \<Longrightarrow> a \<in> not_evaders"
-proof (induct a)
-  case Nil
-  then show ?case
-    by (metis append.right_neutral not_evaders.intros(1))
-  next
-  case (Cons a1 a2)
-  then show ?case try
-  qed
-
-lemma "evaluation B (link_ext x X K) \<in> not_evaders
- \<Longrightarrow> evaluation B (link x X K) \<in> not_evaders"
-proof (induct B)
-  case Nil
-  then show ?case using evaluation.simps
-    by (metis false_evader true_evader)
-next
-  case (Cons a B) 
-  have "evaluation B (link a (set (a # B)) (link_ext x X K)) \<in> not_evaders"
-    using Cons.prems
-    unfolding evaluation.simps
-    using not_evaders.intros(2)
-    using length_evaluation_eq [of B 
-        "link a (set (a # B)) (link_ext x X K)"
-        "cost a (set (a # B)) (link_ext x X K)"]
-    try
-  show ?case
-    unfolding evaluation.simps
-    proof (rule not_evaders.intros (2))
-    
-    sorry
-qed
-
-
 lemma
   cero_collapsible_ext_implies_not_evaders:
   assumes k: "K \<subseteq> powerset X"
@@ -1401,7 +1223,6 @@ next
       obtain x where x: "x \<in> X" and cl: "cone (X - {x}) (link_ext x X K)" 
         and ccc: "cero_collapsible_ext (X - {x}) (cost x X K)" and xxne: "X - {x} \<noteq> {}"
         using cero_collapsible_ext.simps (7) [OF cardx kne]
-        (*using cero_collapsible.simps (4) [OF Suc.prems (3) Suc.prems (2) kne]*)
         by (metis One_nat_def Suc.prems(3) card.empty card_Suc_Diff1)
     have "\<exists>A. (X - {x}, A) \<in> obdt_list \<and> evaluation A (cost x X K) \<in> not_evaders"
     proof (rule Suc.hyps (1))
@@ -1409,7 +1230,6 @@ next
       show "cost x X K \<subseteq> powerset (X - {x})" unfolding cost_def powerset_def by auto
       show "X - {x} \<noteq> {}"
         using False Suc.hyps (2) using cardx by (intro xxne)
-        (*by (metis ccc cero_collapsible.simps(1) cero_collapsible.simps(3) finite.emptyI)*)
       show "finite (X - {x})" using Suc.prems (3) by simp
       show "cero_collapsible_ext (X - {x}) (cost x X K)" using ccc .
     qed
@@ -1418,16 +1238,9 @@ next
     from cl obtain y T where y: "y \<in> X - {x}" and t: "T \<subseteq> powerset (X - {x} - {y})" 
       and lc: "link_ext x X K = T \<union> {s. \<exists>t\<in>T. s = insert y t}" unfolding cone_def
       using x xxne by auto
-
-    (*from cl have "cone (X - {x}) (link x X K)"
-      unfolding cone_def link_def link_ext_def powerset_def
-      apply simp try
-      apply auto*)
-
-
     have el: "evaluation B (link_ext x X K) \<in> not_evaders"
     proof (rule evaluation_cone_not_evaders)
-      show "link_ext x X K \<subseteq> powerset (X - {x})" unfolding link_def powerset_def by auto
+      show "link_ext x X K \<subseteq> powerset (X - {x})" unfolding link_ext_def powerset_def by auto
       show "cone (X - {x}) (link_ext x X K)" using cl .
       show "X - {x} \<noteq> {}" using y by blast
       show "finite (X - {x})" using Suc.prems(3) by blast
@@ -1443,14 +1256,14 @@ next
         show "evaluation B (cost x (set (x # B)) K) \<in> not_evaders"
           using ec
           using \<open>(X, x # B) \<in> obdt_list\<close> obdt_list_coherent by blast
-        show "length (evaluation B (link x (set (x # B)) K)) =
+        show "length (evaluation B (link_ext x (set (x # B)) K)) =
           length (evaluation B (cost x (set (x # B)) K))" by (rule length_evaluation_eq)
-        show "evaluation B (link x (set (x # B)) K) \<in> not_evaders"
+        show "evaluation B (link_ext x (set (x # B)) K) \<in> not_evaders"
           using el
           unfolding obdt_list_coherent [OF \<open>(X, x # B) \<in> obdt_list\<close>, symmetric]
           using evaluation.simps
-          sorry  (*using el
-          using \<open>(X, x # B) \<in> obdt_list\<close> obdt_list_coherent by blast*)
+          using el
+          using \<open>(X, x # B) \<in> obdt_list\<close> obdt_list_coherent by blast
       qed
     qed
   next
@@ -1480,14 +1293,15 @@ next
             show ?thesis
               using Suc.prems (4)
               unfolding True X
-              unfolding evaluation.simps link_def cost_def powerset_def 
-              using not_evaders.intros [of "[True]"] by simp
+              unfolding evaluation.simps link_ext_def cost_def powerset_def 
+              using not_evaders.intros [of "[True]"] 
+              by auto (metis (no_types, lifting) \<open>\<And>l2. [True] = l2 \<Longrightarrow> [True] @ l2 \<in> not_evaders\<close> bot.extremum empty_iff evaluation.simps(2) mem_Collect_eq)
           next
             case False
             have kx: "K = {{x}}" using False kne knee k_cases by simp
             have False 
               using Suc.prems(4) 
-              unfolding X kx using cero_collapsible.simps (5) [of "{x}" x K] by simp
+              unfolding X kx using cero_collapsible_ext.simps (5) [of "{x}" x K] by simp
             thus ?thesis by simp
             qed
           qed
@@ -1496,9 +1310,5 @@ next
     qed
   qed
 qed
-
-
-
-
 
 end
