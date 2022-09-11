@@ -18,35 +18,35 @@ inductive_set bdt_s :: "(nat set \<times> nat tree) set"
   where "({}, Leaf) \<in> bdt_s"
   | "(A, L) \<in> bdt \<and> (A, R) \<in> bdt \<Longrightarrow> (insert x A, (Node L x R)) \<in> bdt_s"
 
-lemma "bdt \<subseteq> bdt_s"
-proof (auto simp add:  bdt.intros)
-  fix a b
-  assume bdt: "(a, b) \<in> bdt"
-  then show "(a, b) \<in> bdt_s" 
-  proof (cases "a = {}")
-    case True
-    then show ?thesis
-      using bdt bdt.cases bdt_s.simps by auto
-  next
-    case False
-    then show ?thesis
-      by (smt (verit, best) bdt bdt.cases bdt.intros(1) bdt_s.intros(2))
+lemma "bdt = bdt_s"
+proof
+  show "bdt \<subseteq> bdt_s"
+  proof (auto simp add:  bdt.intros)
+    fix a b
+    assume bdt: "(a, b) \<in> bdt"
+    then show "(a, b) \<in> bdt_s" 
+    proof (cases "a = {}")
+      case True
+      then show ?thesis using bdt bdt.cases bdt_s.simps by auto
+    next
+      case False
+      then show ?thesis
+        by (smt (verit, best) bdt bdt.cases bdt.intros(1) bdt_s.intros(2))
+    qed
   qed
-qed
-
-lemma "bdt_s \<subseteq> bdt"
-proof (auto simp add:  bdt.intros)
-  fix a b
-  assume bdt: "(a, b) \<in> bdt_s"
-  then show "(a, b) \<in> bdt" 
-  proof (cases "a = {}")
-    case True
-    then show ?thesis
-      by (metis bdt bdt.simps bdt_s.simps)
-  next
-    case False
-    then show ?thesis
-      by (smt (verit, ccfv_threshold) bdt bdt.simps bdt_s.cases)
+  show "bdt_s \<subseteq> bdt"
+  proof (auto simp add:  bdt.intros)
+    fix a b
+    assume bdt: "(a, b) \<in> bdt_s"
+    then show "(a, b) \<in> bdt" 
+    proof (cases "a = {}")
+      case True
+      then show ?thesis by (metis bdt bdt.simps bdt_s.simps)
+    next
+      case False
+      then show ?thesis
+        by (smt (verit, ccfv_threshold) bdt bdt.simps bdt_s.cases)
+    qed
   qed
 qed
 
@@ -103,17 +103,18 @@ lemma
   shows "K = {} \<or> K = {{}} \<or> K = {{x}} \<or> K = {{},{x}}" 
   using K
   unfolding powerset_def
-  by (smt (verit, del_insts) Pow_singleton empty_subsetI insert_commute insert_subsetI subset_antisym subset_insert)
+  by (smt (verit, del_insts) Pow_singleton insert_Diff subset_insert_iff subset_singletonD)
 
 section\<open>Simplicial complexes\<close>
 
 text\<open>In the following we introduce a definition 
   of simplicial complexes as a set of sets that
-  satisfies the property of being cloed by the 
+  satisfies the property of being closed by the 
   subset relation. It is worth noting that in the
-  rest of the development we will work with
-  @{term powerset}, and simplicial complexes will 
-  not be required.\<close>
+  rest of the development we will mainly work with
+  hypergraphs, or sets of sets without the property 
+  of being closed by the subset relation, 
+  and simplicial complexes will not be required.\<close>
 
 definition pow_closed :: "'a set set \<Rightarrow> bool"
   where "pow_closed S \<equiv> (\<forall>s\<in>S. \<forall>s'\<subseteq>s. s'\<in> S)"
@@ -319,8 +320,7 @@ lemma link_mono:
 lemma
   link_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" 
-  shows "link y (V - {x}) (link x V K) = 
-        link x (V - {y}) (link y V K)"
+  shows "link y (V - {x}) (link x V K) = link x (V - {y}) (link y V K)"
   using x y unfolding link_def powerset_def 
   by auto (simp add: insert_commute)+
 
@@ -354,6 +354,7 @@ proof
 qed
 
 lemma
+  link_cc:
   assumes v: "(V,K) \<in> cc_s" and x: "x \<in> V"
   shows "(V, {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}) \<in> cc_s"
 proof (cases "V = {}")
@@ -372,6 +373,15 @@ next
       unfolding pow_closed_def by auto (meson insert_mono)
   qed
 qed
+
+corollary
+  link_cc_s:
+  assumes v: "(V, K) \<in> cc_s"
+  shows "(V, link x V K) \<in> cc_s" 
+  using link_ext_cc_s [OF v, of x] 
+  unfolding cc_s_link_eq_link_ext [OF v, symmetric] .
+
+section\<open>A different characterization of simplicial complexes\<close>
 
 definition closed_remove_element :: "nat set set \<Rightarrow> bool"
   where "closed_remove_element K = (\<forall>c\<in>K. \<forall>x\<in>c. c - {x} \<in> K)"
@@ -438,6 +448,9 @@ proof
  qed
 qed
 
+text\<open>The following result can be understood as the inverse 
+  of @{thm cc_s_link_eq_link_ext}.\<close>
+
 lemma
   link_eq_link_ext_cc_s:
   assumes v: "V \<noteq> {}"
@@ -501,18 +514,8 @@ lemma link_subset_cost:
   shows "link x V K \<subseteq> cost x V K"
   unfolding link_def cost_def powerset_def by auto
 
-text\<open>The following result does not hold for @{thm link_ext_def}\<close>
-
-(*lemma link_ext_subset_cost:
-  shows "link_ext x V K \<subseteq> cost x V K"
-  unfolding link_ext_def cost_def powerset_def try by auto*)
-
-lemma
-  link_cost_commute:
-  assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
-  shows "link y (V - {x}) (cost x V K) = 
-        cost x (V - {y}) (link y V K)"
-  using x y xy unfolding link_def cost_def powerset_def by auto
+text\<open>The previous result does not hold for @{term link_ext}, 
+  it is only true for @{term link}\<close>
 
 lemma
   link_ext_cost_commute:
@@ -520,6 +523,13 @@ lemma
   shows "link_ext y (V - {x}) (cost x V K) = 
         cost x (V - {y}) (link_ext y V K)"
   using x y xy unfolding link_ext_def cost_def powerset_def by auto
+
+lemma
+  link_cost_commute:
+  assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
+  shows "link y (V - {x}) (cost x V K) = 
+        cost x (V - {y}) (link y V K)"
+  using x y xy unfolding link_def cost_def powerset_def by auto
 
 section\<open>Evaluation of a list over a set of sets\<close>
 
@@ -626,13 +636,17 @@ lemma
   using append_eq_conv_conj [of "m1" "m2" "l1 @ l2"]
   using mleq lm ll by force+
 
-text\<open>The following result does not hold for @{thm link_ext_def}\<close>
+text\<open>The following result does not hold in general for 
+  @{term link_ext}, but it is true for simplicial complexes,
+  where @{thm cc_s_link_eq_link_ext} and then we can make use of 
+  @{thm link_subset_cost} which holds in general.\<close>
 
-(*corollary evaluation_cost_link_ext:
-  assumes e: "evaluation l K = l1 @ l2" 
-    and l :"length l1 = length l2"  
+corollary evaluation_cost_link_ext:
+  assumes e: "evaluation l K = l1 @ l2"
+    and cc_s: "(set l, K) \<in> cc_s"
+    and l :"length l1 = length l2"
   shows "l1 \<le> l2"
-proof (cases l)
+using cc_s proof (cases l)
   case Nil
   have False
   proof (cases "K = {}")
@@ -651,7 +665,7 @@ proof (cases l)
   thus ?thesis by fast
 next
   case (Cons a l') note la = Cons
-  have l1: "l1 = evaluation l' (link_ext a (set (a # l')) K)"
+  have "l1 = evaluation l' (link_ext a (set (a # l')) K)"
   proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (link_ext a (set (a # l')) K)" "evaluation l' (cost a (set (a # l')) K)"])
     show "l1 @ l2 = evaluation l' (link_ext a (set (a # l')) K) @ evaluation l' (cost a (set (a # l')) K)"
       using e [symmetric] unfolding la unfolding evaluation.simps (3) .
@@ -659,6 +673,9 @@ next
     show "length (evaluation l' (link_ext a (set (a # l')) K)) = length (evaluation l' (cost a (set (a # l')) K))"
       using length_evaluation_eq [of "l'" "link_ext a (set (a # l')) K" "cost a (set (a # l')) K"] .
   qed
+  hence l1: "l1 = evaluation l' (link a (set (a # l')) K)"
+    using cc_s_link_eq_link_ext [OF cc_s, of a] 
+    unfolding la by simp
   have l2: "l2 = evaluation l' (cost a (set (a # l')) K)"
   proof (rule append_eq_same_length [of "l1" "l2" "evaluation l' (link_ext a (set (a # l')) K)" "evaluation l' (cost a (set (a # l')) K)"])
     show "l1 @ l2 = evaluation l' (link_ext a (set (a # l')) K) @ evaluation l' (cost a (set (a # l')) K)"
@@ -671,10 +688,10 @@ next
     unfolding l1 l2
   proof (rule evaluation_mono [of _ "set (a # l')"])
     show "cost a (set (a # l')) K \<subseteq> powerset (set (a # l'))" unfolding cost_def powerset_def by auto
-    show "link_ext a (set (a # l')) K \<subseteq> powerset (set (a # l'))" unfolding link_def powerset_def by auto
-    show "link_ext a (set (a # l')) K \<subseteq> cost a (set (a # l')) K" by (rule link_subset_cost)
+    show "link a (set (a # l')) K \<subseteq> powerset (set (a # l'))" unfolding link_def powerset_def by auto
+    show "link a (set (a # l')) K \<subseteq> cost a (set (a # l')) K" by (rule link_subset_cost)
   qed
-qed*)
+qed
 
 section\<open>Lists of Boolean elements with no evaders\<close>
 
@@ -751,9 +768,9 @@ proof
     unfolding cost_def link_def powerset_def by auto
 qed
 
-text\<open>The following result does hold for @{thm link_ext_def}, 
-  but the proof is different than for @{thm link_def} 
-  because in general it is no longer true that 
+text\<open>The following result does hold for @{term link_ext}, 
+  but the proof is different than for @{term link} 
+  because in general it does not hold that 
   @{term "link_ext x V K \<subseteq> cost x V K"}\<close>
 
 lemma
@@ -770,6 +787,8 @@ proof
     unfolding kt
     unfolding cost_def link_ext_def powerset_def by auto
 qed
+
+text\<open>Under the given premises, @{term cost} of a cone is a cone.\<close>
 
 lemma
   cost_cone_eq:
@@ -810,6 +829,71 @@ proof
   show "cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t} \<subseteq> cost y V K"
     unfolding kt cost_def powerset_def using x xy by auto
 qed
+
+text\<open>Under the given premises, @{term link_ext} of a cone is a cone.\<close>
+
+lemma
+  link_ext_cone_eq:
+  assumes x: "x \<in> V" (*and y: "y \<in> V"*) and xy: "x \<noteq> y"
+    and cs: "T \<subseteq> powerset (V - {x})" 
+    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  shows "link_ext y V K = (link_ext y (V - {x}) T) \<union> {s. \<exists>t\<in>(link_ext y (V - {x}) T). s = insert x t}"
+proof
+  show "link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t} \<subseteq> link_ext y V K"
+    unfolding kt link_ext_def powerset_def using x xy by auto
+  show "link_ext y V K \<subseteq> link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}"
+  unfolding link_ext_def [of y V K]
+  unfolding link_ext_def [of y "V - {x}" T]
+  proof
+    fix xa
+    assume "xa \<in> {s \<in> powerset V. y \<notin> s \<and> insert y s \<in> K}"
+    hence xap: "xa \<in> powerset V" and xak: "y \<notin> xa" and iyxa: "insert y xa \<in> K" by auto
+    show "xa \<in> {s \<in> powerset (V - {x}). y \<notin> s \<and> insert y s \<in> T} \<union>
+                {s. \<exists>t\<in>{s \<in> powerset (V - {x}). y \<notin> s \<and> insert y s \<in> T}.
+                       s = insert x t}"
+    proof (cases "x \<in> xa")
+      case False note xnxa = False
+      hence xapxy: "xa \<in> powerset (V - {x})" using xap xy unfolding powerset_def by auto
+      moreover have "y \<notin> xa" using xak .
+      moreover have "insert y xa \<in> T"
+      proof (cases "insert y xa \<in> T")
+        case True then show ?thesis by simp
+      next
+        case False with iyxa and kt have "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}"
+          by simp
+        then have "False" using xnxa
+          using xy by blast
+        thus ?thesis by (rule ccontr)
+      qed
+      ultimately have "xa \<in> {s \<in> powerset (V - {x}). y \<notin> s \<and> insert y s \<in> T}"
+        by auto
+      thus ?thesis by fast
+    next
+      case True note xxa = True
+      then obtain t where xai: "xa = insert x t" and xnt: "x \<notin> t" 
+        using Set.set_insert [OF True] by auto
+      have "t \<in> powerset (V - {x})" 
+        using xap xai xnt unfolding powerset_def by auto
+      moreover have t: "y \<notin> xa" using xak .
+      moreover have "insert y t \<in> T"
+      proof (cases "insert y xa \<in> T")
+        case True then have False
+          using cs xxa unfolding powerset_def by auto
+        thus ?thesis by (rule ccontr)
+      next
+        case False
+        with xai iyxa kt have "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}" by simp
+        with xai xap xnt kt show ?thesis
+          unfolding powerset_def
+          by auto (metis (full_types) Diff_insert_absorb False insert_absorb insert_commute insert_iff xak)
+      qed
+      ultimately show ?thesis using xai by auto
+    qed
+  qed
+qed
+
+text\<open>Even if it is not used in our later proofs,
+  it also holds that @{term link} of a cone is a cone.\<close>
 
 lemma
   link_cone_eq:
@@ -872,74 +956,9 @@ proof
         thus ?thesis by (rule ccontr)
       next
         case False
-        (*with xai iyxa kt have "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}" by simp
-        with xai xap xnt kt show ?thesis
-          unfolding powerset_def try*)
         then show ?thesis
           using xai xap xnt kt iyxa unfolding powerset_def
           by (smt (verit, del_insts) Diff_insert_absorb PowD UnE Un_insert_right insert_absorb insert_is_Un iyxa kt mem_Collect_eq powerset_def singletonD subset_Diff_insert xai xap xnt)
-      qed
-      ultimately show ?thesis using xai by auto
-    qed
-  qed
-qed
-
-text\<open>Under the given circumstances, @{term link_ext} of a cone is a cone.\<close>
-
-lemma
-  link_ext_cone_eq:
-  assumes x: "x \<in> V" (*and y: "y \<in> V"*) and xy: "x \<noteq> y"
-    and cs: "T \<subseteq> powerset (V - {x})" 
-    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
-  shows "link_ext y V K = (link_ext y (V - {x}) T) \<union> {s. \<exists>t\<in>(link_ext y (V - {x}) T). s = insert x t}"
-proof
-  show "link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t} \<subseteq> link_ext y V K"
-    unfolding kt link_ext_def powerset_def using x xy by auto
-  show "link_ext y V K \<subseteq> link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}"
-  unfolding link_ext_def [of y V K]
-  unfolding link_ext_def [of y "V - {x}" T]
-  proof
-    fix xa
-    assume "xa \<in> {s \<in> powerset V. y \<notin> s \<and> insert y s \<in> K}"
-    hence xap: "xa \<in> powerset V" and xak: "y \<notin> xa" and iyxa: "insert y xa \<in> K" by auto
-    show "xa \<in> {s \<in> powerset (V - {x}). y \<notin> s \<and> insert y s \<in> T} \<union>
-                {s. \<exists>t\<in>{s \<in> powerset (V - {x}). y \<notin> s \<and> insert y s \<in> T}.
-                       s = insert x t}"
-    proof (cases "x \<in> xa")
-      case False note xnxa = False
-      hence xapxy: "xa \<in> powerset (V - {x})" using xap xy unfolding powerset_def by auto
-      moreover have "y \<notin> xa" using xak .
-      moreover have "insert y xa \<in> T"
-      proof (cases "insert y xa \<in> T")
-        case True then show ?thesis by simp
-      next
-        case False with iyxa and kt have "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}"
-          by simp
-        then have "False" using xnxa
-          using xy by blast
-        thus ?thesis by (rule ccontr)
-      qed
-      ultimately have "xa \<in> {s \<in> powerset (V - {x}). y \<notin> s \<and> insert y s \<in> T}"
-        by auto
-      thus ?thesis by fast
-    next
-      case True note xxa = True
-      then obtain t where xai: "xa = insert x t" and xnt: "x \<notin> t" 
-        using Set.set_insert [OF True] by auto
-      have "t \<in> powerset (V - {x})" 
-        using xap xai xnt unfolding powerset_def by auto
-      moreover have t: "y \<notin> xa" using xak .
-      moreover have "insert y t \<in> T"
-      proof (cases "insert y xa \<in> T")
-        case True then have False
-          using cs xxa unfolding powerset_def by auto
-        thus ?thesis by (rule ccontr)
-      next
-        case False
-        with xai iyxa kt have "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}" by simp
-        with xai xap xnt kt show ?thesis
-          unfolding powerset_def
-          by auto (metis (full_types) Diff_insert_absorb False insert_absorb insert_commute insert_iff xak)
       qed
       ultimately show ?thesis using xai by auto
     qed
@@ -1083,19 +1102,19 @@ next
         intro obdt_list.intros(2), intro x'a', intro xx')
 qed
 
-section\<open>Cero collapsible sets, based on @{thm link_ext_def}\<close>
+section\<open>Cero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
 
-function cero_collapsible_ext :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+function cero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where
-  "V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> cero_collapsible_ext V K = True"
-  | "V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> cero_collapsible_ext V K = False"
-  | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> cero_collapsible_ext V K = True"
-  | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> cero_collapsible_ext V K = True"
-  | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> cero_collapsible_ext V K = False"
-  | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> cero_collapsible_ext V K = True"
-  | "2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> cero_collapsible_ext V K =
-    (\<exists>x\<in>V. cone (V - {x}) (link_ext x V K) \<and> cero_collapsible_ext (V - {x}) (cost x V K))"
-  | "\<not> finite V \<Longrightarrow> cero_collapsible_ext V K = False"
+  "V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> cero_collapsible V K = True"
+  | "V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> cero_collapsible V K = False"
+  | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> cero_collapsible V K = True"
+  | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> cero_collapsible V K = True"
+  | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> cero_collapsible V K = False"
+  | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> cero_collapsible V K = True"
+  | "2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> cero_collapsible V K =
+    (\<exists>x\<in>V. cone (V - {x}) (link_ext x V K) \<and> cero_collapsible (V - {x}) (cost x V K))"
+  | "\<not> finite V \<Longrightarrow> cero_collapsible V K = False"
   unfolding link_ext_def cost_def
 proof -
   fix P :: "bool" and x :: "(nat set \<times> nat set set)"
@@ -1177,21 +1196,24 @@ termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
 qed
 
 lemma
-  shows "cero_collapsible_ext {x} {}" by simp
+  shows "cero_collapsible {x} {}" by simp
 
 lemma
-  shows "\<not> cero_collapsible_ext {x} {{}}" by simp
+  shows "\<not> cero_collapsible {x} {{}}" by simp
 
 lemma "link_ext x {x} {{}, {x}} = {{}}"
   unfolding link_ext_def powerset_def by auto
 
 lemma
-  shows "cero_collapsible_ext {x} {{}, {x}}" by simp
+  shows "cero_collapsible {x} {{}, {x}}" by simp
 
-lemma
-  cero_collapsible_ext_implies_not_evaders:
+text\<open>There is always a valuation for which cero collapsible sets
+ are not evasive.\<close>
+
+theorem
+  cero_collapsible_implies_not_evaders:
   assumes k: "K \<subseteq> powerset X"
-    and x: "X \<noteq> {}" and f: "finite X" and cc: "cero_collapsible_ext X K"
+    and x: "X \<noteq> {}" and f: "finite X" and cc: "cero_collapsible X K"
   shows "\<exists>A. (X, A) \<in> obdt_list \<and> evaluation A K \<in> not_evaders"
 using k x f cc proof (induct "card X" arbitrary: X K)
   case 0 with f have "X = {}" by simp
@@ -1221,8 +1243,8 @@ next
         using Suc.hyps(2) by linarith
       from Suc.prems (4) False Suc.prems (2)
       obtain x where x: "x \<in> X" and cl: "cone (X - {x}) (link_ext x X K)" 
-        and ccc: "cero_collapsible_ext (X - {x}) (cost x X K)" and xxne: "X - {x} \<noteq> {}"
-        using cero_collapsible_ext.simps (7) [OF cardx kne]
+        and ccc: "cero_collapsible (X - {x}) (cost x X K)" and xxne: "X - {x} \<noteq> {}"
+        using cero_collapsible.simps (7) [OF cardx kne]
         by (metis One_nat_def Suc.prems(3) card.empty card_Suc_Diff1)
     have "\<exists>A. (X - {x}, A) \<in> obdt_list \<and> evaluation A (cost x X K) \<in> not_evaders"
     proof (rule Suc.hyps (1))
@@ -1231,7 +1253,7 @@ next
       show "X - {x} \<noteq> {}"
         using False Suc.hyps (2) using cardx by (intro xxne)
       show "finite (X - {x})" using Suc.prems (3) by simp
-      show "cero_collapsible_ext (X - {x}) (cost x X K)" using ccc .
+      show "cero_collapsible (X - {x}) (cost x X K)" using ccc .
     qed
     then obtain B where xxb: "(X - {x}, B) \<in> obdt_list" 
       and ec: "evaluation B (cost x X K) \<in> not_evaders" by auto
@@ -1301,7 +1323,7 @@ next
             have kx: "K = {{x}}" using False kne knee k_cases by simp
             have False 
               using Suc.prems(4) 
-              unfolding X kx using cero_collapsible_ext.simps (5) [of "{x}" x K] by simp
+              unfolding X kx using cero_collapsible.simps (5) [of "{x}" x K] by simp
             thus ?thesis by simp
             qed
           qed
@@ -1310,5 +1332,260 @@ next
     qed
   qed
 qed
+
+locale vertex_set = fixes V :: "nat set"
+begin
+
+definition upper_cc_s :: "nat set set \<Rightarrow> nat set set"
+  where "upper_cc_s X = (LEAST K. (V, K) \<in> cc_s \<and> X \<subseteq> K)"
+
+definition upper_cc_s_ex :: "nat set set \<Rightarrow> nat set set"
+  where "upper_cc_s_ex X = \<Union>(powerset ` {x. x \<in> X})"
+
+lemma subset_upper_cc_s_ex: "X \<subseteq> upper_cc_s_ex X" 
+  unfolding upper_cc_s_ex_def powerset_def by auto
+
+lemma 
+  pow_closed_upper_cc_s_ex:
+  "pow_closed (upper_cc_s_ex X)"
+  unfolding pow_closed_def upper_cc_s_ex_def powerset_def by auto
+
+lemma
+  upper_cc_s_ex_idempotent:
+  "upper_cc_s_ex (upper_cc_s_ex X) = upper_cc_s_ex X"
+  unfolding pow_closed_def upper_cc_s_ex_def powerset_def by auto
+
+lemma
+  upper_cc_s_ex_min:
+  assumes x: "X \<subseteq> Y" and y: "pow_closed Y"
+  shows "upper_cc_s_ex X \<subseteq> Y"
+  using x y unfolding pow_closed_def upper_cc_s_ex_def powerset_def by auto
+
+lemma
+  upper_cc_s_ex_closed:
+  assumes v: "V \<noteq> {}" and x: "X \<subseteq> powerset V"
+  shows "upper_cc_s_ex X \<subseteq> powerset V"
+  using x unfolding pow_closed_def upper_cc_s_ex_def powerset_def by auto
+
+lemma
+  upper_cc_s_ex_cc_s:
+  assumes v: "V \<noteq> {}" and x: "X \<subseteq> powerset V"
+  shows "(V, upper_cc_s_ex X) \<in> cc_s" 
+proof (rule cc_s.intros (3) [OF v, of "upper_cc_s_ex X"])
+  show "upper_cc_s_ex X \<subseteq> powerset V" using upper_cc_s_ex_closed [OF v x] .
+  show "pow_closed (upper_cc_s_ex X)" using pow_closed_upper_cc_s_ex .
+qed
+
+lemma
+  powerset_cc_s:
+  assumes v: "V \<noteq> {}"
+  shows "(V, powerset V) \<in> cc_s"
+  unfolding powerset_def
+  using cc_s.intros (3) [OF v, of "Pow V"] 
+  unfolding powerset_def pow_closed_def by auto
+
+lemma "upper_cc_s {} = {}" unfolding upper_cc_s_def 
+  apply auto
+  by (metis Least_equality bot.extremum cc_s.intros(2) empty_iff)
+
+lemma
+  upper_cc_s_id:
+  assumes v: "V \<noteq> {}" and c: "(V, X) \<in> cc_s"
+  shows "upper_cc_s X = X" 
+  unfolding upper_cc_s_def
+  by (metis (no_types, lifting) Least_equality c order_refl)
+
+lemma
+  exists_upper_cc_s:
+  assumes v: "V \<noteq> {}" and x: "X \<subseteq> powerset V"
+  shows "\<exists>K. (V, K) \<in> cc_s \<and> X \<subseteq> K"
+proof (rule exI [of _ "upper_cc_s_ex X"], rule conjI)
+  show "(V, upper_cc_s_ex X) \<in> cc_s" by (rule upper_cc_s_ex_cc_s [OF v x])
+  show "X \<subseteq> upper_cc_s_ex X" by (rule subset_upper_cc_s_ex)
+qed
+
+corollary
+  upper_cc_s_subset:
+  assumes v: "V \<noteq> {}" and x: "X \<subseteq> powerset V"
+  shows "X \<subseteq> upper_cc_s X"
+  unfolding upper_cc_s_def
+proof (rule LeastI2_order [of _ "upper_cc_s_ex X"], intro conjI)
+  show "(V, upper_cc_s_ex X) \<in> cc_s" using upper_cc_s_ex_cc_s [OF v x] .
+  show "X \<subseteq> upper_cc_s_ex X" by (rule subset_upper_cc_s_ex)
+  fix y
+  show "(V, y) \<in> cc_s \<and> X \<subseteq> y \<Longrightarrow> upper_cc_s_ex X \<subseteq> y"
+    by (metis cc_s.cases empty_iff pow_closed_def upper_cc_s_ex_min)
+  fix x
+  show "(V, x) \<in> cc_s \<and> X \<subseteq> x \<Longrightarrow> \<forall>y. (V, y) \<in> cc_s \<and> X \<subseteq> y \<longrightarrow> x \<subseteq> y \<Longrightarrow> X \<subseteq> x" 
+    by simp
+qed
+
+lemma
+  upper_cc_s_cc_s:
+  assumes v: "V \<noteq> {}" and x: "X \<subseteq> powerset V"
+  shows "(V, upper_cc_s X) \<in> cc_s"
+  unfolding upper_cc_s_def
+proof (rule LeastI2_order [of _ "upper_cc_s_ex X"], intro conjI)
+  show "(V, upper_cc_s_ex X) \<in> cc_s" using upper_cc_s_ex_cc_s [OF v x] .
+  show "X \<subseteq> upper_cc_s_ex X" by (rule subset_upper_cc_s_ex)
+  fix y
+  show "(V, y) \<in> cc_s \<and> X \<subseteq> y \<Longrightarrow> upper_cc_s_ex X \<subseteq> y"
+    by (metis cc_s.cases empty_iff pow_closed_def upper_cc_s_ex_min)
+  fix x
+  show "(V, x) \<in> cc_s \<and> X \<subseteq> x \<Longrightarrow> \<forall>y. (V, y) \<in> cc_s \<and> X \<subseteq> y \<longrightarrow> x \<subseteq> y \<Longrightarrow> (V, x) \<in> cc_s" 
+    by simp
+qed
+
+lemma "upper_cc_s_ex (cost 0 {0} {{0}}) = {}"
+  unfolding upper_cc_s_ex_def cost_def powerset_def by auto
+
+lemma "cost 0 {0} (upper_cc_s_ex {{0}}) = {{}}"
+    unfolding upper_cc_s_ex_def cost_def powerset_def by auto
+
+lemma 
+  assumes "V \<noteq> {}" 
+  shows "upper_cc_s_ex (cost x V X) \<subseteq> cost x V (upper_cc_s_ex X)"
+  unfolding cost_def upper_cc_s_ex_def powerset_def by auto
+
+lemma
+  assumes "V \<noteq> {}"
+  shows "upper_cc_s_ex (link x V X) \<subseteq> link x V (upper_cc_s_ex X)"
+  unfolding link_def upper_cc_s_ex_def powerset_def by auto
+
+lemma "upper_cc_s_ex (link 0 {0} {{0}}) = {}"
+  unfolding upper_cc_s_ex_def link_def powerset_def by auto
+
+lemma "link 0 {0} (upper_cc_s_ex {{0}}) = {{}}"
+    unfolding upper_cc_s_ex_def link_def powerset_def by auto
+
+definition lower_cc_s :: "nat set set \<Rightarrow> nat set set"
+  where "lower_cc_s X = (GREATEST K. (V, K) \<in> cc_s \<and> K \<subseteq> X)"
+
+definition lower_cc_s_ex :: "nat set set \<Rightarrow> nat set set"
+  where "lower_cc_s_ex X = {x. x \<in> X \<and> powerset x \<subseteq> X}"
+
+lemma subset_lower_cc_s_ex: "lower_cc_s_ex X \<subseteq> X"
+  unfolding lower_cc_s_ex_def powerset_def by auto
+
+lemma 
+  pow_closed_lower_cc_s_ex:
+  "pow_closed (lower_cc_s_ex X)"
+  unfolding pow_closed_def lower_cc_s_ex_def powerset_def by auto
+
+lemma
+  lower_cc_s_ex_idempotent:
+  "lower_cc_s_ex (lower_cc_s_ex X) = lower_cc_s_ex X"
+  unfolding pow_closed_def lower_cc_s_ex_def powerset_def by auto
+
+lemma
+  lower_cc_s_ex_min:
+  assumes x: "Y \<subseteq> X" and y: "pow_closed Y"
+  shows "Y \<subseteq> lower_cc_s_ex X"
+  using x y unfolding pow_closed_def lower_cc_s_ex_def powerset_def by auto
+
+lemma
+  lower_cc_s_ex_closed:
+  assumes v: "V \<noteq> {}" and x: "X \<subseteq> powerset V"
+  shows "lower_cc_s_ex X \<subseteq> powerset V"
+  using x unfolding pow_closed_def lower_cc_s_ex_def powerset_def by auto
+
+lemma
+  lower_cc_s_ex_cc_s:
+  assumes v: "V \<noteq> {}" and x: "X \<subseteq> powerset V"
+  shows "(V, lower_cc_s_ex X) \<in> cc_s" 
+proof (rule cc_s.intros (3) [OF v, of "lower_cc_s_ex X"])
+  show "lower_cc_s_ex X \<subseteq> powerset V" using lower_cc_s_ex_closed [OF v x] .
+  show "pow_closed (lower_cc_s_ex X)" using pow_closed_lower_cc_s_ex .
+qed
+
+lemma "lower_cc_s {} = {}" unfolding lower_cc_s_def 
+  apply auto
+  by (metis (mono_tags, lifting) Greatest_equality cc_s.intros(2) dual_order.refl empty_iff)
+
+lemma
+  lower_cc_s_id:
+  assumes v: "V \<noteq> {}" and c: "(V, X) \<in> cc_s"
+  shows "lower_cc_s X = X" 
+  unfolding lower_cc_s_def
+  by (metis (no_types, lifting) Greatest_equality c order_refl)
+
+lemma
+  exists_lower_cc_s:
+  assumes v: "V \<noteq> {}" and x: "X \<subseteq> powerset V"
+  shows "\<exists>K. (V, K) \<in> cc_s \<and> K \<subseteq> X"
+proof (rule exI [of _ "lower_cc_s_ex X"], rule conjI)
+  show "(V, lower_cc_s_ex X) \<in> cc_s" by (rule lower_cc_s_ex_cc_s [OF v x])
+  show "lower_cc_s_ex X \<subseteq> X" by (rule subset_lower_cc_s_ex)
+qed
+
+corollary
+  lower_cc_s_subset:
+  assumes v: "V \<noteq> {}" and x: "X \<subseteq> powerset V"
+  shows "lower_cc_s X \<subseteq> X"
+  unfolding lower_cc_s_def
+proof (rule GreatestI2_order [of _ "lower_cc_s_ex X"], intro conjI)
+  show "(V, lower_cc_s_ex X) \<in> cc_s" using lower_cc_s_ex_cc_s [OF v x] .
+  show "lower_cc_s_ex X \<subseteq> X" by (rule subset_lower_cc_s_ex)
+  fix x
+  show "(V, x) \<in> cc_s \<and> x \<subseteq> X \<Longrightarrow> \<forall>y. (V, y) \<in> cc_s \<and> y \<subseteq> X \<longrightarrow> y \<subseteq> x \<Longrightarrow> x \<subseteq> X"
+    by simp
+  fix y
+  show "(V, y) \<in> cc_s \<and> y \<subseteq> X \<Longrightarrow> y \<subseteq> lower_cc_s_ex X"
+    by (metis cc_s.cases empty_iff pow_closed_def lower_cc_s_ex_min)
+qed
+
+lemma
+  lower_cc_s_cc_s:
+  assumes v: "V \<noteq> {}" and x: "X \<subseteq> powerset V"
+  shows "(V, lower_cc_s X) \<in> cc_s"
+  unfolding lower_cc_s_def
+proof (rule GreatestI2_order [of _ "lower_cc_s_ex X"], intro conjI)
+  show "(V, lower_cc_s_ex X) \<in> cc_s" using lower_cc_s_ex_cc_s [OF v x] .
+  show "lower_cc_s_ex X \<subseteq> X" by (rule subset_lower_cc_s_ex)
+  fix y
+  show "(V, y) \<in> cc_s \<and> y \<subseteq> X \<Longrightarrow> y \<subseteq> lower_cc_s_ex X"
+    by (metis cc_s.cases empty_iff pow_closed_def lower_cc_s_ex_min)
+  fix x
+  show "(V, x) \<in> cc_s \<and> x \<subseteq> X \<Longrightarrow> \<forall>y. (V, y) \<in> cc_s \<and> y \<subseteq> X \<longrightarrow> y \<subseteq> x \<Longrightarrow> (V, x) \<in> cc_s" 
+    by simp
+qed
+
+lemma "lower_cc_s_ex (cost 0 {0} {{0}}) = {}"
+  unfolding lower_cc_s_ex_def cost_def powerset_def by auto
+
+lemma "cost 0 {0} (lower_cc_s_ex {{0}}) = {}"
+    unfolding lower_cc_s_ex_def cost_def powerset_def by auto
+
+lemma 
+  shows "cost x V (lower_cc_s_ex X) = lower_cc_s_ex (cost x V X)"
+  unfolding cost_def lower_cc_s_ex_def powerset_def by auto
+
+lemma
+  shows "link x V (lower_cc_s_ex X) \<subseteq> lower_cc_s_ex (link x V X)"
+  unfolding link_def lower_cc_s_ex_def powerset_def by auto
+
+lemma
+  assumes "V \<noteq> {}"
+  shows "lower_cc_s_ex (link x V X) \<subseteq> link x V (lower_cc_s_ex X)"
+  unfolding link_def lower_cc_s_ex_def powerset_def apply auto
+
+
+lemma "upper_cc_s_ex (link 0 {0} {{0}}) = {}"
+  unfolding upper_cc_s_ex_def link_def powerset_def by auto
+
+lemma "link 0 {0} (upper_cc_s_ex {{0}}) = {{}}"
+    unfolding upper_cc_s_ex_def link_def powerset_def by auto
+
+
+
+
+
+
+lemma "lower_cc_s {} = {}" unfolding lower_cc_s_def 
+  apply auto
+  by (smt (verit, ccfv_threshold) bot.extremum_unique cc_s.simps empty_subsetI equals0D theI')
+
+lemma "lower_cc_s X \<subseteq> upper_cc_s X"
+  unfolding lower_cc_s_def upper_cc_s_def apply auto try
 
 end
