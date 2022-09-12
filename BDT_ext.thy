@@ -1345,7 +1345,7 @@ definition upper_cc_s_ex :: "nat set set \<Rightarrow> nat set set"
 lemma subset_upper_cc_s_ex: "X \<subseteq> upper_cc_s_ex X" 
   unfolding upper_cc_s_ex_def powerset_def by auto
 
-lemma 
+lemma
   pow_closed_upper_cc_s_ex:
   "pow_closed (upper_cc_s_ex X)"
   unfolding pow_closed_def upper_cc_s_ex_def powerset_def by auto
@@ -1442,8 +1442,8 @@ lemma "upper_cc_s_ex (cost 0 {0} {{0}}) = {}"
 lemma "cost 0 {0} (upper_cc_s_ex {{0}}) = {{}}"
     unfolding upper_cc_s_ex_def cost_def powerset_def by auto
 
-lemma 
-  assumes "V \<noteq> {}" 
+lemma
+  assumes "V \<noteq> {}"
   shows "upper_cc_s_ex (cost x V X) \<subseteq> cost x V (upper_cc_s_ex X)"
   unfolding cost_def upper_cc_s_ex_def powerset_def by auto
 
@@ -1457,6 +1457,15 @@ lemma "upper_cc_s_ex (link 0 {0} {{0}}) = {}"
 
 lemma "link 0 {0} (upper_cc_s_ex {{0}}) = {{}}"
     unfolding upper_cc_s_ex_def link_def powerset_def by auto
+
+lemma "upper_cc_s_ex (link_ext x V X) \<subseteq> link_ext x V (upper_cc_s_ex X)"
+  unfolding link_ext_def upper_cc_s_ex_def powerset_def by auto
+
+lemma "link_ext 0 {0} (upper_cc_s_ex  {{1, 0}}) = {{}}"
+  unfolding link_ext_def upper_cc_s_ex_def powerset_def by auto
+
+lemma "upper_cc_s_ex (link_ext 0 {0} {{1, 0}}) = {}"
+  unfolding link_ext_def upper_cc_s_ex_def powerset_def by auto
 
 definition lower_cc_s :: "nat set set \<Rightarrow> nat set set"
   where "lower_cc_s X = (GREATEST K. (V, K) \<in> cc_s \<and> K \<subseteq> X)"
@@ -1556,36 +1565,47 @@ lemma "lower_cc_s_ex (cost 0 {0} {{0}}) = {}"
 lemma "cost 0 {0} (lower_cc_s_ex {{0}}) = {}"
     unfolding lower_cc_s_ex_def cost_def powerset_def by auto
 
-lemma 
-  shows "cost x V (lower_cc_s_ex X) = lower_cc_s_ex (cost x V X)"
+lemma "cost x V (lower_cc_s_ex X) = lower_cc_s_ex (cost x V X)"
   unfolding cost_def lower_cc_s_ex_def powerset_def by auto
 
-lemma
-  shows "link x V (lower_cc_s_ex X) \<subseteq> lower_cc_s_ex (link x V X)"
+lemma "link x V (lower_cc_s_ex X) \<subseteq> lower_cc_s_ex (link x V X)"
   unfolding link_def lower_cc_s_ex_def powerset_def by auto
 
-lemma
+lemma "link_ext 0 {} (lower_cc_s_ex  {{0}}) = {}"
+  unfolding link_ext_def lower_cc_s_ex_def powerset_def by auto
+
+lemma "lower_cc_s_ex (link_ext 0 {} {{0}}) = {{}}"
+  unfolding link_ext_def lower_cc_s_ex_def powerset_def by auto
+
+(*lemma
   assumes "V \<noteq> {}"
   shows "lower_cc_s_ex (link x V X) \<subseteq> link x V (lower_cc_s_ex X)"
-  unfolding link_def lower_cc_s_ex_def powerset_def apply auto
-
-
-lemma "upper_cc_s_ex (link 0 {0} {{0}}) = {}"
-  unfolding upper_cc_s_ex_def link_def powerset_def by auto
-
-lemma "link 0 {0} (upper_cc_s_ex {{0}}) = {{}}"
-    unfolding upper_cc_s_ex_def link_def powerset_def by auto
-
-
-
-
-
-
-lemma "lower_cc_s {} = {}" unfolding lower_cc_s_def 
-  apply auto
-  by (smt (verit, ccfv_threshold) bot.extremum_unique cc_s.simps empty_subsetI equals0D theI')
-
-lemma "lower_cc_s X \<subseteq> upper_cc_s X"
-  unfolding lower_cc_s_def upper_cc_s_def apply auto try
+  unfolding link_def lower_cc_s_ex_def powerset_def
+proof
+  fix xa
+  assume xa: "xa \<in> {xa \<in> {s \<in> Pow (V - {x}). s \<in> X \<and> insert x s \<in> X}.
+                Pow xa \<subseteq> {s \<in> Pow (V - {x}). s \<in> X \<and> insert x s \<in> X}}"
+  from xa have px: "Pow xa \<subseteq> X" and pp: "Pow xa \<subseteq> Pow (V - {x})" and ixxa: "insert x xa \<in> X" 
+    by auto
+  show "xa \<in> {s \<in> Pow (V - {x}). s \<in> {x \<in> X. Pow x \<subseteq> X} \<and> insert x s \<in> {x \<in> X. Pow x \<subseteq> X}}"
+  proof (rule, intro conjI)
+    show "xa \<in> Pow (V - {x})"
+      using xa by simp
+    show xa_pow_closed: "xa \<in> {x \<in> X. Pow x \<subseteq> X}" using xa by auto
+    show "insert x xa \<in> {x \<in> X. Pow x \<subseteq> X}"
+    proof (rule, intro conjI)
+      show "insert x xa \<in> X" using xa by simp
+      show "Pow (insert x xa) \<subseteq> X" 
+      proof
+        fix xb
+        assume xb: "xb \<in> Pow (insert x xa)"
+        show "xb \<in> X"
+          proof (cases "x \<in> xb")
+            case False
+            thus ?thesis using xb using px by auto
+          next
+            case True
+            thus ?thesis using xb using px using ixxa try
+*)
 
 end
