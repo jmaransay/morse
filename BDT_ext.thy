@@ -3,9 +3,16 @@ theory BDT_ext
   imports
     "HOL-Library.Tree"
     Simplicial_complex
+    "ROBDD.BDT"
 begin
 
 section\<open>BDT\<close>
+
+(*inductive_set bdt :: "(nat set \<times> nat ifex) set"
+  where "({}, Trueif) \<in> bdt"
+    | "({}, Falseif) \<in> bdt"
+    | "({x}, (IF x Trueif Falseif)) \<in> bdt"
+    | "(A, L) \<in> bdt \<and> (A, R) \<in> bdt \<Longrightarrow> (insert x A, (IF x L R)) \<in> bdt"*)
 
 inductive_set bdt :: "(nat set \<times> nat tree) set"
   where "({}, Leaf) \<in> bdt"
@@ -775,8 +782,8 @@ text\<open>The following result does hold for @{term link_ext},
 
 lemma
   cone_cost_eq_link_ext:
-  assumes x: "x \<in> X" 
-    and cs: "T \<subseteq> powerset (X - {x})" 
+  assumes x: "x \<in> V"
+    and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
   shows "cost x V K = link_ext x V K"
 proof
@@ -787,6 +794,20 @@ proof
     unfolding kt
     unfolding cost_def link_ext_def powerset_def by auto
 qed
+
+lemma
+  assumes c: "cost x V K = link_ext x V K"
+    and x: "x \<in> V" and p: "K \<subseteq> powerset V"
+  shows "cone V K"
+  unfolding cone_def
+  apply (rule bexI [OF _ x]) 
+  apply (rule exI [of _ "cost x V K"])
+  apply (rule conjI) unfolding cost_def apply simp using c
+  unfolding cost_def link_ext_def powerset_def
+  apply (rule)
+  apply (rule, blast) using p x unfolding powerset_def try
+      apply blast
+      
 
 text\<open>Under the given premises, @{term cost} of a cone is a cone.\<close>
 
@@ -1102,19 +1123,19 @@ next
         intro obdt_list.intros(2), intro x'a', intro xx')
 qed
 
-section\<open>Cero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
+section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
 
-function cero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+function zero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where
-  "V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> cero_collapsible V K = True"
-  | "V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> cero_collapsible V K = False"
-  | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> cero_collapsible V K = True"
-  | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> cero_collapsible V K = True"
-  | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> cero_collapsible V K = False"
-  | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> cero_collapsible V K = True"
-  | "2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> cero_collapsible V K =
-    (\<exists>x\<in>V. cone (V - {x}) (link_ext x V K) \<and> cero_collapsible (V - {x}) (cost x V K))"
-  | "\<not> finite V \<Longrightarrow> cero_collapsible V K = False"
+  "V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> zero_collapsible V K = True"
+  | "V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> zero_collapsible V K = False"
+  | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> zero_collapsible V K = True"
+  | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> zero_collapsible V K = True"
+  | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> zero_collapsible V K = False"
+  | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> zero_collapsible V K = True"
+  | "2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> zero_collapsible V K =
+    (\<exists>x\<in>V. cone (V - {x}) (link_ext x V K) \<and> zero_collapsible (V - {x}) (cost x V K))"
+  | "\<not> finite V \<Longrightarrow> zero_collapsible V K = False"
   unfolding link_ext_def cost_def
 proof -
   fix P :: "bool" and x :: "(nat set \<times> nat set set)"
@@ -1196,24 +1217,24 @@ termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
 qed
 
 lemma
-  shows "cero_collapsible {x} {}" by simp
+  shows "zero_collapsible {x} {}" by simp
 
 lemma
-  shows "\<not> cero_collapsible {x} {{}}" by simp
+  shows "\<not> zero_collapsible {x} {{}}" by simp
 
 lemma "link_ext x {x} {{}, {x}} = {{}}"
   unfolding link_ext_def powerset_def by auto
 
 lemma
-  shows "cero_collapsible {x} {{}, {x}}" by simp
+  shows "zero_collapsible {x} {{}, {x}}" by simp
 
 text\<open>There is always a valuation for which cero collapsible sets
  are not evasive.\<close>
 
 theorem
-  cero_collapsible_implies_not_evaders:
+  zero_collapsible_implies_not_evaders:
   assumes k: "K \<subseteq> powerset X"
-    and x: "X \<noteq> {}" and f: "finite X" and cc: "cero_collapsible X K"
+    and x: "X \<noteq> {}" and f: "finite X" and cc: "zero_collapsible X K"
   shows "\<exists>A. (X, A) \<in> obdt_list \<and> evaluation A K \<in> not_evaders"
 using k x f cc proof (induct "card X" arbitrary: X K)
   case 0 with f have "X = {}" by simp
@@ -1243,8 +1264,8 @@ next
         using Suc.hyps(2) by linarith
       from Suc.prems (4) False Suc.prems (2)
       obtain x where x: "x \<in> X" and cl: "cone (X - {x}) (link_ext x X K)" 
-        and ccc: "cero_collapsible (X - {x}) (cost x X K)" and xxne: "X - {x} \<noteq> {}"
-        using cero_collapsible.simps (7) [OF cardx kne]
+        and ccc: "zero_collapsible (X - {x}) (cost x X K)" and xxne: "X - {x} \<noteq> {}"
+        using zero_collapsible.simps (7) [OF cardx kne]
         by (metis One_nat_def Suc.prems(3) card.empty card_Suc_Diff1)
     have "\<exists>A. (X - {x}, A) \<in> obdt_list \<and> evaluation A (cost x X K) \<in> not_evaders"
     proof (rule Suc.hyps (1))
@@ -1253,7 +1274,7 @@ next
       show "X - {x} \<noteq> {}"
         using False Suc.hyps (2) using cardx by (intro xxne)
       show "finite (X - {x})" using Suc.prems (3) by simp
-      show "cero_collapsible (X - {x}) (cost x X K)" using ccc .
+      show "zero_collapsible (X - {x}) (cost x X K)" using ccc .
     qed
     then obtain B where xxb: "(X - {x}, B) \<in> obdt_list" 
       and ec: "evaluation B (cost x X K) \<in> not_evaders" by auto
@@ -1323,7 +1344,7 @@ next
             have kx: "K = {{x}}" using False kne knee k_cases by simp
             have False 
               using Suc.prems(4) 
-              unfolding X kx using cero_collapsible.simps (5) [of "{x}" x K] by simp
+              unfolding X kx using zero_collapsible.simps (5) [of "{x}" x K] by simp
             thus ?thesis by simp
             qed
           qed
@@ -1607,5 +1628,7 @@ proof
             case True
             thus ?thesis using xb using px using ixxa try
 *)
+
+end
 
 end
