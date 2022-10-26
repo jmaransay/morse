@@ -799,13 +799,33 @@ lemma
   assumes c: "cost x V K = link_ext x V K"
     and x: "x \<in> V" and p: "K \<subseteq> powerset V"
   shows "cone V K"
-  unfolding cone_def
-  apply (rule bexI [OF _ x]) 
-  apply (rule exI [of _ "cost x V K"])
-  apply (rule conjI) unfolding cost_def apply simp using c
-  unfolding cost_def link_ext_def powerset_def
+proof (unfold cone_def, rule bexI [OF _ x], rule exI [of _ "cost x V K"], rule conjI)
+  show "cost x V K \<subseteq> powerset (V - {x})"
+    using p unfolding cost_def powerset_def by auto
+  show "K = cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
+  proof
+    show "cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t} \<subseteq> K"
+      using x p 
+      using c
+      unfolding cost_def powerset_def link_ext_def by auto
+    show "K \<subseteq> cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
+    proof (rule)
+      fix xa
+      assume xa: "xa \<in> K"
+      show "xa \<in> cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
+      proof (cases "xa \<in> cost x V K")
+        case True
+        then show ?thesis by simp
+      next
+        case False hence "xa \<notin> link_ext x V K" using c by simp
+        hence "x \<in> xa" using xa p unfolding link_ext_def powerset_def try
+        then show ?thesis using xa p unfolding cost sorry
+      qed
+        
+        
+        unfolding cost_def link_ext_def powerset_def try
   apply (rule)
-  apply (rule, blast) using p x unfolding powerset_def try
+  apply (rule, blast) using p x unfolding powerset_def apply simp try
       apply blast
       
 
