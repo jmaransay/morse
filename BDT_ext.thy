@@ -781,7 +781,7 @@ text\<open>The following result does hold for @{term link_ext},
   @{term "link_ext x V K \<subseteq> cost x V K"}\<close>
 
 lemma
-  cone_cost_eq_link_ext:
+  cone_impl_cost_eq_link_ext:
   assumes x: "x \<in> V"
     and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
@@ -796,6 +796,7 @@ proof
 qed
 
 lemma
+  cost_eq_link_ext_impl_cone:
   assumes c: "cost x V K = link_ext x V K"
     and x: "x \<in> V" and p: "K \<subseteq> powerset V"
   shows "cone V K"
@@ -805,29 +806,33 @@ proof (unfold cone_def, rule bexI [OF _ x], rule exI [of _ "cost x V K"], rule c
   show "K = cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
   proof
     show "cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t} \<subseteq> K"
-      using x p 
+      using x p
       using c
       unfolding cost_def powerset_def link_ext_def by auto
-    show "K \<subseteq> cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
-    proof (rule)
+    show "K \<subseteq> cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}" 
+    proof (subst c, unfold cost_def link_ext_def powerset_def, rule)
       fix xa
       assume xa: "xa \<in> K"
-      show "xa \<in> cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
-      proof (cases "xa \<in> cost x V K")
-        case True
-        then show ?thesis by simp
+      show "xa \<in> {s \<in> Pow V. x \<notin> s \<and> insert x s \<in> K} \<union>
+                {s. \<exists>t\<in>{s \<in> Pow (V - {x}). s \<in> K}. s = insert x t}"
+      proof (cases "x \<in> xa")
+        case False
+        then show ?thesis using xa c p 
+          unfolding cost_def link_ext_def powerset_def by blast
       next
-        case False hence "xa \<notin> link_ext x V K" using c by simp
-        hence "x \<in> xa" using xa p unfolding link_ext_def powerset_def try
-        then show ?thesis using xa p unfolding cost sorry
+        case True
+        have "xa - {x} \<in> {s \<in> Pow V. x \<notin> s \<and> insert x s \<in> K}"
+          using xa p True unfolding powerset_def
+          using mk_disjoint_insert by fastforce
+        hence "xa - {x} \<in> {s \<in> Pow (V - {x}). s \<in> K}"
+          using c unfolding cost_def link_ext_def powerset_def by simp
+        hence "xa \<in> {s. \<exists>t\<in>{s \<in> Pow (V - {x}). s \<in> K}. s = insert x t}"
+          using True by auto
+        thus ?thesis by fast
       qed
-        
-        
-        unfolding cost_def link_ext_def powerset_def try
-  apply (rule)
-  apply (rule, blast) using p x unfolding powerset_def apply simp try
-      apply blast
-      
+    qed
+  qed
+qed
 
 text\<open>Under the given premises, @{term cost} of a cone is a cone.\<close>
 
@@ -1037,7 +1042,7 @@ proof -
     proof (cases "x = y")
       case True
       have cl_eq: "cost x X K = link_ext x X K"
-        by (rule cone_cost_eq_link_ext [of x X T], rule x, rule cs, rule kt)
+        by (rule cone_impl_cost_eq_link_ext [of x X T], rule x, rule cs, rule kt)
       show "evaluation l' (link_ext y X K) @ evaluation l' (cost y X K)
             \<in> not_evaders"
         using True using cl_eq unfolding l [symmetric]
