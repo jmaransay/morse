@@ -746,7 +746,7 @@ qed
 section\<open>A set of sets being a cone over a given vertex\<close>
 
 definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where "cone X K = ((\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x})  
+  where "cone V K = ((\<exists>x\<in>V. \<exists>T. T \<subseteq> powerset (V - {x})  
                       \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}))"
 
 lemma cone_not_empty:
