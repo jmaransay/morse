@@ -780,8 +780,7 @@ text\<open>The following result does hold for @{term link_ext},
   because in general it does not hold that 
   @{term "link_ext x V K \<subseteq> cost x V K"}\<close>
 
-lemma
-  cone_impl_cost_eq_link_ext:
+lemma cone_impl_cost_eq_link_ext:
   assumes x: "x \<in> V"
     and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
@@ -937,7 +936,7 @@ proof
     qed
   qed
 qed
-
+find_theorems "evaluation"
 text\<open>Even if it is not used in our later proofs,
   it also holds that @{term link} of a cone is a cone.\<close>
 
