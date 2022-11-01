@@ -936,7 +936,7 @@ proof
     qed
   qed
 qed
-find_theorems "evaluation"
+
 text\<open>Even if it is not used in our later proofs,
   it also holds that @{term link} of a cone is a cone.\<close>
 
@@ -1036,7 +1036,7 @@ proof -
     show ?case
       unfolding l 
       unfolding evaluation.simps (3) 
-      unfolding l [symmetric] 
+      unfolding l [symmetric]
       unfolding obdt_list_coherent [OF Suc.prems (3), symmetric]
     proof (cases "x = y")
       case True
@@ -1276,7 +1276,7 @@ next
       show "(X, A) \<in> obdt_list" using xa .
       show "evaluation A K \<in> not_evaders"
       unfolding True
-      using evaluation.simps (3)
+      using evaluation.simps (3) using Suc.prems(2) xa 
       by (metis Suc.prems(2) empty_set evaluation_empty_set_not_evaders obdt_list_coherent xa)
   qed
   next
@@ -1315,22 +1315,19 @@ next
     qed
     show ?thesis
     proof (rule exI [of _ "x # B"], rule conjI)
-      show "(X, x # B) \<in> obdt_list" using xxb x
+      show xxb: "(X, x # B) \<in> obdt_list" using xxb x
         by (metis DiffE insert_Diff obdt_list.intros(2) singletonI)
       show "evaluation (x # B) K \<in> not_evaders"
         unfolding evaluation.simps (3)
       proof (rule not_evaders.intros (2))
         show "evaluation B (cost x (set (x # B)) K) \<in> not_evaders"
-          using ec
-          using \<open>(X, x # B) \<in> obdt_list\<close> obdt_list_coherent by blast
+          unfolding obdt_list_coherent [OF xxb, symmetric]
+          by (rule ec)
         show "length (evaluation B (link_ext x (set (x # B)) K)) =
           length (evaluation B (cost x (set (x # B)) K))" by (rule length_evaluation_eq)
         show "evaluation B (link_ext x (set (x # B)) K) \<in> not_evaders"
-          using el
-          unfolding obdt_list_coherent [OF \<open>(X, x # B) \<in> obdt_list\<close>, symmetric]
-          using evaluation.simps
-          using el
-          using \<open>(X, x # B) \<in> obdt_list\<close> obdt_list_coherent by blast
+          unfolding obdt_list_coherent [OF xxb, symmetric]
+          by (rule el)
       qed
     qed
   next
@@ -1357,12 +1354,13 @@ next
           show ?thesis
           proof (cases "K = {{}, {x}}")
             case True note kex = True
-            show ?thesis
-              using Suc.prems (4)
-              unfolding True X
-              unfolding evaluation.simps link_ext_def cost_def powerset_def 
-              using not_evaders.intros [of "[True]"] 
-              by auto (metis (no_types, lifting) \<open>\<And>l2. [True] = l2 \<Longrightarrow> [True] @ l2 \<in> not_evaders\<close> bot.extremum empty_iff evaluation.simps(2) mem_Collect_eq)
+            have f: "{s \<in> Pow (set [x] - {x}). s \<in> {{}, {x}}} \<noteq> {}" by simp
+            have s: "{s \<in> Pow (set [x]). x \<notin> s \<and> insert x s \<in> {{}, {x}}} \<noteq> {}" by auto
+            have "evaluation [x] K = [True, True]"
+              unfolding evaluation.simps link_ext_def cost_def powerset_def
+              unfolding kex
+              unfolding evaluation.simps (2) [OF f] evaluation.simps (2) [OF s] by simp
+            thus ?thesis using not_evaders.intros(1) [of "[True]" "[True]"] by simp
           next
             case False
             have kx: "K = {{x}}" using False kne knee k_cases by simp
