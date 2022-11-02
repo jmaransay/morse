@@ -59,26 +59,26 @@ qed
 
 section\<open>Ordered Binary Decision trees -- OBDT --\<close>
 
-inductive_set obdt_list :: "(nat set \<times> nat list) set"
-  where "({}, []) \<in> obdt_list"
-  | "(A, l) \<in> obdt_list \<Longrightarrow> x \<notin> A \<Longrightarrow> (insert x A, Cons x l) \<in> obdt_list"
+inductive_set sorted_variables :: "(nat set \<times> nat list) set"
+  where "({}, []) \<in> sorted_variables"
+  | "(A, l) \<in> sorted_variables \<Longrightarrow> x \<notin> A \<Longrightarrow> (insert x A, Cons x l) \<in> sorted_variables"
 
-lemma "({1}, [1]) \<in> obdt_list"
-  by (simp add: obdt_list.intros(1) obdt_list.intros(2))
+lemma "({1}, [1]) \<in> sorted_variables"
+  by (simp add: sorted_variables.intros(1) sorted_variables.intros(2))
 
-lemma "({1}, [1,1]) \<notin> obdt_list"
-  by (metis (no_types, lifting) insert_absorb insert_eq_iff insert_not_empty not_Cons_self2 obdt_list.cases)
+lemma "({1}, [1,1]) \<notin> sorted_variables"
+  by (metis (no_types, lifting) insert_absorb insert_eq_iff insert_not_empty not_Cons_self2 sorted_variables.cases)
 
-lemma "({1,2,3},[3,2,1]) \<in> obdt_list"
-  using obdt_list.intros (1)
-  using obdt_list.intros (2) [of "{}" "[]" "1"]
-  using obdt_list.intros (2) [of "{1}" "[1]" "2"]
-  using obdt_list.intros (2) [of "{1,2}" "[2,1]" "3"]
-  by (simp add: insert_commute obdt_list.intros(2))
+lemma "({1,2,3},[3,2,1]) \<in> sorted_variables"
+  using sorted_variables.intros (1)
+  using sorted_variables.intros (2) [of "{}" "[]" "1"]
+  using sorted_variables.intros (2) [of "{1}" "[1]" "2"]
+  using sorted_variables.intros (2) [of "{1,2}" "[2,1]" "3"]
+  by (simp add: insert_commute sorted_variables.intros(2))
 
 lemma
-  obdt_list_length_coherent:
-  assumes al: "(A, l) \<in> obdt_list"
+  sorted_variables_length_coherent:
+  assumes al: "(A, l) \<in> sorted_variables"
   shows "card A = length l"
 using al proof (induct)
   case 1
@@ -86,11 +86,11 @@ using al proof (induct)
 next
   case (2 A l x)
   then show ?case
-    by (metis card_Suc_eq length_0_conv length_Cons neq_Nil_conv obdt_list.simps)
+    by (metis card_Suc_eq length_0_conv length_Cons neq_Nil_conv sorted_variables.simps)
 qed
 
-lemma obdt_list_coherent:
-  assumes al: "(A, l) \<in> obdt_list"
+lemma sorted_variables_coherent:
+  assumes al: "(A, l) \<in> sorted_variables"
   shows "A = set l" using al by (induct, simp_all)
 
 section\<open>Powerset\<close>
@@ -612,7 +612,7 @@ lemma
   evaluation_mono:
   assumes k: "K \<subseteq> powerset V" and l: "L \<subseteq> powerset V" 
     and kl: "K \<subseteq> L"
-    (*and "(V, l) \<in> obdt_list"*)
+    (*and "(V, l) \<in> sorted_variables"*)
  shows "evaluation l K \<le> evaluation l L"
 using kl proof (induction l arbitrary: K L)
   case Nil
@@ -746,7 +746,7 @@ qed
 section\<open>A set of sets being a cone over a given vertex\<close>
 
 definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where "cone V K = ((\<exists>x\<in>V. \<exists>T. T \<subseteq> powerset (V - {x})  
+  where "cone X K = ((\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x})  
                       \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}))"
 
 lemma cone_not_empty:
@@ -780,7 +780,8 @@ text\<open>The following result does hold for @{term link_ext},
   because in general it does not hold that 
   @{term "link_ext x V K \<subseteq> cost x V K"}\<close>
 
-lemma cone_impl_cost_eq_link_ext:
+lemma
+  cone_impl_cost_eq_link_ext:
   assumes x: "x \<in> V"
     and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
@@ -1013,7 +1014,7 @@ qed
 lemma
   evaluation_cone_not_evaders:
   assumes k: "K \<subseteq> powerset X"
-    and c: "cone X K" and X: "X \<noteq> {}" and f: "finite X" and xl: "(X, l) \<in> obdt_list"
+    and c: "cone X K" and X: "X \<noteq> {}" and f: "finite X" and xl: "(X, l) \<in> sorted_variables"
   shows "evaluation l K \<in> not_evaders"
 proof -
   from c and X obtain x :: nat and T :: "nat set set"
@@ -1031,13 +1032,13 @@ proof -
         and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
       using Suc.prems (1,4) unfolding cone_def by auto
     obtain y l' where l: "l = y # l'" and y: "y \<in> X"
-      using Suc.prems Suc.hyps (2) obdt_list_length_coherent [OF Suc.prems (3)]
-      by (metis insert_iff obdt_list.cases)
+      using Suc.prems Suc.hyps (2) sorted_variables_length_coherent [OF Suc.prems (3)]
+      by (metis insert_iff sorted_variables.cases)
     show ?case
       unfolding l 
       unfolding evaluation.simps (3) 
-      unfolding l [symmetric]
-      unfolding obdt_list_coherent [OF Suc.prems (3), symmetric]
+      unfolding l [symmetric] 
+      unfolding sorted_variables_coherent [OF Suc.prems (3), symmetric]
     proof (cases "x = y")
       case True
       have cl_eq: "cost x X K = link_ext x X K"
@@ -1070,9 +1071,9 @@ proof -
           show "n = card (X - {y})" using Suc.hyps (2) y x False by simp
           show "X - {y} \<noteq> {}" using x False by auto
           show "finite (X - {y})" using Suc.prems (2) by simp
-          show "(X - {y}, l') \<in> obdt_list"
+          show "(X - {y}, l') \<in> sorted_variables"
             using Suc.prems (3) using l y Suc.prems (1)
-            by (metis Diff_insert_absorb list.inject obdt_list.cases)
+            by (metis Diff_insert_absorb list.inject sorted_variables.cases)
           show "cone (X - {y}) (link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t})"
           proof (rule cone_not_empty, intro bexI [of _ x] exI [of _ "link_ext y (X - {x}) T"], rule conjI)
             show "link_ext y (X - {x}) T \<subseteq> powerset (X - {y} - {x})"
@@ -1087,9 +1088,9 @@ proof -
           show "n = card (X - {y})" using Suc.hyps (2) y x False by simp
           show "X - {y} \<noteq> {}" using x False by auto
           show "finite (X - {y})" using Suc.prems (2) by simp
-          show "(X - {y}, l') \<in> obdt_list"
+          show "(X - {y}, l') \<in> sorted_variables"
             using Suc.prems (3) using l y Suc.prems (1)
-            by (metis Diff_insert_absorb list.inject obdt_list.cases)
+            by (metis Diff_insert_absorb list.inject sorted_variables.cases)
           show "cone (X - {y}) (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t})"
           proof (rule cone_not_empty, intro bexI [of _ x] exI [of _ "cost y (X - {x}) T"], rule conjI)
             show "cost y (X - {x}) T \<subseteq> powerset (X - {y} - {x})"
@@ -1127,24 +1128,24 @@ proof -
 qed
 
 lemma
-  finite_set_obdt_list:
+  finite_set_sorted_variables:
   assumes f: "finite X"
-  shows "\<exists>A. (X, A) \<in> obdt_list"
+  shows "\<exists>A. (X, A) \<in> sorted_variables"
 using f proof (induct "card X" arbitrary: X)
   case 0
   then have x: "X = {}" by simp
-  show ?case unfolding x by (rule exI [of _ "[]"], rule obdt_list.intros(1))
+  show ?case unfolding x by (rule exI [of _ "[]"], rule sorted_variables.intros(1))
 next
   case (Suc n)
   then obtain x X' 
     where X: "X = insert x X'" and cx': "card X' = n" 
       and f: "finite X'" and xx': "x \<notin> X'"
     by (metis card_Suc_eq_finite)
-  from Suc.hyps (1) [OF cx'[symmetric] f] obtain A' where x'a': "(X', A') \<in> obdt_list"
+  from Suc.hyps (1) [OF cx'[symmetric] f] obtain A' where x'a': "(X', A') \<in> sorted_variables"
     by auto
   show ?case 
     by (unfold X, intro exI [of _ "x # A'"],
-        intro obdt_list.intros(2), intro x'a', intro xx')
+        intro sorted_variables.intros(2), intro x'a', intro xx')
 qed
 
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
@@ -1259,7 +1260,7 @@ theorem
   zero_collapsible_implies_not_evaders:
   assumes k: "K \<subseteq> powerset X"
     and x: "X \<noteq> {}" and f: "finite X" and cc: "zero_collapsible X K"
-  shows "\<exists>A. (X, A) \<in> obdt_list \<and> evaluation A K \<in> not_evaders"
+  shows "\<exists>A. (X, A) \<in> sorted_variables \<and> evaluation A K \<in> not_evaders"
 using k x f cc proof (induct "card X" arbitrary: X K)
   case 0 with f have "X = {}" by simp
   with "0.prems" (2) have False by fast
@@ -1269,15 +1270,15 @@ next
   show ?case
   proof (cases "K = {}")
     case True
-    obtain A where xa: "(X, A) \<in> obdt_list"
-      using finite_set_obdt_list [OF Suc.prems (3)] by auto
+    obtain A where xa: "(X, A) \<in> sorted_variables"
+      using finite_set_sorted_variables [OF Suc.prems (3)] by auto
     show ?thesis
     proof (intro exI [of _ A], rule conjI)
-      show "(X, A) \<in> obdt_list" using xa .
+      show "(X, A) \<in> sorted_variables" using xa .
       show "evaluation A K \<in> not_evaders"
       unfolding True
-      using evaluation.simps (3) using Suc.prems(2) xa 
-      by (metis Suc.prems(2) empty_set evaluation_empty_set_not_evaders obdt_list_coherent xa)
+      using evaluation.simps (3)
+      by (metis Suc.prems(2) empty_set evaluation_empty_set_not_evaders sorted_variables_coherent xa)
   qed
   next
     case False note kne = False
@@ -1291,7 +1292,7 @@ next
         and ccc: "zero_collapsible (X - {x}) (cost x X K)" and xxne: "X - {x} \<noteq> {}"
         using zero_collapsible.simps (7) [OF cardx kne]
         by (metis One_nat_def Suc.prems(3) card.empty card_Suc_Diff1)
-    have "\<exists>A. (X - {x}, A) \<in> obdt_list \<and> evaluation A (cost x X K) \<in> not_evaders"
+    have "\<exists>A. (X - {x}, A) \<in> sorted_variables \<and> evaluation A (cost x X K) \<in> not_evaders"
     proof (rule Suc.hyps (1))
       show "n = card (X - {x})" using x using Suc.hyps (2) by simp
       show "cost x X K \<subseteq> powerset (X - {x})" unfolding cost_def powerset_def by auto
@@ -1300,7 +1301,7 @@ next
       show "finite (X - {x})" using Suc.prems (3) by simp
       show "zero_collapsible (X - {x}) (cost x X K)" using ccc .
     qed
-    then obtain B where xxb: "(X - {x}, B) \<in> obdt_list" 
+    then obtain B where xxb: "(X - {x}, B) \<in> sorted_variables" 
       and ec: "evaluation B (cost x X K) \<in> not_evaders" by auto
     from cl obtain y T where y: "y \<in> X - {x}" and t: "T \<subseteq> powerset (X - {x} - {y})" 
       and lc: "link_ext x X K = T \<union> {s. \<exists>t\<in>T. s = insert y t}" unfolding cone_def
@@ -1311,32 +1312,35 @@ next
       show "cone (X - {x}) (link_ext x X K)" using cl .
       show "X - {x} \<noteq> {}" using y by blast
       show "finite (X - {x})" using Suc.prems(3) by blast
-      show "(X - {x}, B) \<in> obdt_list" using xxb .
+      show "(X - {x}, B) \<in> sorted_variables" using xxb .
     qed
     show ?thesis
     proof (rule exI [of _ "x # B"], rule conjI)
-      show xxb: "(X, x # B) \<in> obdt_list" using xxb x
-        by (metis DiffE insert_Diff obdt_list.intros(2) singletonI)
+      show "(X, x # B) \<in> sorted_variables" using xxb x
+        by (metis DiffE insert_Diff sorted_variables.intros(2) singletonI)
       show "evaluation (x # B) K \<in> not_evaders"
         unfolding evaluation.simps (3)
       proof (rule not_evaders.intros (2))
         show "evaluation B (cost x (set (x # B)) K) \<in> not_evaders"
-          unfolding obdt_list_coherent [OF xxb, symmetric]
-          by (rule ec)
+          using ec
+          using \<open>(X, x # B) \<in> sorted_variables\<close> sorted_variables_coherent by blast
         show "length (evaluation B (link_ext x (set (x # B)) K)) =
           length (evaluation B (cost x (set (x # B)) K))" by (rule length_evaluation_eq)
         show "evaluation B (link_ext x (set (x # B)) K) \<in> not_evaders"
-          unfolding obdt_list_coherent [OF xxb, symmetric]
-          by (rule el)
+          using el
+          unfolding sorted_variables_coherent [OF \<open>(X, x # B) \<in> sorted_variables\<close>, symmetric]
+          using evaluation.simps
+          using el
+          using \<open>(X, x # B) \<in> sorted_variables\<close> sorted_variables_coherent by blast
       qed
     qed
   next
     case True
     then obtain x where X: "X = {x}" by (rule card_1_singletonE)
-    show "\<exists>A. (X, A) \<in> obdt_list \<and> evaluation A K \<in> not_evaders"
+    show "\<exists>A. (X, A) \<in> sorted_variables \<and> evaluation A K \<in> not_evaders"
     proof (unfold X, intro exI [of _ "[x]"], rule conjI)
-      show "({x}, [x]) \<in> obdt_list"
-        by (simp add: obdt_list.intros(1) obdt_list.intros(2))
+      show "({x}, [x]) \<in> sorted_variables"
+        by (simp add: sorted_variables.intros(1) sorted_variables.intros(2))
       show "evaluation [x] K \<in> not_evaders"
       proof -
         from kne and Suc.prems (1)
@@ -1354,13 +1358,12 @@ next
           show ?thesis
           proof (cases "K = {{}, {x}}")
             case True note kex = True
-            have f: "{s \<in> Pow (set [x] - {x}). s \<in> {{}, {x}}} \<noteq> {}" by simp
-            have s: "{s \<in> Pow (set [x]). x \<notin> s \<and> insert x s \<in> {{}, {x}}} \<noteq> {}" by auto
-            have "evaluation [x] K = [True, True]"
-              unfolding evaluation.simps link_ext_def cost_def powerset_def
-              unfolding kex
-              unfolding evaluation.simps (2) [OF f] evaluation.simps (2) [OF s] by simp
-            thus ?thesis using not_evaders.intros(1) [of "[True]" "[True]"] by simp
+            show ?thesis
+              using Suc.prems (4)
+              unfolding True X
+              unfolding evaluation.simps link_ext_def cost_def powerset_def 
+              using not_evaders.intros [of "[True]"] 
+              by auto (metis (no_types, lifting) \<open>\<And>l2. [True] = l2 \<Longrightarrow> [True] @ l2 \<in> not_evaders\<close> bot.extremum empty_iff evaluation.simps(2) mem_Collect_eq)
           next
             case False
             have kx: "K = {{x}}" using False kne knee k_cases by simp
