@@ -2,17 +2,9 @@
 theory BDT_ext
   imports
     "HOL-Library.Tree"
-    Simplicial_complex
-    "ROBDD.BDT"
 begin
 
 section\<open>BDT\<close>
-
-(*inductive_set bdt :: "(nat set \<times> nat ifex) set"
-  where "({}, Trueif) \<in> bdt"
-    | "({}, Falseif) \<in> bdt"
-    | "({x}, (IF x Trueif Falseif)) \<in> bdt"
-    | "(A, L) \<in> bdt \<and> (A, R) \<in> bdt \<Longrightarrow> (insert x A, (IF x L R)) \<in> bdt"*)
 
 inductive_set bdt :: "(nat set \<times> nat tree) set"
   where "({}, Leaf) \<in> bdt"
@@ -59,6 +51,9 @@ qed
 
 section\<open>Ordered Binary Decision trees -- OBDT --\<close>
 
+text\<open>We represent sorted sets of variables by means of a given list
+  that contains the same elements as the set.\<close>
+
 inductive_set sorted_variables :: "(nat set \<times> nat list) set"
   where "({}, []) \<in> sorted_variables"
   | "(A, l) \<in> sorted_variables \<Longrightarrow> x \<notin> A \<Longrightarrow> (insert x A, Cons x l) \<in> sorted_variables"
@@ -102,15 +97,14 @@ definition powerset :: "nat set \<Rightarrow> nat set set"
 
 lemma "powerset {} = {{}}" unfolding powerset_def by simp
 
-lemma "powerset {x} = {{},{x}}" unfolding powerset_def by auto
+lemma powerset_singleton: "powerset {x} = {{},{x}}" unfolding powerset_def by auto
 
 lemma
   powerset_singleton_cases:
   assumes K: "K \<subseteq> powerset {x}"
   shows "K = {} \<or> K = {{}} \<or> K = {{x}} \<or> K = {{},{x}}" 
   using K
-  unfolding powerset_def
-  by (smt (verit, del_insts) Pow_singleton insert_Diff subset_insert_iff subset_singletonD)
+  by (smt (verit, del_insts) powerset_singleton insert_Diff subset_insert_iff subset_singletonD)
 
 section\<open>Simplicial complexes\<close>
 
@@ -229,8 +223,7 @@ lemma link_ext_mono:
   shows "link_ext x V K \<subseteq> link_ext x V L"
   using assms unfolding link_ext_def powerset_def by auto
 
-lemma
-  link_ext_cc:
+lemma link_ext_cc:
   assumes v: "(V, K) \<in> cc_s"
   shows "(V, {s. insert x s \<in> K}) \<in> cc_s"
 proof (cases "x \<in> V")
@@ -269,8 +262,7 @@ next
   qed
 qed
 
-corollary
-  link_ext_cc_s:
+corollary link_ext_cc_s:
   assumes v: "(V, K) \<in> cc_s"
   shows "(V, link_ext x V K) \<in> cc_s"
 proof (cases "V = {}")
@@ -304,8 +296,7 @@ next
   qed
 qed
 
-lemma
-  link_ext_commute:
+lemma link_ext_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" 
   shows "link_ext y (V - {x}) (link_ext x V K) = 
         link_ext x (V - {y}) (link_ext y V K)"
@@ -324,8 +315,7 @@ lemma link_mono:
   shows "link x V K \<subseteq> link x V L"
   using assms unfolding link_def powerset_def by auto
 
-lemma
-  link_commute:
+lemma link_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" 
   shows "link y (V - {x}) (link x V K) = link x (V - {y}) (link y V K)"
   using x y unfolding link_def powerset_def 
@@ -335,8 +325,7 @@ lemma link_subset_link_ext:
   "link x V K \<subseteq> link_ext x V K"
   unfolding link_def link_ext_def powerset_def by auto
 
-lemma
-  cc_s_link_eq_link_ext:
+lemma cc_s_link_eq_link_ext:
   assumes cc: "(V, K) \<in> cc_s" 
   shows "link x V K = link_ext x V K"
 proof
@@ -360,8 +349,7 @@ proof
   qed
 qed
 
-lemma
-  link_cc:
+lemma link_cc:
   assumes v: "(V,K) \<in> cc_s" and x: "x \<in> V"
   shows "(V, {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}) \<in> cc_s"
 proof (cases "V = {}")
@@ -381,8 +369,7 @@ next
   qed
 qed
 
-corollary
-  link_cc_s:
+corollary link_cc_s:
   assumes v: "(V, K) \<in> cc_s"
   shows "(V, link x V K) \<in> cc_s" 
   using link_ext_cc_s [OF v, of x] 
@@ -393,8 +380,7 @@ section\<open>A different characterization of simplicial complexes\<close>
 definition closed_remove_element :: "nat set set \<Rightarrow> bool"
   where "closed_remove_element K = (\<forall>c\<in>K. \<forall>x\<in>c. c - {x} \<in> K)"
 
-lemma
-  cc_s_closed_remove_element:
+lemma cc_s_closed_remove_element:
   assumes cc_s: "(V, K) \<in> cc_s"
   shows "closed_remove_element K"
 proof (unfold closed_remove_element_def, rule, rule)
@@ -407,8 +393,7 @@ proof (unfold closed_remove_element_def, rule, rule)
   then show "c - {x} \<in> K" using c unfolding pow_closed_def by simp
 qed
 
-lemma
-  closed_remove_element_cc_s:
+lemma closed_remove_element_cc_s:
   assumes v: "V \<noteq> {}"
     and f: "finite V"
     and k: "K \<subseteq> powerset V" 
@@ -458,8 +443,7 @@ qed
 text\<open>The following result can be understood as the inverse 
   of @{thm cc_s_link_eq_link_ext}.\<close>
 
-lemma
-  link_eq_link_ext_cc_s:
+lemma link_eq_link_ext_cc_s:
   assumes v: "V \<noteq> {}"
     and f: "finite V"
     and k: "K \<subseteq> powerset V"
@@ -510,8 +494,7 @@ lemma cost_mono:
   shows "cost x V K \<subseteq> cost x V L"
   using assms unfolding cost_def powerset_def by auto
 
-lemma
-  cost_commute:
+lemma cost_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" 
   shows "cost y (V - {x}) (cost x V K) = 
         cost x (V - {y}) (cost y V K)"
@@ -524,15 +507,13 @@ lemma link_subset_cost:
 text\<open>The previous result does not hold for @{term link_ext}, 
   it is only true for @{term link}\<close>
 
-lemma
-  link_ext_cost_commute:
+lemma link_ext_cost_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
   shows "link_ext y (V - {x}) (cost x V K) = 
         cost x (V - {y}) (link_ext y V K)"
   using x y xy unfolding link_ext_def cost_def powerset_def by auto
 
-lemma
-  link_cost_commute:
+lemma link_cost_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
   shows "link y (V - {x}) (cost x V K) = 
         cost x (V - {y}) (link y V K)"
@@ -583,8 +564,7 @@ qed
 
 end
 
-lemma
-  less_eq_list_append:
+lemma less_eq_list_append:
   assumes le1: "length l1 = length l2" and le2: "length l3 = length l4"
     and leq1: "l1 \<le> l2" and leq2: "l3 \<le> l4"
   shows "l1 @ l3 \<le> l2 @ l4"
@@ -608,8 +588,7 @@ proof (unfold less_eq_list_def, rule)
   qed
 qed
 
-lemma
-  evaluation_mono:
+lemma evaluation_mono:
   assumes k: "K \<subseteq> powerset V" and l: "L \<subseteq> powerset V" 
     and kl: "K \<subseteq> L"
     (*and "(V, l) \<in> sorted_variables"*)
@@ -635,8 +614,7 @@ next
   qed
 qed
 
-lemma
-  append_eq_same_length:
+lemma append_eq_same_length:
   assumes mleq: "m1 @ m2 = l1 @ l2" 
     and lm: "length m1 = length m2" and ll: "length l1 = length l2"
   shows "m1 = l1" and "m2 = l2"
@@ -700,7 +678,7 @@ next
   qed
 qed
 
-section\<open>Lists of Boolean elements with no evaders\<close>
+section\<open>Lists of Boolean elements with no evaders.\<close>
 
 text\<open>The base cases, @{term "[False, False]"} 
   and  @{term "[True, True]"} belonging to the set 
@@ -755,15 +733,13 @@ lemma cone_not_empty:
   unfolding cone_def
   using assms by blast
 
-lemma
-  cone_disjoint:
+lemma cone_disjoint:
   assumes "cone X K" and "x \<in> X" and t: "T \<subseteq> powerset (X - {x})"
    and "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
   shows "T \<inter> {s. \<exists>t\<in>T. s = insert x t} = {}"
   using t unfolding powerset_def by auto
 
-lemma
-  cone_cost_eq_link:
+lemma cone_cost_eq_link:
   assumes x: "x \<in> X" 
     and cs: "T \<subseteq> powerset (X - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
@@ -780,8 +756,7 @@ text\<open>The following result does hold for @{term link_ext},
   because in general it does not hold that 
   @{term "link_ext x V K \<subseteq> cost x V K"}\<close>
 
-lemma
-  cone_impl_cost_eq_link_ext:
+lemma cone_impl_cost_eq_link_ext:
   assumes x: "x \<in> V"
     and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
@@ -795,8 +770,7 @@ proof
     unfolding cost_def link_ext_def powerset_def by auto
 qed
 
-lemma
-  cost_eq_link_ext_impl_cone:
+lemma cost_eq_link_ext_impl_cone:
   assumes c: "cost x V K = link_ext x V K"
     and x: "x \<in> V" and p: "K \<subseteq> powerset V"
   shows "cone V K"
@@ -836,8 +810,7 @@ qed
 
 text\<open>Under the given premises, @{term cost} of a cone is a cone.\<close>
 
-lemma
-  cost_cone_eq:
+lemma cost_cone_eq:
   assumes x: "x \<in> V" (*and y: "y \<in> V"*) and xy: "x \<noteq> y"
     and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
@@ -878,8 +851,7 @@ qed
 
 text\<open>Under the given premises, @{term link_ext} of a cone is a cone.\<close>
 
-lemma
-  link_ext_cone_eq:
+lemma link_ext_cone_eq:
   assumes x: "x \<in> V" (*and y: "y \<in> V"*) and xy: "x \<noteq> y"
     and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
@@ -941,8 +913,7 @@ qed
 text\<open>Even if it is not used in our later proofs,
   it also holds that @{term link} of a cone is a cone.\<close>
 
-lemma
-  link_cone_eq:
+lemma link_cone_eq:
   assumes x: "x \<in> V" (*and y: "y \<in> V"*) and xy: "x \<noteq> y"
     and cs: "T \<subseteq> powerset (V - {x})" 
     and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
@@ -1011,8 +982,7 @@ proof
   qed
 qed
 
-lemma
-  evaluation_cone_not_evaders:
+lemma evaluation_cone_not_evaders:
   assumes k: "K \<subseteq> powerset X"
     and c: "cone X K" and X: "X \<noteq> {}" and f: "finite X" and xl: "(X, l) \<in> sorted_variables"
   shows "evaluation l K \<in> not_evaders"
@@ -1127,8 +1097,7 @@ proof -
     by (rule not_evaders.intros(1), rule refl)
 qed
 
-lemma
-  finite_set_sorted_variables:
+lemma finite_set_sorted_variables:
   assumes f: "finite X"
   shows "\<exists>A. (X, A) \<in> sorted_variables"
 using f proof (induct "card X" arbitrary: X)
@@ -1241,19 +1210,16 @@ termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
     using c k x by simp
 qed
 
-lemma
-  shows "zero_collapsible {x} {}" by simp
+lemma shows "zero_collapsible {x} {}" by simp
 
-lemma
-  shows "\<not> zero_collapsible {x} {{}}" by simp
+lemma shows "\<not> zero_collapsible {x} {{}}" by simp
 
 lemma "link_ext x {x} {{}, {x}} = {{}}"
   unfolding link_ext_def powerset_def by auto
 
-lemma
-  shows "zero_collapsible {x} {{}, {x}}" by simp
+lemma shows "zero_collapsible {x} {{}, {x}}" by simp
 
-text\<open>There is always a valuation for which cero collapsible sets
+text\<open>There is always a valuation for which zero collapsible sets
  are not evasive.\<close>
 
 theorem
@@ -1396,8 +1362,7 @@ lemma
   "pow_closed (upper_cc_s_ex X)"
   unfolding pow_closed_def upper_cc_s_ex_def powerset_def by auto
 
-lemma
-  upper_cc_s_ex_idempotent:
+lemma upper_cc_s_ex_idempotent:
   "upper_cc_s_ex (upper_cc_s_ex X) = upper_cc_s_ex X"
   unfolding pow_closed_def upper_cc_s_ex_def powerset_def by auto
 
