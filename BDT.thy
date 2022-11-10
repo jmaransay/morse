@@ -1090,10 +1090,10 @@ lemma cost_singleton2: "cost x {x} {{}, {x}} = {{}}"
 
 lemma
   evaluation_empty_set_not_evaders:
-  assumes a: "A \<noteq> []"
-  shows "evaluation A {} \<in> not_evaders"
+  assumes a: "l \<noteq> []"
+  shows "evaluation l {} \<in> not_evaders"
 proof -
-  from a obtain x l where xl: "A = x # l"
+  from a obtain x l' where xl: "l = x # l'"
     by (meson neq_Nil_conv)
   show ?thesis 
     unfolding xl unfolding evaluation.simps (3) 
@@ -1103,7 +1103,7 @@ qed
 
 lemma finite_set_sorted_variables:
   assumes f: "finite X"
-  shows "\<exists>A. (X, A) \<in> sorted_variables"
+  shows "\<exists>l. (X, l) \<in> sorted_variables"
 using f proof (induct "card X" arbitrary: X)
   case 0
   then have x: "X = {}" by simp
@@ -1114,10 +1114,10 @@ next
     where X: "X = insert x X'" and cx': "card X' = n" 
       and f: "finite X'" and xx': "x \<notin> X'"
     by (metis card_Suc_eq_finite)
-  from Suc.hyps (1) [OF cx'[symmetric] f] obtain A' where x'a': "(X', A') \<in> sorted_variables"
+  from Suc.hyps (1) [OF cx'[symmetric] f] obtain l' where x'a': "(X', l') \<in> sorted_variables"
     by auto
   show ?case 
-    by (unfold X, intro exI [of _ "x # A'"],
+    by (unfold X, intro exI [of _ "x # l'"],
         intro sorted_variables.intros(2), intro x'a', intro xx')
 qed
 
@@ -1230,7 +1230,7 @@ theorem
   zero_collapsible_implies_not_evaders:
   assumes k: "K \<subseteq> powerset X"
     and x: "X \<noteq> {}" and f: "finite X" and cc: "zero_collapsible X K"
-  shows "\<exists>A. (X, A) \<in> sorted_variables \<and> evaluation A K \<in> not_evaders"
+  shows "\<exists>l. (X, l) \<in> sorted_variables \<and> evaluation l K \<in> not_evaders"
 using k x f cc proof (induct "card X" arbitrary: X K)
   case 0 with f have "X = {}" by simp
   with "0.prems" (2) have False by fast
@@ -1240,12 +1240,12 @@ next
   show ?case
   proof (cases "K = {}")
     case True
-    obtain A where xa: "(X, A) \<in> sorted_variables"
+    obtain l where xa: "(X, l) \<in> sorted_variables"
       using finite_set_sorted_variables [OF Suc.prems (3)] by auto
     show ?thesis
-    proof (intro exI [of _ A], rule conjI)
-      show "(X, A) \<in> sorted_variables" using xa .
-      show "evaluation A K \<in> not_evaders"
+    proof (intro exI [of _ l], rule conjI)
+      show "(X, l) \<in> sorted_variables" using xa .
+      show "evaluation l K \<in> not_evaders"
       unfolding True
       using evaluation.simps (3)
       by (metis Suc.prems(2) empty_set evaluation_empty_set_not_evaders sorted_variables_coherent xa)
@@ -1262,7 +1262,7 @@ next
         and ccc: "zero_collapsible (X - {x}) (cost x X K)" and xxne: "X - {x} \<noteq> {}"
         using zero_collapsible.simps (7) [OF cardx kne]
         by (metis One_nat_def Suc.prems(3) card.empty card_Suc_Diff1)
-    have "\<exists>A. (X - {x}, A) \<in> sorted_variables \<and> evaluation A (cost x X K) \<in> not_evaders"
+    have "\<exists>l. (X - {x}, l) \<in> sorted_variables \<and> evaluation l (cost x X K) \<in> not_evaders"
     proof (rule Suc.hyps (1))
       show "n = card (X - {x})" using x using Suc.hyps (2) by simp
       show "cost x X K \<subseteq> powerset (X - {x})" unfolding cost_def powerset_def by auto
@@ -1271,43 +1271,43 @@ next
       show "finite (X - {x})" using Suc.prems (3) by simp
       show "zero_collapsible (X - {x}) (cost x X K)" using ccc .
     qed
-    then obtain B where xxb: "(X - {x}, B) \<in> sorted_variables" 
-      and ec: "evaluation B (cost x X K) \<in> not_evaders" by auto
+    then obtain l' where xxb: "(X - {x}, l') \<in> sorted_variables" 
+      and ec: "evaluation l' (cost x X K) \<in> not_evaders" by auto
     from cl obtain y T where y: "y \<in> X - {x}" and t: "T \<subseteq> powerset (X - {x} - {y})" 
       and lc: "link_ext x X K = T \<union> {s. \<exists>t\<in>T. s = insert y t}" unfolding cone_def
       using x xxne by auto
-    have el: "evaluation B (link_ext x X K) \<in> not_evaders"
+    have el: "evaluation l' (link_ext x X K) \<in> not_evaders"
     proof (rule evaluation_cone_not_evaders)
       show "link_ext x X K \<subseteq> powerset (X - {x})" unfolding link_ext_def powerset_def by auto
       show "cone (X - {x}) (link_ext x X K)" using cl .
       show "X - {x} \<noteq> {}" using y by blast
       show "finite (X - {x})" using Suc.prems(3) by blast
-      show "(X - {x}, B) \<in> sorted_variables" using xxb .
+      show "(X - {x}, l') \<in> sorted_variables" using xxb .
     qed
     show ?thesis
-    proof (rule exI [of _ "x # B"], rule conjI)
-      show "(X, x # B) \<in> sorted_variables" using xxb x
+    proof (rule exI [of _ "x # l'"], rule conjI)
+      show "(X, x # l') \<in> sorted_variables" using xxb x
         by (metis DiffE insert_Diff sorted_variables.intros(2) singletonI)
-      show "evaluation (x # B) K \<in> not_evaders"
+      show "evaluation (x # l') K \<in> not_evaders"
         unfolding evaluation.simps (3)
       proof (rule not_evaders.intros (2))
-        show "evaluation B (cost x (set (x # B)) K) \<in> not_evaders"
+        show "evaluation l' (cost x (set (x # l')) K) \<in> not_evaders"
           using ec
-          using \<open>(X, x # B) \<in> sorted_variables\<close> sorted_variables_coherent by blast
-        show "length (evaluation B (link_ext x (set (x # B)) K)) =
-          length (evaluation B (cost x (set (x # B)) K))" by (rule length_evaluation_eq)
-        show "evaluation B (link_ext x (set (x # B)) K) \<in> not_evaders"
+          using \<open>(X, x # l') \<in> sorted_variables\<close> sorted_variables_coherent by blast
+        show "length (evaluation l' (link_ext x (set (x # l')) K)) =
+          length (evaluation l' (cost x (set (x # l')) K))" by (rule length_evaluation_eq)
+        show "evaluation l' (link_ext x (set (x # l')) K) \<in> not_evaders"
           using el
-          unfolding sorted_variables_coherent [OF \<open>(X, x # B) \<in> sorted_variables\<close>, symmetric]
+          unfolding sorted_variables_coherent [OF \<open>(X, x # l') \<in> sorted_variables\<close>, symmetric]
           using evaluation.simps
           using el
-          using \<open>(X, x # B) \<in> sorted_variables\<close> sorted_variables_coherent by blast
+          using \<open>(X, x # l') \<in> sorted_variables\<close> sorted_variables_coherent by blast
       qed
     qed
   next
     case True
     then obtain x where X: "X = {x}" by (rule card_1_singletonE)
-    show "\<exists>A. (X, A) \<in> sorted_variables \<and> evaluation A K \<in> not_evaders"
+    show "\<exists>l. (X, l) \<in> sorted_variables \<and> evaluation l K \<in> not_evaders"
     proof (unfold X, intro exI [of _ "[x]"], rule conjI)
       show "({x}, [x]) \<in> sorted_variables"
         by (simp add: sorted_variables.intros(1) sorted_variables.intros(2))
