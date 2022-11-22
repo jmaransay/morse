@@ -1,6 +1,7 @@
 
 theory Binary_Decision_Diagrams
-  imports "HOL.Main"
+  imports
+    "ROBDD.Bool_Func"
 begin
 
 (*datatype ifex = CIF bool | VIF nat | IF ifex ifex ifex*)
@@ -63,7 +64,6 @@ lemma "\<not> valif (IF 1 (IF 2 (IF 3 (IF 4 (CIF True) (CIF False))
                            (IF (VIF 4) (CIF True) (CIF False))) 
               (\<lambda>x. if x = 3 then True else False)" by simp*)
 
-
 fun vars :: "ifex \<Rightarrow> nat set" 
   where
   "vars (IF v f t) =  insert v (vars f \<union> vars t)" |
@@ -91,18 +91,25 @@ fun depth :: "ifex \<Rightarrow> nat"
     "depth (CIF b) = 0" |
     "depth (IF b f t) = 1 + min (depth f) (depth t)" 
 
-lemma "depth (CIF True) = 0" by simp
-
-
+lemma "depth (IF 1 (IF 2 (IF 3 (IF 4 (CIF True) (CIF False)) 
+                                 (IF 4 (CIF True) (CIF False)))
+                           (IF 3 (IF 4 (CIF True) (CIF False)) 
+                                 (IF  4 (CIF True) (CIF False))))
+                           (IF 4 (CIF True) (CIF False))) = 2" by simp
 
 text\<open>Pending definition\<close>
 
-fun reduce :: "ifex \<Rightarrow> ifex"
-  where 
-    "reduce (CIF b) = CIF b" |
-    "reduce (IF a f t) = (if a \<in> vars f then f 
-                              else if a \<in> vars t then t 
-                              else (IF a (reduce f) (reduce t)))"
+fun reduce :: "ifex \<Rightarrow> (nat \<Rightarrow> bool) \<Rightarrow> ifex"
+  where
+    "reduce (CIF b) env = CIF b" |
+    "reduce (IF a f t) env = (if f = t then (reduce f env) else IF a (reduce f (env(a:=True)))
+                               (reduce t (env(a:=False))))"
+
+value "reduce (IF 1 (IF 2 (IF 3 (IF 4 (CIF True) (CIF False)) 
+                                 (IF 4 (CIF True) (CIF False)))
+                           (IF 3 (IF 4 (CIF True) (CIF False)) 
+                                 (IF  4 (CIF True) (CIF False))))
+                           (IF 4 (CIF True) (CIF False))) (\<lambda>x. if x = 3 then False else True)"
 
 lemma
   assumes "depth (IF a t f) = n"
