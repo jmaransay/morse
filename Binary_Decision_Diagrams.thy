@@ -10,8 +10,8 @@ datatype ifex = CIF bool | IF nat ifex ifex
 primrec valif :: "ifex => (nat => bool) => bool"
   where
   "valif (CIF b)    env = b" |
-  "valif (IF b t e) env = (if env b then valif t env
-                                      else valif e env)"
+  "valif (IF b f t) env = (if env b then valif f env
+                                      else valif t env)"
 
 (*primrec valif :: "ifex => (nat => bool) => bool"
   where
@@ -66,17 +66,13 @@ lemma "\<not> valif (IF 1 (IF 2 (IF 3 (IF 4 (CIF True) (CIF False))
 
 fun vars :: "ifex \<Rightarrow> nat set" 
   where
-  "vars (IF v t f) =  insert v (vars t \<union> vars f)" |
-  "vars (CIF True) = {}" |
-  "vars (CIF False) = {}"
-
+  "vars (IF v f t) =  insert v (vars f \<union> vars t)" |
+  "vars (CIF b) = {}"
 
 fun ifex_unique_var :: "ifex \<Rightarrow> bool"
-  where 
-    "ifex_unique_var (CIF True) = True"  |
-    "ifex_unique_var (CIF False) = True" |
-    "ifex_unique_var (IF n t f) = (n \<notin> vars t \<and> n \<notin> vars f)"
-
+  where
+    "ifex_unique_var (CIF b) = True" |
+    "ifex_unique_var (IF n f t) = (n \<notin> vars t \<and> n \<notin> vars f)"
 
 
 lemma "ifex_unique_var (IF 1 (IF 2 (IF 3 (IF 4 (CIF True) (CIF False)) 
@@ -88,5 +84,30 @@ lemma "ifex_unique_var (IF 1 (IF 2 (IF 3 (IF 4 (CIF True) (CIF False))
 lemma "\<not> ifex_unique_var (IF 3 (IF 3 (CIF True) (CIF False))
                          (IF 3 (CIF True) (CIF False)))" by simp
 
-end
 
+
+fun depth :: "ifex \<Rightarrow> nat"
+  where 
+    "depth (CIF b) = 0" |
+    "depth (IF b f t) = 1 + min (depth f) (depth t)" 
+
+lemma "depth (CIF True) = 0" by simp
+
+
+
+text\<open>Pending definition\<close>
+
+fun reduce :: "ifex \<Rightarrow> ifex"
+  where 
+    "reduce (CIF b) = CIF b" |
+    "reduce (IF a f t) = (if a \<in> vars f then f 
+                              else if a \<in> vars t then t 
+                              else (IF a (reduce f) (reduce t)))"
+
+lemma
+  assumes "depth (IF a t f) = n"
+    and "a \<in> vars t"
+  shows "True"
+
+
+end
