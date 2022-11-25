@@ -5,6 +5,64 @@ theory Binary_Decision_Diagrams
     "Boolean_Expression_Checkers.Boolean_Expression_Checkers"
 begin
 
+
+fun depth :: "'a ifex \<Rightarrow> nat"
+  where
+    "depth Trueif = 0" | "depth Falseif = 0" |
+    "depth (IF b f t) = 1 + min (depth f) (depth t)"
+
+lemma depth_mkIF: "depth (mkIF x t1 t2) \<le> Suc (max (depth t1) (depth t2))"
+  unfolding mkIF_def by auto
+
+lemma "depth (reduce env b) \<le> depth b"
+proof (induct b arbitrary: env)
+  case Trueif
+  show ?case by simp
+next
+  case Falseif
+  show ?case by simp
+next
+  case (IF x1 b1 b2)
+  show ?case
+  proof (cases "Mapping.lookup env x1")
+    case None
+    have "depth (mkIF x1 (reduce (Mapping.update x1 True env) b1) (reduce (Mapping.update x1 False env) b2)) 
+          \<le> depth (IF x1 b1 b2)"
+      unfolding depth.simps (3)
+      using IF.hyps (1) [of "(Mapping.update x1 True env)"]
+      using IF.hyps (2) [of "(Mapping.update x1 False env)"]
+      unfolding mkIF_def by auto
+    thus ?thesis using None unfolding reduce.simps by simp
+  next
+    case (Some b)
+    show ?thesis
+    proof (cases b)
+      case True note b = True
+      show ?thesis
+      proof (cases "depth b1 \<le> depth b2")
+        case True hence db1: "depth (IF x1 b1 b2) = Suc (depth b1)" by simp
+        show ?thesis unfolding reduce.simps Some using b using db1
+          by (simp add: IF.hyps(1) le_SucI)
+      next
+        case False hence db2: "depth (IF x1 b1 b2) = Suc (depth b2)" by simp
+        show ?thesis unfolding reduce.simps Some using b using db2 try
+
+      qed
+      
+        using Some unfolding reduce.simps using True apply simp sorry
+    next
+      case False
+      then show ?thesis sorry
+    qed
+      unfolding reduce.simps
+    have "depth (reduce env (IF x1 b1 b2)) \<le> depth (IF x1 b1 b2)" try
+    have "depth (reduce env (if b then b1 else b2)) \<le> depth (IF x1 b1 b2)"
+      using IF.hyps [of env] apply (cases b) apply auto try
+      unfolding reduce.simps
+
+    show ?thesis unfolding reduce.simps
+  qed
+
 (*datatype ifex = CIF bool | VIF nat | IF ifex ifex ifex*)
 
 datatype ifex = CIF bool | IF nat ifex ifex
