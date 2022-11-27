@@ -3,18 +3,47 @@ theory Binary_Decision_Diagrams
   imports
     Main
     "Boolean_Expression_Checkers.Boolean_Expression_Checkers"
+    "Boolean_Expression_Checkers.Boolean_Expression_Checkers_AList_Mapping"
 begin
-
 
 fun depth :: "'a ifex \<Rightarrow> nat"
   where
     "depth Trueif = 0" | "depth Falseif = 0" |
     "depth (IF b f t) = 1 + min (depth f) (depth t)"
 
-lemma depth_mkIF: "depth (mkIF x t1 t2) \<le> Suc (max (depth t1) (depth t2))"
+lemma depth_mkIF: "depth (mkIF x t1 t2) \<le> Suc (min (depth t1) (depth t2))"
   unfolding mkIF_def by auto
 
-lemma "depth (reduce env b) \<le> depth b"
+fun Alexander_dual :: "'a ifex \<Rightarrow> 'a ifex"
+  where "Alexander_dual Trueif = Falseif" |
+    "Alexander_dual Falseif = Trueif" |
+    "Alexander_dual (IF b f t) = (IF b (Alexander_dual t) (Alexander_dual f))"
+
+lift_definition neg_env :: "'a env_bool \<Rightarrow> 'a env_bool"
+  is "\<lambda>m k. case m k of None \<Rightarrow> None | Some v \<Rightarrow> Some (\<not> v)" .
+
+lemma "val_ifex (Alexander_dual t) env = (\<not> val_ifex (t) (\<lambda>x. \<not> env x))"
+  by (induct t) auto
+
+lemma "depth (Alexander_dual t) = depth t"
+  by (induct t) auto
+
+lemma "Alexander_dual (Alexander_dual t) = t"
+  by (induct t) auto
+
+value "Alexander_dual (IF (1::int) Trueif Falseif)"
+
+value "Alexander_dual (IF (1::int) (IF 2 (Trueif) (Falseif))
+                         (IF 3 (Trueif) (Falseif)))"
+
+value "Alexander_dual (IF (1::int) (IF 2 ((IF 3 (Falseif) (Trueif))) (Falseif))
+                         (IF 3 (Trueif) (Falseif)))"
+
+value "depth (IF a\<^sub>1 (IF a\<^sub>2 (IF a\<^sub>3 Trueif Falseif) (IF a\<^sub>4 Falseif Trueif)) Trueif)"
+
+value "depth (reduce_alist  [(a\<^sub>1, True)] (IF a\<^sub>1 (IF a\<^sub>2 (IF a\<^sub>3 Trueif Falseif) (IF a\<^sub>4 Falseif Trueif)) Trueif))"
+
+lemma "depth (reduce_alist env b) \<le> depth b" try
 proof (induct b arbitrary: env)
   case Trueif
   show ?case by simp
@@ -45,7 +74,8 @@ next
           by (simp add: IF.hyps(1) le_SucI)
       next
         case False hence db2: "depth (IF x1 b1 b2) = Suc (depth b2)" by simp
-        show ?thesis unfolding reduce.simps Some using b using db2 try
+        show ?thesis unfolding reduce.simps Some using b using IF.hyps(1,2) [of env] using db2
+          apply auto try
 
       qed
       
