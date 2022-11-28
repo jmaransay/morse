@@ -6,18 +6,18 @@ theory Binary_Decision_Diagrams
     "Boolean_Expression_Checkers.Boolean_Expression_Checkers_AList_Mapping"
 begin
 
+text\<open>Beware that following @{term val_ifex} definition the left branch 
+corresponds to @{term True} and the left branch to @{term False}\<close>
+
 fun depth :: "'a ifex \<Rightarrow> nat"
   where
     "depth Trueif = 0" | "depth Falseif = 0" |
-    "depth (IF b f t) = 1 + min (depth f) (depth t)"
-
-lemma depth_mkIF: "depth (mkIF x t1 t2) \<le> Suc (min (depth t1) (depth t2))"
-  unfolding mkIF_def by auto
+    "depth (IF b t f) = 1 + min (depth t) (depth f)"
 
 fun Alexander_dual :: "'a ifex \<Rightarrow> 'a ifex"
   where "Alexander_dual Trueif = Falseif" |
     "Alexander_dual Falseif = Trueif" |
-    "Alexander_dual (IF b f t) = (IF b (Alexander_dual t) (Alexander_dual f))"
+    "Alexander_dual (IF b t f) = (IF b (Alexander_dual f) (Alexander_dual t))"
 
 lift_definition neg_env :: "'a env_bool \<Rightarrow> 'a env_bool"
   is "\<lambda>m k. case m k of None \<Rightarrow> None | Some v \<Rightarrow> Some (\<not> v)" .
@@ -39,12 +39,69 @@ value "Alexander_dual (IF (1::int) (IF 2 (Trueif) (Falseif))
 value "Alexander_dual (IF (1::int) (IF 2 ((IF 3 (Falseif) (Trueif))) (Falseif))
                          (IF 3 (Trueif) (Falseif)))"
 
-value "depth (IF a\<^sub>1 (IF a\<^sub>2 (IF a\<^sub>3 Trueif Falseif) (IF a\<^sub>4 Falseif Trueif)) Trueif)"
+text\<open>Beware that the depth of a reduced BDT is not always smaller than the 
+  one of the original BDT (it may depend on the chosen environment).\<close>
 
-value "depth (reduce_alist  [(a\<^sub>1, True)] (IF a\<^sub>1 (IF a\<^sub>2 (IF a\<^sub>3 Trueif Falseif) (IF a\<^sub>4 Falseif Trueif)) Trueif))"
+value "depth (IF finite_4.a\<^sub>1 (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) (IF finite_4.a\<^sub>4 Falseif Trueif)) Trueif)"
 
-lemma "depth (reduce_alist env b) \<le> depth b" try
-proof (induct b arbitrary: env)
+value "depth (reduce_alist  [(finite_4.a\<^sub>1, True)] 
+    (IF finite_4.a\<^sub>1 (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) (IF finite_4.a\<^sub>4 Falseif Trueif)) 
+                      Trueif))"
+
+value "depth (reduce_alist  [(finite_4.a\<^sub>1, False)] 
+    (IF finite_4.a\<^sub>1 (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) (IF finite_4.a\<^sub>4 Falseif Trueif)) 
+                      Trueif))"
+
+lemma depth_mkIF: "depth (mkIF x t1 t2) \<le> Suc (min (depth t1) (depth t2))"
+  unfolding mkIF_def by auto
+
+thm reduce.induct
+
+lemma
+  assumes x: "Mapping.lookup env x = None "
+  shows "depth (reduce env (IF x b1 b2)) \<le> depth (IF x b1 b2)"
+  using x proof (induct b1)
+  case Trueif
+  then show ?case
+    by simp (metis depth.simps(1) depth_mkIF min_0L)
+next
+  case Falseif
+  then show ?case
+    by simp (metis depth.simps(2) depth_mkIF min_0L)
+next
+  case (IF x1 b11 b12)
+  then show ?case sorry
+qed
+
+lemma
+  assumes x: "x \<notin> Mapping.keys env"
+  shows "depth (reduce env (IF x b1 b2)) \<le> depth (IF x b1 b2)"
+  using x proof (induct rule: reduce.induct)
+  case ("2_1" env)
+  show ?case by simp
+next
+  case ("2_2" env)
+  show ?case by simp
+next
+  case (1 uu x t1 t2)
+  from "1.prems" have "Mapping.lookup uu y = None" try
+  show ?case using "1.hyps" and "1.prems" sorry
+qed
+
+proof (induct b)
+  case Trueif
+  then show ?case by simp
+next
+  case Falseif
+  then show ?case by simp
+next
+  case (IF x1 b1 b2)
+  then show ?case sorry
+qed
+
+
+lemma "depth (reduce_alist [] b) \<le> depth b"
+proof (induct b)
   case Trueif
   show ?case by simp
 next
@@ -52,7 +109,36 @@ next
   show ?case by simp
 next
   case (IF x1 b1 b2)
-  show ?case
+  show ?case 
+    unfolding reduce_alist.simps 
+  proof (simp)
+    have "depth (mkIF x1 (reduce_alist [(x1, True)] b1) (reduce_alist [(x1, False)] b2))
+    \<le> Suc (min (depth (reduce_alist [(x1, True)] b1)) (depth (reduce_alist [(x1, False)] b2)))"
+      by (rule depth_mkIF)
+    have "depth (reduce_alist [(x1, True)] b1) \<le> depth b1 + 1"
+    proof (induct b1)
+      case Trueif
+      then show ?case by simp
+    next
+      case Falseif
+      then show ?case by simp
+    next
+      case (IF x2 b11 b12)
+      show ?case proof (cases "x1 = x2")
+        case True
+        show ?thesis unfolding True reduce_alist.simps 
+          apply simp using IF.hyps (1)
+          apply auto unfolding True
+          using suc_min
+        try
+        by (metis add.commute le_add_same_cancel2 reduce_alist.elims reduce_alist.simps(1) zero_order(1))
+    qed
+      try
+      show "depth (mkIF x1 (reduce_alist [(x1, True)] b1) (reduce_alist [(x1, False)] b2))
+    \<le> Suc (min (depth b1) (depth b2))"
+      using IF.hyps using depth_mkIF
+    
+         try
   proof (cases "Mapping.lookup env x1")
     case None
     have "depth (mkIF x1 (reduce (Mapping.update x1 True env) b1) (reduce (Mapping.update x1 False env) b2)) 
@@ -97,7 +183,8 @@ next
 
 datatype ifex = CIF bool | IF nat ifex ifex
 
-primrec valif :: "ifex => (nat => bool) => bool"
+primrec 
+valif :: "ifex => (nat => bool) => bool"
   where
   "valif (CIF b)    env = b" |
   "valif (IF b f t) env = (if env b then valif f env
