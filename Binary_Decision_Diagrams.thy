@@ -44,9 +44,31 @@ text\<open>Beware that the depth of a reduced BDT is not always smaller than the
 
 value "depth (IF finite_4.a\<^sub>1 (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) (IF finite_4.a\<^sub>4 Falseif Trueif)) Trueif)"
 
+value "depth (IF finite_4.a\<^sub>1 
+                (IF finite_4.a\<^sub>1 
+                  (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) 
+                                  (IF finite_4.a\<^sub>4 Falseif Trueif)) 
+                  Trueif)
+                Trueif)"
+
 value "depth (reduce_alist  [(finite_4.a\<^sub>1, True)] 
     (IF finite_4.a\<^sub>1 (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) (IF finite_4.a\<^sub>4 Falseif Trueif)) 
                       Trueif))"
+
+value "depth (reduce_alist  [(finite_4.a\<^sub>1, True)] (IF finite_4.a\<^sub>1
+                (IF finite_4.a\<^sub>1 
+                  (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) 
+                                  (IF finite_4.a\<^sub>4 Falseif Trueif)) 
+                  Trueif)
+                Trueif))"
+
+value "depth (reduce_alist  [] (IF finite_4.a\<^sub>1
+                (IF finite_4.a\<^sub>1
+                  (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) 
+                                  (IF finite_4.a\<^sub>4 Falseif Trueif)) 
+                  Trueif)
+                Trueif))"
+
 
 value "depth (reduce_alist  [(finite_4.a\<^sub>1, False)] 
     (IF finite_4.a\<^sub>1 (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) (IF finite_4.a\<^sub>4 Falseif Trueif)) 
@@ -55,23 +77,68 @@ value "depth (reduce_alist  [(finite_4.a\<^sub>1, False)]
 lemma depth_mkIF: "depth (mkIF x t1 t2) \<le> Suc (min (depth t1) (depth t2))"
   unfolding mkIF_def by auto
 
-thm reduce.induct
-
 lemma
-  assumes x: "Mapping.lookup env x = None "
-  shows "depth (reduce env (IF x b1 b2)) \<le> depth (IF x b1 b2)"
-  using x proof (induct b1)
+  (*assumes k: "Mapping.keys env = {}"*)
+  shows "depth (reduce env b) \<le> depth b" nitpick
+using k proof (induction b arbitrary: env)
   case Trueif
-  then show ?case
-    by simp (metis depth.simps(1) depth_mkIF min_0L)
+  then show ?case by simp
 next
   case Falseif
-  then show ?case
-    by simp (metis depth.simps(2) depth_mkIF min_0L)
+  then show ?case by simp
 next
-  case (IF x1 b11 b12)
-  then show ?case sorry
-qed
+  case (IF x1 b1 b2)
+  show ?case proof (cases "Mapping.lookup env x1 = None")
+    case True
+    have rhs: "depth (IF x1 b1 b2) = 1 + min (depth b1) (depth b2)" by simp
+    have r: "reduce env (IF x1 b1 b2) =
+        (mkIF x1 (reduce (Mapping.update x1 True env) b1) 
+                (reduce (Mapping.update x1 False env) b2))"
+    using True reduce.simps (1) [of env x1] mkIF_def by simp
+    moreover have "depth (mkIF x1 (reduce (Mapping.update x1 True env) b1) 
+                (reduce (Mapping.update x1 False env) b2))
+  \<le> 1 + min (depth (reduce (Mapping.update x1 True env) b1)) 
+            (depth (reduce (Mapping.update x1 False env) b2))"
+      using depth_mkIF by simp
+    moreover have "depth (reduce (Mapping.update x1 True env) b1) \<le> depth b1"
+      using IF.IH (1) by simp
+    moreover have "depth (reduce (Mapping.update x1 True env) b2) \<le> depth b2"
+      using IF.IH (2) by simp
+    ultimately
+    have "depth (reduce env (IF x1 b1 b2)) \<le> 1 + min (depth b1) (depth b2)"
+      by (smt (verit, ccfv_SIG) IF.IH(2) add_left_mono dual_order.trans min.mono)
+    thus ?thesis using rhs by simp
+  next
+    case False
+    then show ?thesis nitpick
+
+lemma
+  assumes x: "Mapping.lookup env x = None"
+  shows "depth (reduce env (IF x b1 b2)) \<le> depth (IF x b1 b2)"
+proof
+ have rhs: "depth (IF x1 b1 b2) = 1 + min (depth b1) (depth b2)" by simp
+    have r: "reduce env (IF x1 b1 b2) =
+        (mkIF x1 (reduce (Mapping.update x1 True env) b1) 
+                (reduce (Mapping.update x1 False env) b2))"
+    using True reduce.simps (1) [of env x1] mkIF_def by simp
+    moreover have "depth (mkIF x1 (reduce (Mapping.update x1 True env) b1) 
+                (reduce (Mapping.update x1 False env) b2))
+  \<le> 1 + min (depth (reduce (Mapping.update x1 True env) b1)) 
+            (depth (reduce (Mapping.update x1 False env) b2))"
+      using depth_mkIF by simp
+    moreover have "depth (reduce (Mapping.update x1 True env) b1) \<le> depth b1"
+      using IF.IH (1) by simp
+    moreover have "depth (reduce (Mapping.update x1 True env) b2) \<le> depth b2"
+      using IF.IH (2) by simp
+    ultimately
+    have "depth (reduce env (IF x1 b1 b2)) \<le> 1 + min (depth b1) (depth b2)"
+      by (smt (verit, ccfv_SIG) IF.IH(2) dual_order.trans min_def not_less_eq_eq plus_1_eq_Suc trans_le_add2)
+    thus ?thesis using rhs by simp
+
+
+
+
+
 
 lemma
   assumes x: "x \<notin> Mapping.keys env"
