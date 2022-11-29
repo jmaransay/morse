@@ -77,10 +77,47 @@ value "depth (reduce_alist  [(finite_4.a\<^sub>1, False)]
 lemma depth_mkIF: "depth (mkIF x t1 t2) \<le> Suc (min (depth t1) (depth t2))"
   unfolding mkIF_def by auto
 
+fun vars :: "'a ifex \<Rightarrow> 'a set"
+  where "vars (IF x t f) = insert x (vars t \<union> vars f)" |
+        "vars _ = {}"
+
+lemma vars_IFT_subset: "vars t \<subseteq> vars (IF x t f)" by auto
+lemma vars_IFF_subset: "vars f\<subseteq> vars (IF x t f)" by auto
+
+lemma
+  assumes k: "vars b \<inter> Mapping.keys env = {}"
+  shows "depth (reduce env b) \<le> depth b"
+  using k proof (induction b arbitrary: env)
+  case Trueif show ?case by simp
+next
+  case Falseif show ?case by simp
+next 
+  case (IF x1 b1 b2)
+  from IF.prems
+  have vb1: "vars b1 \<inter> Mapping.keys env = {}" 
+    and vb2: "vars b2 \<inter> Mapping.keys env = {}" by auto
+  from IF.prems have x1none: "Mapping.lookup env x1 = None"
+    by (simp add: domIff keys_dom_lookup)
+  from IF.IH have "depth (reduce env b1) \<le> depth b1"
+    and "depth (reduce env b2) \<le> depth b2" using vb2 vb1 by simp_all
+  have "reduce env (IF x1 b1 b2) = mkIF x1 (reduce (Mapping.update x1 True env) b1)
+      (reduce (Mapping.update x1 False env) b2)"
+    using x1none by simp
+  have "depth (mkIF x1 (reduce (Mapping.update x1 True env) b1)
+      (reduce (Mapping.update x1 False env) b2)) \<le>
+      Suc (min (depth (reduce (Mapping.update x1 True env) b1)) (depth (reduce (Mapping.update x1 False env) b2)))"
+    by (rule depth_mkIF)
+  
+
+    have       Suc (min (depth (reduce (Mapping.update x1 True env) b1))) depth (reduce (Mapping.update x1 False env) b2)))"
+
+    show ?case using reduce.simps (1) [of env x1 b1 b2]
+
 lemma
   (*assumes k: "Mapping.keys env = {}"*)
   shows "depth (reduce env b) \<le> depth b" nitpick
-using k proof (induction b arbitrary: env)
+(*using k*)
+proof (induction b arbitrary: env)
   case Trueif
   then show ?case by simp
 next
@@ -110,7 +147,19 @@ next
     thus ?thesis using rhs by simp
   next
     case False
-    then show ?thesis nitpick
+    then obtain b where x1b: "Mapping.lookup env x1 = Some b" by auto
+    show ?thesis
+    proof (cases b)
+      case True
+      have r: "reduce env (IF x1 b1 b2) = (reduce env b1)" 
+        using reduce.simps True x1b by auto
+      have db1: "depth (reduce env b1) \<le> depth b1" using IF.IH by simp
+      have db2: "depth (reduce env b2) \<le> depth b2" using IF.IH by simp
+      show ?thesis unfolding r using db1 db2 unfolding depth.simps (3) try sorry
+    next
+      case False
+      then show ?thesis sorry
+    qed
 
 lemma
   assumes x: "Mapping.lookup env x = None"
