@@ -84,34 +84,46 @@ fun vars :: "'a ifex \<Rightarrow> 'a set"
 lemma vars_IFT_subset: "vars t \<subseteq> vars (IF x t f)" by auto
 lemma vars_IFF_subset: "vars f\<subseteq> vars (IF x t f)" by auto
 
+fun ifex_no_twice where 
+  "ifex_no_twice (IF v t e) = (
+  v \<notin> (vars t \<union> vars e) \<and> ifex_no_twice t \<and> ifex_no_twice e)" |
+ "ifex_no_twice _ = True"
+
 lemma
-  assumes k: "vars b \<inter> Mapping.keys env = {}"
+  assumes ib: "ifex_no_twice b" 
+    and k: "vars b \<inter> Mapping.keys env = {}"
   shows "depth (reduce env b) \<le> depth b"
-  using k proof (induction b arbitrary: env)
+using ib k proof (induction b arbitrary: env)
   case Trueif show ?case by simp
 next
   case Falseif show ?case by simp
-next 
-  case (IF x1 b1 b2)
-  from IF.prems
-  have vb1: "vars b1 \<inter> Mapping.keys env = {}" 
-    and vb2: "vars b2 \<inter> Mapping.keys env = {}" by auto
-  from IF.prems have x1none: "Mapping.lookup env x1 = None"
-    by (simp add: domIff keys_dom_lookup)
-  from IF.IH have "depth (reduce env b1) \<le> depth b1"
-    and "depth (reduce env b2) \<le> depth b2" using vb2 vb1 by simp_all
-  have "reduce env (IF x1 b1 b2) = mkIF x1 (reduce (Mapping.update x1 True env) b1)
-      (reduce (Mapping.update x1 False env) b2)"
-    using x1none by simp
-  have "depth (mkIF x1 (reduce (Mapping.update x1 True env) b1)
-      (reduce (Mapping.update x1 False env) b2)) \<le>
-      Suc (min (depth (reduce (Mapping.update x1 True env) b1)) (depth (reduce (Mapping.update x1 False env) b2)))"
-    by (rule depth_mkIF)
-  
-
-    have       Suc (min (depth (reduce (Mapping.update x1 True env) b1))) depth (reduce (Mapping.update x1 False env) b2)))"
-
-    show ?case using reduce.simps (1) [of env x1 b1 b2]
+next
+  case (IF x t f)
+  from IF.prems 
+  have int: "ifex_no_twice t" and inf: "ifex_no_twice f"
+    and xt: "x \<notin> vars t" and xf: "x \<notin> vars f"
+    and vt: "vars t \<inter> Mapping.keys (Mapping.update x True env) = {}"
+    and vf: "vars f \<inter> Mapping.keys (Mapping.update x False env) = {}"
+    by auto
+  have drdt: "depth (reduce (Mapping.update x True env) t) \<le> depth t"
+    and drdf: "depth (reduce (Mapping.update x False env) f) \<le> depth f"
+     by (rule IF.IH, intro int, intro vt)
+          (rule IF.IH, intro inf, intro vf)
+  have mlxnone: "Mapping.lookup env x = None"
+     using IF.prems (2)
+     by (metis disjoint_iff_not_equal domIff insertCI keys_dom_lookup vars.simps(1))
+  have "depth (reduce env (IF x t f)) =
+          depth (mkIF x (reduce (Mapping.update x True env) t)
+      (reduce (Mapping.update x False env) f))" 
+        (is "_ = depth (mkIF x ?xt ?xf)")
+      using mlxnone reduce.simps (1) [of env x t f] by simp
+  also have "... \<le> Suc (min (depth ?xt) (depth ?xf))"
+      using depth_mkIF by metis
+  also have "... \<le> Suc (min (depth t) (depth f))"
+      using drdt drdf by auto
+  also have "... = depth (IF x t f)" by simp
+  finally show ?case .
+qed
 
 lemma
   (*assumes k: "Mapping.keys env = {}"*)
