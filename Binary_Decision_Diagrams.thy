@@ -55,7 +55,7 @@ value "depth (reduce_alist  [(finite_4.a\<^sub>1, True)]
     (IF finite_4.a\<^sub>1 (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) (IF finite_4.a\<^sub>4 Falseif Trueif)) 
                       Trueif))"
 
-value "depth (reduce_alist  [(finite_4.a\<^sub>1, True)] (IF finite_4.a\<^sub>1
+value "depth (reduce_alist [(finite_4.a\<^sub>1, True)] (IF finite_4.a\<^sub>1
                 (IF finite_4.a\<^sub>1 
                   (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) 
                                   (IF finite_4.a\<^sub>4 Falseif Trueif)) 
@@ -82,12 +82,103 @@ fun vars :: "'a ifex \<Rightarrow> 'a set"
         "vars _ = {}"
 
 lemma vars_IFT_subset: "vars t \<subseteq> vars (IF x t f)" by auto
-lemma vars_IFF_subset: "vars f\<subseteq> vars (IF x t f)" by auto
+lemma vars_IFF_subset: "vars f \<subseteq> vars (IF x t f)" by auto
+
+lemma vars_mkIF: "vars (mkIF x t f) \<subseteq> vars (IF x t f)" 
+  by (metis dual_order.eq_iff mkIF_def vars_IFT_subset)
+
+lemma
+  shows "vars (reduce env b) \<subseteq> vars b"
+proof (induction b arbitrary: env)
+  case Trueif
+  then show ?case by simp
+next
+  case Falseif
+  then show ?case by simp
+next
+  case (IF x1 b1 b2)
+  show ?case
+  proof (cases "Mapping.lookup env x1 = None")
+    case True
+    have vt: "vars (reduce (Mapping.update x1 True env) b1) \<subseteq> vars b1"
+        and vf: "vars (reduce (Mapping.update x1 False env) b2) \<subseteq> vars b2"
+      using IF.IH by simp_all
+    with vars_mkIF show ?thesis unfolding reduce.simps using True by fastforce
+  next
+    case False
+    have vt: "vars (reduce env b1) \<subseteq> vars b1"
+        and vf: "vars (reduce env b2) \<subseteq> vars b2" using IF.IH by simp_all
+    thus ?thesis unfolding reduce.simps using False
+      by auto (metis (mono_tags, lifting) subset_eq)
+  qed
+qed
 
 fun ifex_no_twice where 
   "ifex_no_twice (IF v t e) = (
   v \<notin> (vars t \<union> vars e) \<and> ifex_no_twice t \<and> ifex_no_twice e)" |
  "ifex_no_twice _ = True"
+
+lemma
+  env_not_in_vars:
+  assumes m: "Mapping.lookup env x = Some b"
+  shows "x \<notin> vars (reduce env bdd)"
+  using m proof (induction bdd arbitrary: env b)
+  case Trueif
+  then show ?case by simp
+next
+  case Falseif
+  then show ?case by simp
+next
+  case (IF x1 bdd1 bdd2 _ b)
+  show ?case
+  proof (cases "x = x1")
+    case True
+    have rw: "reduce env (IF x1 bdd1 bdd2) = reduce env (if b then bdd1 else bdd2)"
+      using IF.prems True unfolding reduce.simps by auto
+    show ?thesis unfolding rw using IF.IH [OF IF.prems] by (cases b, auto)
+  next
+    case False
+    have "x \<notin> vars (reduce (Mapping.update x1 True env) bdd1)"
+      and "x \<notin> vars (reduce (Mapping.update x1 False env) bdd2)"
+      using False IF.IH(1,2) IF.prems by auto
+    moreover have "x \<notin> vars (reduce env bdd1)"
+      and "x \<notin> vars (reduce env bdd2)"
+      using False IF.IH(1,2) IF.prems by auto
+    ultimately show ?thesis unfolding reduce.simps
+      apply (cases "Mapping.lookup env x1 = None") 
+      using False unfolding mkIF_def by (simp_all) force
+  qed
+qed
+
+lemma "x \<notin> vars (reduce (Mapping.update x b env) bdd)"
+  using env_not_in_vars by force
+
+lemma "ifex_no_twice (reduce env b)"
+proof (induction b arbitrary: env)
+  case Trueif
+  then show ?case by simp
+next
+  case Falseif
+  then show ?case by simp
+next
+  case (IF x1 b1 b2)
+  show ?case
+  proof (cases "Mapping.lookup env x1 = None")
+    case True
+    have vt: "ifex_no_twice (reduce (Mapping.update x1 True env) b1)"
+        and vf: "ifex_no_twice (reduce (Mapping.update x1 False env) b2)"
+      using IF.IH by simp_all
+    show ?thesis unfolding reduce.simps using True
+      by auto (simp add: env_not_in_vars mkIF_def vf vt)
+  next
+    case False
+    have vt: "ifex_no_twice (reduce env b1)"
+        and vf: "ifex_no_twice (reduce env b2)"
+      using IF.IH by simp_all
+    show ?thesis unfolding reduce.simps using False
+      using vf vt by force
+  qed
+qed
 
 lemma
   assumes ib: "ifex_no_twice b" 
@@ -124,6 +215,31 @@ next
   also have "... = depth (IF x t f)" by simp
   finally show ?case .
 qed
+
+fun path :: "'a env_bool \<Rightarrow> 'a ifex \<Rightarrow> 'a list option"
+  where "path _ Trueif = Some []" |
+  "path _ Falseif = Some []" |
+  "path eval (IF x t f) = (case Mapping.lookup eval x of 
+      None \<Rightarrow> None |
+      Some True \<Rightarrow> (case (path eval t) of 
+                        None \<Rightarrow> None |
+                        Some l \<Rightarrow> Some (x # l)) |
+      Some False \<Rightarrow> (case (path eval f) of 
+                        None \<Rightarrow> None |
+                        Some l \<Rightarrow> Some (x # l)))"
+
+value "path Mapping.empty (IF x Trueif Falseif)"
+
+lemma "path (Mapping.update x False env) (IF x (IF y Trueif Falseif) Falseif) 
+  = Some [x]" 
+  by simp
+
+definition length_path :: "'a list option \<Rightarrow> nat"
+  where "length_path l = (case l of None \<Rightarrow> 0 | Some m \<Rightarrow> length m)"
+
+lemma "length_path (path eval (reduce env b)) \<le> length_path (path eval b)"
+  try
+
 
 lemma
   (*assumes k: "Mapping.keys env = {}"*)
