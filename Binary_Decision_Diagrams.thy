@@ -181,6 +181,7 @@ next
 qed
 
 lemma
+  depth_reduce_le:
   assumes ib: "ifex_no_twice b" 
     and k: "vars b \<inter> Mapping.keys env = {}"
   shows "depth (reduce env b) \<le> depth b"
@@ -231,13 +232,417 @@ fun path :: "'a env_bool \<Rightarrow> 'a ifex \<Rightarrow> 'a list option"
 value "path Mapping.empty (IF x Trueif Falseif)"
 
 lemma "path (Mapping.update x False env) (IF x (IF y Trueif Falseif) Falseif) 
-  = Some [x]" 
+  = Some [x]"
   by simp
 
-definition length_path :: "'a list option \<Rightarrow> nat"
-  where "length_path l = (case l of None \<Rightarrow> 0 | Some m \<Rightarrow> length m)"
+lemma "path (Mapping.of_alist [(x, True), (y, True)]) 
+                  (IF x (IF y Trueif Falseif) Falseif) 
+  = Some [x, y]"
+  by auto (simp add: lookup_of_alist)
 
-lemma "length_path (path eval (reduce env b)) \<le> length_path (path eval b)"
+definition olength :: "'a list option \<Rightarrow> nat option"
+  where "olength l = (case l of None \<Rightarrow> None | Some m \<Rightarrow> Some (length m))"
+
+value "olength (path (Mapping.of_alist [(finite_4.a\<^sub>1, True)]) 
+            (IF finite_4.a\<^sub>1 Falseif Falseif))"
+
+value "olength (path (Mapping.of_alist [(finite_4.a\<^sub>3, False)])
+            (IF finite_4.a\<^sub>3 (IF finite_4.a\<^sub>1 Falseif Falseif) (Falseif)))"
+
+lemma
+  path_exists:
+  assumes v: "vars bdd \<subseteq> Mapping.keys eval"
+  shows "path eval bdd \<noteq> None"
+  using v proof (induction bdd)
+  case Trueif
+  then show ?case by simp
+next
+  case Falseif
+  then show ?case by simp
+next
+  case (IF x1 b11 b12)
+  from IF.prems
+  have vb11: "vars b11 \<subseteq> Mapping.keys eval" and vb12: "vars b12 \<subseteq> Mapping.keys eval"
+    and x1: "x1 \<in> Mapping.keys eval"
+    by simp_all
+  obtain l11 l12 x11 
+    where "path eval b11 = Some l11" and "path eval b12 = Some l12"
+      and "Mapping.lookup eval x1 = Some x11"
+    using IF.IH (1) [OF vb11] IF.IH (2) [OF vb12] x1
+    by auto (meson in_keysD)
+  then show ?case unfolding path.simps
+    by (simp add: case_bool_if)
+qed
+
+lemma
+  path_reduce_exists:
+  assumes v: "vars bdd \<subseteq> Mapping.keys eval"
+  shows "path eval (reduce env bdd) \<noteq> None"
+  using v path_exists [OF v] proof (induction bdd arbitrary: env)
+  case Trueif
+  then show ?case by simp
+next
+  case Falseif
+  then show ?case by simp
+next
+  case (IF x1 b1 b2)
+  show ?case
+  proof (cases "Mapping.lookup env x1 = None")
+    case False 
+    then obtain x11 where mx1: "Mapping.lookup env x1 = Some (x11)" by auto
+    from IF.prems (1)
+    have vb1: "vars b1 \<subseteq> Mapping.keys eval" and vb2: "vars b2 \<subseteq> Mapping.keys eval"
+      by simp_all
+    obtain l11 l12
+      where perb1: "path eval (reduce env b1) = Some l11" 
+        and perb2: "path eval (reduce env b2) = Some l12"
+      using IF.IH (1) [OF vb1 path_exists [OF vb1]] 
+        IF.IH (2) [OF vb2 path_exists [OF vb2]] (*x1*)
+      by auto (meson in_keysD)
+    thus ?thesis unfolding reduce.simps using mx1 by auto
+  next
+    case True
+    from IF.prems (1)
+    have vb1: "vars b1 \<subseteq> Mapping.keys eval" and vb2: "vars b2 \<subseteq> Mapping.keys eval"
+      and x1: "x1 \<in> Mapping.keys eval"
+      by simp_all
+    obtain l11 l12 x11
+      where perb1: "path eval (reduce (Mapping.update x1 True env) b1) = Some l11" 
+        and perb2: "path eval (reduce (Mapping.update x1 True env) b2) = Some l12"
+        and mx1: "Mapping.lookup eval x1 = Some x11"
+      using IF.IH (1) [OF vb1 path_exists [OF vb1]] 
+        IF.IH (2) [OF vb2 path_exists [OF vb2]] x1
+      by auto (meson in_keysD)
+    thus ?thesis
+      using True perb1 perb2 unfolding reduce.simps mkIF_def 
+      apply auto
+      apply (cases x11)
+      by (simp add: IF.IH(2) option.case_eq_if path_exists vb2)+
+  qed
+qed
+
+corollary
+  path_some:
+  assumes v: "vars bdd \<subseteq> Mapping.keys eval"
+  obtains l
+  where "path eval bdd = Some l"
+  using path_exists [OF v] by auto
+
+corollary
+  path_reduce_some:
+  assumes v: "vars bdd \<subseteq> Mapping.keys eval"
+  obtains l
+  where "path eval (reduce env bdd) = Some l"
+  using path_reduce_exists [OF v] by auto
+
+corollary
+  olength_some:
+  assumes v: "vars bdd \<subseteq> Mapping.keys eval"
+  obtains i
+  where "olength (path eval bdd) = Some i"
+  using path_some [OF v] unfolding olength_def
+  by (metis option.simps(5))
+
+corollary
+  olength_reduce_some:
+  assumes v: "vars bdd \<subseteq> Mapping.keys eval"
+  obtains i
+  where "olength (path eval (reduce env bdd)) = Some i"
+  using path_reduce_some [OF v] unfolding olength_def
+  by (metis option.simps(5))
+
+(*lemma assumes pm: "path eval
+       (mkIF x1 (reduce env1 b1) (reduce env2 b2)) = Some l"
+      and p: "path eval (IF x1 b1 b2) = Some m"
+    shows "set l \<subseteq> set m" and "length l \<le> length m"
+proof (cases "(reduce (Mapping.update x1 True env1) b1) =
+         (reduce (Mapping.update x1 False env1) b2)")
+  case True
+  hence "mkIF x1 (reduce (Mapping.update x1 True env1) b1)
+         (reduce (Mapping.update x1 False env2) b2) = 
+         reduce (Mapping.update x1 True env1) b1"
+    unfolding mkIF_def by simp*)
+
+text\<open>Beware that if we omit the first premise the result does not hold:
+  Nitpick found a counterexample for card 'a = 6:
+  Free variables:
+    @{term "b = IF a\<^sub>1 (IF a\<^sub>2 (IF a\<^sub>3 Falseif Trueif) Falseif) Trueif"},
+    @{term "env = [a\<^sub>1 \<mapsto> True, a\<^sub>6 \<mapsto> False]"},
+    @{term "eval =
+      [a\<^sub>1 \<mapsto> False, a\<^sub>2 \<mapsto> True, a\<^sub>3 \<mapsto> False, a\<^sub>4 \<mapsto> False, a\<^sub>5 \<mapsto> False, a\<^sub>6 
+        \<mapsto> False]"},
+    @{term "i = 2"},
+    @{term "j = 1"}.
+\<close>
+
+lemma
+  assumes v: "vars bdd \<subseteq> Mapping.keys eval"
+    and c: "\<forall>x\<in>Mapping.keys eval.
+          (Mapping.lookup env x = Mapping.lookup eval x \<or> Mapping.lookup env x = None)"
+    and li: "olength (path eval (reduce env bdd)) = Some i"
+    and lj: "olength (path eval bdd) = Some j"
+  shows "i \<le> j"
+  using c v li lj proof (induction bdd arbitrary: eval env i j)
+  case Trueif
+  then show ?case by simp
+next
+  case Falseif
+  then show ?case by simp
+next
+  case (IF x1 b1 b2)
+  from IF.prems (2)
+  have vb1: "vars b1 \<subseteq> Mapping.keys eval" and vb2: "vars b2 \<subseteq> Mapping.keys eval"
+    and x1: "x1 \<in> Mapping.keys eval"
+    by simp_all
+  obtain x11 where x1some: "Mapping.lookup eval x1 = Some x11"
+    using x1 by (meson in_keysD)
+  obtain lb1 where pb1: "path eval b1 = Some lb1" by (meson path_some vb1)
+  obtain lb2 where pb2: "path eval b2 = Some lb2" by (meson path_some vb2)
+  obtain lrb1t where pb1t: "path eval (reduce (Mapping.update x1 True env) b1) = Some lrb1t"
+    using path_reduce_some vb1 by blast
+  obtain lrb1f where pb1f: "path eval (reduce (Mapping.update x1 False env) b1) = Some lrb1f"
+    using path_reduce_some vb1 by blast
+  obtain lrb2t where pb2t: "path eval (reduce (Mapping.update x1 True env) b2) = Some lrb2t"
+    using path_reduce_some vb2 by blast
+  obtain lrb2f where pb2f: "path eval (reduce (Mapping.update x1 False env) b2) = Some lrb2f"
+    using path_reduce_some vb2 by blast
+  obtain i1 where oreb1: "olength (path eval (reduce env b1)) = Some i1"
+    using olength_reduce_some [OF vb1] by auto
+  obtain i12 where oreb12: "olength (path eval (reduce (Mapping.update x1 True env) b1)) = Some i12"
+    using olength_reduce_some [OF vb1] by auto
+  obtain j1 where ob1: "olength (path eval b1) = Some j1"
+    using olength_some [OF vb1] by auto
+  have i1j1: "i1 \<le> j1" using IF.IH (1) [OF IF.prems (1) vb1 oreb1 ob1] .
+  (*have i12j1: "i12 \<le> j1" using IF.IH (1) [OF _ vb1 oreb12 ob1] .*)
+  obtain i2 where oreb2: "olength (path eval (reduce env b2)) = Some i2"
+    using olength_reduce_some [OF vb2] by auto
+  obtain i22 where oreb22: "olength (path eval (reduce (Mapping.update x1 False env) b2)) = Some i22"
+    using olength_reduce_some [OF vb2] by auto
+  obtain j2 where ob2: "olength (path eval b2) = Some j2"
+    using olength_some [OF vb2] by auto
+  have i2j2: "i2 \<le> j2" using IF.IH (2) [OF IF.prems (1) vb2 oreb2 ob2] .
+  (*have i22j2: "i22 \<le> j2" using IF.IH (2) [OF _ vb2 oreb22 ob2] .*)
+  show ?case
+  proof (cases "Mapping.lookup env x1 = None")
+    case True note x1none = True
+    have r: "reduce env (IF x1 b1 b2) =
+      mkIF x1 (reduce (Mapping.update x1 True env) b1)  
+              (reduce (Mapping.update x1 False env) b2)"
+      unfolding reduce.simps using True by simp
+    show ?thesis
+    proof (cases "reduce (Mapping.update x1 True env) b1 =
+           reduce (Mapping.update x1 False env) b2")
+      case False
+      hence mk: "mkIF x1 (reduce (Mapping.update x1 True env) b1)  
+              (reduce (Mapping.update x1 False env) b2) = 
+        IF x1 (reduce (Mapping.update x1 True env) b1)  
+              (reduce (Mapping.update x1 False env) b2)" 
+        unfolding mkIF_def by simp
+      show ?thesis
+      proof (cases "x11")
+        case True
+        have i12j1: "i12 \<le> j1" 
+          using IF.IH (1) [OF _ vb1 oreb12 ob1] 
+            IF.prems (1) x1none
+          by (simp add: True lookup_update_unfold x1some)
+        have li12: "length (the (path eval (reduce (Mapping.update x1 True env) b1)))
+          = i12"
+            and li: "length (the (path eval (reduce env (IF x1 b1 b2)))) = i"
+          using pb1t oreb12 IF.prems (3)
+          unfolding olength_def apply simp_all
+          by (metis (no_types, lifting) option.case_eq_if option.distinct(1) option.sel)
+        have "i = i12 + 1"
+          unfolding li12 [symmetric] li [symmetric]
+          unfolding r mk unfolding path.simps 
+          using True x1some pb1t by auto
+        moreover have "length (the (path eval (IF x1 b1 b2))) = j"
+          and "j = j1 + 1" using IF.prems (4) unfolding path.simps
+          using x1some using ob1 unfolding olength_def using True
+           apply auto
+            apply (metis option.case_eq_if option.distinct(1) option.sel)
+          by (smt (verit, ccfv_SIG) True length_Cons option.case_eq_if option.distinct(1) option.sel)
+        ultimately show ?thesis using IF.prems (2,3) 
+          using i12j1 oreb12
+          unfolding olength_def by auto
+      next
+        case False
+        have i22j2: "i22 \<le> j2" 
+          using IF.IH (2) [OF _ vb2 oreb22 ob2] 
+            IF.prems (1) x1none
+          by (simp add: False lookup_update_unfold x1some)
+        have li22: "length (the (path eval (reduce (Mapping.update x1 False env) b2)))
+          = i22"
+            and li: "length (the (path eval (reduce env (IF x1 b1 b2)))) = i"
+          using pb2f oreb22 IF.prems (3)
+          unfolding olength_def apply simp_all
+          by (metis (no_types, lifting) option.case_eq_if option.distinct(1) option.sel)
+        have "i = i22 + 1"
+          unfolding li22 [symmetric] li [symmetric]
+          unfolding r mk unfolding path.simps 
+          using False x1some pb2f by auto
+        moreover have "length (the (path eval (IF x1 b1 b2))) = j"
+          and "j = j2 + 1" using IF.prems (4) unfolding path.simps
+          using x1some using ob2 unfolding olength_def using False
+           apply auto
+            apply (metis option.case_eq_if option.distinct(1) option.sel)
+          by (smt (verit, ccfv_SIG) False length_Cons option.case_eq_if option.distinct(1) option.sel)
+        ultimately show ?thesis using IF.prems (2,3)
+          using i22j2 oreb22
+          unfolding olength_def by auto        
+      qed
+    next
+      case True note b1b2eq = True
+      have rb1: "reduce env (IF x1 b1 b2) = reduce (Mapping.update x1 True env) b1"
+        unfolding r unfolding mkIF_def using True
+        unfolding reduce.simps using x1some by auto
+      show ?thesis
+      proof (cases "x11")
+        case True
+        have i12j1: "i12 \<le> j1" 
+          using IF.IH (1) [OF _ vb1 oreb12 ob1] 
+            IF.prems (1) x1none
+          by (simp add: True lookup_update_unfold x1some)
+        have li12: "length (the (path eval (reduce (Mapping.update x1 True env) b1)))
+          = i12"
+            and li: "length (the (path eval (reduce env (IF x1 b1 b2)))) = i"
+          using pb1t oreb12 IF.prems (3) 
+          unfolding olength_def apply simp_all
+          by (metis (no_types, lifting) option.case_eq_if option.distinct(1) option.sel)
+        have "i12 \<le> i"
+          unfolding li12 [symmetric] li [symmetric]
+          unfolding r rb1 unfolding path.simps 
+          using True x1some pb1t
+          using r rb1 by auto
+        moreover have "length (the (path eval (IF x1 b1 b2))) = j"
+          and "j = j1 + 1" using IF.prems (4) unfolding path.simps
+          using x1some using ob1 unfolding olength_def using True
+           apply auto
+            apply (metis option.case_eq_if option.distinct(1) option.sel)
+          by (smt (verit, ccfv_SIG) True length_Cons option.case_eq_if option.distinct(1) option.sel)
+        ultimately show ?thesis using IF.prems (2,3) 
+          using i12j1 oreb12
+          unfolding olength_def
+          by (metis li li12 rb1 trans_le_add1)
+      next
+        case False
+        have i22j2: "i22 \<le> j2" 
+          using IF.IH (2) [OF _ vb2 oreb22 ob2] 
+            IF.prems (1) x1none
+          by (simp add: False lookup_update_unfold x1some)
+        have li22: "length (the (path eval (reduce (Mapping.update x1 False env) b2)))
+          = i22"
+            and li: "length (the (path eval (reduce env (IF x1 b1 b2)))) = i"
+          using pb2f oreb22 IF.prems (3) 
+          unfolding olength_def apply simp_all
+          by (metis (no_types, lifting) option.case_eq_if option.distinct(1) option.sel)
+        have "i22 \<le> i"
+          unfolding li22 [symmetric] li [symmetric]
+          unfolding r rb1 unfolding path.simps 
+          using True x1some pb1t
+          using r rb1 by auto
+        moreover have "length (the (path eval (IF x1 b1 b2))) = j"
+          and "j = j2 + 1" using IF.prems (4) unfolding path.simps
+          using x1some using ob2 unfolding olength_def using False
+           apply auto
+            apply (metis option.case_eq_if option.distinct(1) option.sel)
+          by (smt (verit, ccfv_SIG) False length_Cons option.case_eq_if option.distinct(1) option.sel)
+        ultimately show ?thesis using IF.prems (2,3) 
+          using i22j2 oreb12
+          unfolding olength_def
+          by (metis True li li22 rb1 trans_le_add1)
+        qed
+      qed
+  next
+    case False
+    then obtain bl where x1envsome: "Mapping.lookup env x1 = Some bl" by auto
+    show ?thesis
+    proof (cases bl)
+      case True
+      have r: "reduce env (IF x1 b1 b2) = reduce env b1"
+        unfolding reduce.simps using x1envsome True by auto
+      show ?thesis
+      proof (cases "x11")
+        case True
+        have li12: "length (the (path eval (reduce env b1)))
+          = i1"
+            and li: "length (the (path eval (reduce env (IF x1 b1 b2)))) = i"
+          using vb1 oreb1 IF.prems (3)
+          unfolding olength_def apply simp_all
+          apply (simp add: option.case_eq_if path_reduce_exists)
+          by (metis (no_types, lifting) option.case_eq_if option.distinct(1) option.inject)
+        have "i1 = i"
+          unfolding li12 [symmetric] li [symmetric]
+          unfolding r unfolding path.simps ..
+        moreover have "length (the (path eval (IF x1 b1 b2))) = j"
+          and "j = j1 + 1" using IF.prems (4) unfolding path.simps
+          using x1some using ob1 unfolding olength_def using True
+           apply auto
+            apply (metis option.case_eq_if option.distinct(1) option.sel)
+          by (smt (verit, ccfv_SIG) True length_Cons option.case_eq_if option.distinct(1) option.sel)
+        ultimately show ?thesis using IF.prems (2,3) 
+          using i1j1 oreb12
+          unfolding olength_def by auto
+      next
+        case False
+        with IF.prems (1) x1some x1envsome True have False
+          using x1 by fastforce
+        thus ?thesis by fast
+      qed
+    next
+      case False note nbl = False
+      have r: "reduce env (IF x1 b1 b2) = reduce env b2"
+        unfolding reduce.simps using x1envsome False by auto
+      show ?thesis
+      proof (cases "x11")
+        case False
+        have li12: "length (the (path eval (reduce env b2)))
+          = i2"
+            and li: "length (the (path eval (reduce env (IF x1 b1 b2)))) = i"
+          using vb2 oreb2 IF.prems (3)
+          unfolding olength_def apply simp_all
+          apply (simp add: option.case_eq_if path_reduce_exists)
+          by (metis (no_types, lifting) option.case_eq_if option.distinct(1) option.inject)
+        have "i2 = i"
+          unfolding li12 [symmetric] li [symmetric]
+          unfolding r unfolding path.simps ..
+        moreover have "length (the (path eval (IF x1 b1 b2))) = j"
+          and "j = j2 + 1" using IF.prems (4) unfolding path.simps
+          using x1some using ob2 unfolding olength_def using False
+           apply auto
+            apply (metis option.case_eq_if option.distinct(1) option.sel)
+          by (smt (verit, ccfv_SIG) False length_Cons option.case_eq_if option.distinct(1) option.sel)
+        ultimately show ?thesis using IF.prems (2,3) 
+          using i2j2 oreb12
+          unfolding olength_def by auto
+      next
+        case True
+        with IF.prems (1) x1some x1envsome nbl have False
+          using x1 by fastforce
+        thus ?thesis by fast
+      qed
+    qed
+  qed
+qed
+   
+
+
+
+  proof (cases "Mapping.lookup env x1 = None")
+    case True from IF.prems
+    have "reduce env (IF x1 b1 b2) =
+        mkIF x1 (reduce (Mapping.update x1 True env) b1)
+                (reduce (Mapping.update x1 False env) b2)"
+      using reduce.simps True by simp
+    moreover from IF.IH have ""
+  
+  show ?case
+  
+  proof (cases "Mapping.lookup env x1 = None")
+    case True
+    try sorry
+qed
+
+
   try
 
 
