@@ -363,7 +363,8 @@ proof (cases "(reduce (Mapping.update x1 True env1) b1) =
          reduce (Mapping.update x1 True env1) b1"
     unfolding mkIF_def by simp*)
 
-text\<open>Beware that if we omit the first premise the result does not hold:
+text\<open>Beware that if we omit the first premise of the following result
+  then it does not hold:
   Nitpick found a counterexample for card 'a = 6:
   Free variables:
     @{term "b = IF a\<^sub>1 (IF a\<^sub>2 (IF a\<^sub>3 Falseif Trueif) Falseif) Trueif"},
