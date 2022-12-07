@@ -552,6 +552,41 @@ value "depth (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
 
 lemma "depth_path (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
+       (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif )) = 2" (is "depth_path ?IF = 2")
+proof (unfold depth_path_def, rule Least_equality)
+  show "(\<exists>eval.
+        2 = length (path eval ?IF) \<and>
+        vars ?IF \<subseteq> Mapping.keys eval)"
+  proof (rule exI [of _ "Mapping.of_alist [(a\<^sub>1,False)]"], rule conjI)
+    show "2 = length (path (Mapping.of_alist [(a\<^sub>1, False)]) ?IF)"
+      unfolding path.simps by (simp add: lookup_of_alist)
+    show "vars ?IF \<subseteq> Mapping.keys (Mapping.of_alist [(a\<^sub>1, False)])"
+      by simp
+    qed
+  next
+    fix y :: nat
+    show "(\<exists>eval.
+            y = length (path eval ?IF) \<and>
+            vars ?IF \<subseteq> Mapping.keys eval) \<Longrightarrow> 2 \<le> y "
+    proof -
+      assume e: "\<exists>eval::'a env_bool. y = length (path eval ?IF) \<and> 
+        vars ?IF \<subseteq> Mapping.keys eval"
+      show "2 \<le> y"
+      proof -
+      from e obtain eval
+        where y: "y = length (path eval ?IF)" and
+                 vars: "vars ?IF \<subseteq> Mapping.keys eval" by auto
+      from vars have "a\<^sub>1 \<in> Mapping.keys eval" by simp
+      hence "path eval ?IF = [a\<^sub>1, a\<^sub>1]"
+        unfolding path.simps try
+        by (metis bool.case_eq_if in_keysD option.simps(5))
+      with y show ?thesis by simp
+    qed
+  qed
+qed
+
+
+lemma "depth_path (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif))) = 3" (is "depth_path ?IF = 3")
 proof (unfold depth_path_def, rule Least_equality)
   show "(\<exists>eval.
