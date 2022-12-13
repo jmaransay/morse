@@ -552,41 +552,6 @@ value "depth (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
 
 lemma "depth_path (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
-       (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif )) = 2" (is "depth_path ?IF = 2")
-proof (unfold depth_path_def, rule Least_equality)
-  show "(\<exists>eval.
-        2 = length (path eval ?IF) \<and>
-        vars ?IF \<subseteq> Mapping.keys eval)"
-  proof (rule exI [of _ "Mapping.of_alist [(a\<^sub>1,False)]"], rule conjI)
-    show "2 = length (path (Mapping.of_alist [(a\<^sub>1, False)]) ?IF)"
-      unfolding path.simps by (simp add: lookup_of_alist)
-    show "vars ?IF \<subseteq> Mapping.keys (Mapping.of_alist [(a\<^sub>1, False)])"
-      by simp
-    qed
-  next
-    fix y :: nat
-    show "(\<exists>eval.
-            y = length (path eval ?IF) \<and>
-            vars ?IF \<subseteq> Mapping.keys eval) \<Longrightarrow> 2 \<le> y "
-    proof -
-      assume e: "\<exists>eval::'a env_bool. y = length (path eval ?IF) \<and> 
-        vars ?IF \<subseteq> Mapping.keys eval"
-      show "2 \<le> y"
-      proof -
-      from e obtain eval
-        where y: "y = length (path eval ?IF)" and
-                 vars: "vars ?IF \<subseteq> Mapping.keys eval" by auto
-      from vars have "a\<^sub>1 \<in> Mapping.keys eval" by simp
-      hence "path eval ?IF = [a\<^sub>1, a\<^sub>1]"
-        unfolding path.simps try
-        by (metis bool.case_eq_if in_keysD option.simps(5))
-      with y show ?thesis by simp
-    qed
-  qed
-qed
-
-
-lemma "depth_path (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif))) = 3" (is "depth_path ?IF = 3")
 proof (unfold depth_path_def, rule Least_equality)
   show "(\<exists>eval.
@@ -617,6 +582,107 @@ proof (unfold depth_path_def, rule Least_equality)
         by (metis bool.case_eq_if in_keysD option.simps(5))
       with y show ?thesis by simp
     qed
+  qed
+qed
+
+lemma "depth_path (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
+       (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)) = 2" (is "depth_path ?IF = 2")
+proof (unfold depth_path_def, rule Least_equality)
+  show "(\<exists>eval.
+        2 = length (path eval ?IF) \<and>
+        vars ?IF \<subseteq> Mapping.keys eval)"
+  proof (rule exI [of _ "Mapping.of_alist [(a\<^sub>1,False)]"], rule conjI)
+    show "2 = length (path (Mapping.of_alist [(a\<^sub>1, False)]) ?IF)"
+      unfolding path.simps by (simp add: lookup_of_alist)
+    show "vars ?IF \<subseteq> Mapping.keys (Mapping.of_alist [(a\<^sub>1, False)])"
+      by simp
+    qed
+  next
+    fix y :: nat
+    show "(\<exists>eval.
+            y = length (path eval ?IF) \<and>
+            vars ?IF \<subseteq> Mapping.keys eval) \<Longrightarrow> 2 \<le> y "
+    proof -
+      assume e: "\<exists>eval::'a env_bool. y = length (path eval ?IF) \<and> 
+        vars ?IF \<subseteq> Mapping.keys eval"
+      show "2 \<le> y"
+      proof -
+      from e obtain eval
+        where y: "y = length (path eval ?IF)" and
+                 vars: "vars ?IF \<subseteq> Mapping.keys eval" by auto
+      from vars 
+      have a1: "a\<^sub>1 \<in> Mapping.keys eval" by simp
+      have "path eval ?IF = [a\<^sub>1, a\<^sub>1, a\<^sub>1] \<or> path eval ?IF = [a\<^sub>1, a\<^sub>1]"
+      proof (cases "Mapping.lookup eval a\<^sub>1 = None")
+        case True show ?thesis using a1
+          by (simp add: True domIff keys_dom_lookup)
+      next
+        case False note a1some = False
+        then obtain x1 where x1: "Mapping.lookup eval a\<^sub>1 = Some x1" by auto
+        show ?thesis
+        proof (cases x1)
+          case True
+          thus ?thesis unfolding path.simps using a1some x1 by simp
+        next
+          case False
+          thus ?thesis unfolding path.simps using a1some x1 by simp
+        qed
+      qed
+      with y show ?thesis by auto
+    qed
+  qed
+qed
+
+section\<open>Chemins\<close>
+
+fun chemins :: "'a ifex \<Rightarrow> 'a list list"
+  where "chemins Trueif = [[]]" |
+  "chemins Falseif = [[]]" |
+  "chemins (IF x t f) = append (map (Cons x) (chemins t)) (map (Cons x) (chemins f))"
+
+definition chemins_set :: "'a ifex \<Rightarrow> 'a list set"
+  where "chemins_set bdd = set (chemins bdd)"
+
+lemma "chemins Trueif = [[]]" by simp
+
+lemma "chemins (IF a1 Falseif Falseif) = [[a1],[a1]]" by simp
+
+lemma "chemins_set (Falseif) = {[]}" and "chemins_set (Trueif) = {[]}" 
+  unfolding chemins_set_def by simp_all
+
+lemma "chemins_set (IF a1 Falseif Falseif) = {[a1]}" 
+  unfolding chemins_set_def by simp
+
+value "chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
+       (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
+
+value "chemins_set (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
+       (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
+
+lemma 
+  assumes v: "vars bdd \<subseteq> Mapping.keys eval"
+  shows "path eval bdd \<in> chemins_set bdd"
+using v proof (induction bdd arbitrary: eval)
+  case Trueif
+  then show ?case by (simp add: chemins_set_def)
+next
+  case Falseif
+  then show ?case by (simp add: chemins_set_def)
+next
+  case (IF x1 bdd1 bdd2)
+  show ?case
+  proof (cases "Mapping.lookup eval x1 = None")
+    case True
+    then show ?thesis using IF.prems by auto (simp add: keys_is_none_rep)
+  next
+    case False
+    then obtain x11 where m: "Mapping.lookup eval x1 = Some x11" by auto
+    have p1: "path eval bdd1 \<in> chemins_set bdd1" 
+      and p2: "path eval bdd2 \<in> chemins_set bdd2"
+      using IF.IH (1,2) using IF.prems by simp_all
+    show ?thesis
+      using m p1 p2 unfolding path.simps chemins_set_def 
+      by (cases x11, auto)  
   qed
 qed
 
