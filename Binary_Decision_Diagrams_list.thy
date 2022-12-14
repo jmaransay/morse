@@ -496,7 +496,7 @@ next
   case (IF x1 bdd1 bdd2)
   from IF.hyps obtain eval1 :: "'a env_bool" and eval2 :: "'a env_bool"
     where v1: "vars bdd1 \<subseteq> Mapping.keys eval1"
-    and v2: "vars bdd2 \<subseteq> Mapping.keys eval2" by (metis keys_map_values)
+    and v2: "vars bdd2 \<subseteq> Mapping.keys eval2" by metis
   show ?case
     apply (rule exI [of _ "Mapping.update x1 True (Mapping.combine (\<lambda>x y. x) eval1 eval2)"])
     using v1 v2 by fastforce
@@ -682,9 +682,95 @@ next
       using IF.IH (1,2) using IF.prems by simp_all
     show ?thesis
       using m p1 p2 unfolding path.simps chemins_set_def 
-      by (cases x11, auto)  
+      by (cases x11, auto)
   qed
 qed
+
+definition "min_chemins bdd = min_list (map length (chemins bdd))"
+
+(*fun min_chemins :: "'a list list \<Rightarrow> nat"
+  where "min_chemins [] = 0" |
+  "min_chemins [l] = length l" |
+  "min_chemins (l # la # lb) = min (length l) (min_chemins (la # lb))"*)
+
+value "min_chemins Falseif"
+
+value "min_chemins Trueif"
+
+value "min_chemins (IF a\<^sub>1 Falseif Falseif)"
+
+value "chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
+       (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
+
+value "min_chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
+       (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
+
+lemma chemins_map: "chemins (IF x1 bdd1 bdd2) = map (Cons x1) (append (chemins bdd1) (chemins bdd2))"
+  by simp
+
+lemma "min_chemins (IF x1 bdd1 bdd2) =
+    1 + min (min_chemins bdd1) (min_chemins bdd2)"
+  unfolding min_chemins_def unfolding chemins_map 
+  using min_list.simps apply auto
+  try
+
+
+lemma "min_chemins (chemins bdd) = depth bdd"
+proof (induction bdd)
+  case Trueif
+  then show ?case by simp
+next
+  case Falseif
+  then show ?case by simp
+next
+  case (IF x1 bdd1 bdd2)
+  have "depth (IF x1 bdd1 bdd2) = 1 + min (depth bdd1) (depth bdd2)" by simp
+  have "chemins (IF x1 bdd1 bdd2) = 
+    append (map (Cons x1) (chemins bdd1)) (map (Cons x1) (chemins bdd2))" by simp
+  have "min_chemins (chemins (IF x1 bdd1 bdd2)) = 
+    1 + min_chemins (append (chemins bdd1) (chemins bdd2))"
+    unfolding chemins.simps using min_chemins.simps apply auto
+    try
+
+  hence "min_chemins (chemins (IF x1 bdd1 bdd2)) =
+      1 + min (min_chemins (chemins bdd1)) (min_chemins (chemins bdd2))"
+    using min_chemins.simps
+    apply auto
+    try
+
+  then show ?case sorry
+qed
+
+  quickcheck
+  try
+
+
+
+value "chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
+       (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
+
+value "min_chemins (chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
+       (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif))))"
+
+instantiation list :: (type) linorder
+begin
+
+definition "less_eq l m == (length l \<le> length m)"
+
+definition "less l m == (length l < length m)"
+
+instance
+proof
+  fix x :: "'a list" and y :: "'a list" and z :: "'a list"
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" 
+    unfolding less_list_def less_eq_list_def by auto
+  show "x \<le> x" using less_eq_list_def by auto
+  assume "x \<le> y" and "y \<le> z" thus "x \<le> z" unfolding less_eq_list_def by simp
+  assume "x \<le> y" and "y \<le> x" thus "x = y" try
+
+
+definition min_chemines :: "'a ifex \<Rightarrow> nat"
+  where "min_chemines bdd = length (Min (chemins_set bdd))"
 
 lemma "depth bdd = depth_path bdd" try
 proof (induct bdd)
