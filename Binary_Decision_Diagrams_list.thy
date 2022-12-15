@@ -659,7 +659,8 @@ value "chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falsei
 value "chemins_set (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
 
-lemma 
+lemma
+  path_is_chemin:
   assumes v: "vars bdd \<subseteq> Mapping.keys eval"
   shows "path eval bdd \<in> chemins_set bdd"
 using v proof (induction bdd arbitrary: eval)
@@ -705,14 +706,111 @@ value "chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falsei
 value "min_chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
 
+lemma chemins_notempty[simp]: "chemins bdd \<noteq> []" 
+  by (induction bdd) simp_all
+
+lemma chemins_finite[simp]: "finite (set (chemins bdd))"
+  by (induction bdd) simp_all
+
 lemma chemins_map: "chemins (IF x1 bdd1 bdd2) = map (Cons x1) (append (chemins bdd1) (chemins bdd2))"
   by simp
 
-lemma "min_chemins (IF x1 bdd1 bdd2) =
+lemma
+  assumes a: "a \<in> set (chemins bdd1) \<union> set (chemins bdd1)"
+  shows "x1 # a \<in> set (chemins (IF x1 bdd1 bdd2))"
+  unfolding chemins_map using a by simp
+
+lemma
+  set_chemins_IF_cons:
+  assumes a: "a \<in> set (chemins (IF x1 bdd1 bdd2))"
+  shows "\<exists>l\<in>set (chemins bdd1) \<union> set (chemins bdd2). a = x1 # l"
+  using a unfolding chemins_map by auto
+
+lemma
+  min_list_in:
+  fixes l :: "'a::ord list"
+  assumes l: "l \<noteq> []"
+  shows "\<exists>x\<in>(set l). x = min_list l"
+  using l by (induct l, auto) (metis list.case_eq_if min_def)
+
+lemma
+  min_list_list_in:
+  fixes l :: "'a list list"
+  assumes l: "l \<noteq> []"
+  shows "\<exists>x\<in>(set l). length x = min_list (map length l)"
+  using l by (induct l, auto)
+   (metis list.case_eq_if list.map_disc_iff min_def)
+
+lemma
+  min_chemins_in:
+  shows "\<exists>l\<in>set(chemins bdd). length l = min_chemins bdd"
+  unfolding min_chemins_def
+  apply (rule min_list_list_in)
+  using chemins_notempty by auto
+
+lemma 
+  assumes a: "a \<in> A" and ne: "a \<noteq> Min A" and f: "finite A"
+  shows "Min A \<le> a"
+  using a ne f by simp
+
+lemma "min_chemins (IF x bdd1 bdd2) =
     1 + min (min_chemins bdd1) (min_chemins bdd2)"
-  unfolding min_chemins_def unfolding chemins_map 
-  using min_list.simps apply auto
-  try
+proof -
+  obtain l
+    where lin: "l \<in> set (chemins (IF x bdd1 bdd2))"
+      and ll: "length l = min_chemins (IF x bdd1 bdd2)"
+    using min_chemins_in [of "(IF x bdd1 bdd2)"] by auto
+  from set_chemins_IF_cons [OF lin]
+  obtain la where l1_set: "la \<in> set (chemins bdd1) \<union> set (chemins bdd2)"
+    and l_Cons: "l = x # la" by auto
+  show ?thesis
+  proof (cases "la \<in> set (chemins bdd1)")
+    case True
+    have "length la = min_chemins bdd1"
+    proof (rule ccontr)
+      assume contr: "length la \<noteq> min_chemins bdd1"
+      then obtain lb :: "'a list" 
+        where llb_min: "length lb = min_chemins bdd1" 
+          and llb_in: "lb \<in> set (chemins bdd1)"
+        using min_chemins_in [of bdd1] by auto
+      have ne: "map length (chemins bdd1) \<noteq> []" by simp
+      have llain: "length la \<in> (set (map length (chemins bdd1)))"
+        using True by simp
+      have lbla: "length lb < length la" 
+        using contr True  
+        using llb_min
+        unfolding min_chemins_def
+        unfolding min_list_Min [OF ne]
+        apply auto using llain
+        by (simp add: order_less_le)
+      have "x # lb \<in> set (chemins (IF x bdd1 bdd2))"
+        and "length (x # lb) < length (x # la)"
+        using llb_in lbla by simp_all
+      thus False using ll using l_Cons llb_in apply auto
+        unfolding min_chemins_def
+        using min_list_Min try
+      
+        show False sorry
+  next
+    case False
+    then show ?thesis sorry
+  qed
+  
+  obtain l1 where l1in: "l1 \<in> set (chemins bdd1)"
+      and ll1: "length l1 = min_chemins bdd1"
+    using min_chemins_in [of bdd1] by auto
+  obtain l2 where l2in: "l2 \<in> set (chemins bdd2)"
+      and ll2: "length l2 = min_chemins bdd2"
+    using min_chemins_in [of bdd2] by auto
+  
+  show ?thesis
+    unfolding ll [symmetric] ll1 [symmetric] ll2 [symmetric] try
+
+
+    case True
+  show ?thesis
+    unfolding min_chemins_def unfolding chemins_map
+    using min_list.simps True apply auto
 
 
 lemma "min_chemins (chemins bdd) = depth bdd"
