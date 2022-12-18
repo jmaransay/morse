@@ -12,7 +12,7 @@ corresponds to @{term True} and the left branch to @{term False}\<close>
 fun depth :: "'a ifex \<Rightarrow> nat"
   where
     "depth Trueif = 0" | "depth Falseif = 0" |
-    "depth (IF b t f) = 1 + min (depth t) (depth f)"
+    "depth (IF b t f) = 1 + max (depth t) (depth f)"
 
 fun Alexander_dual :: "'a ifex \<Rightarrow> 'a ifex"
   where "Alexander_dual Trueif = Falseif" |
@@ -51,7 +51,7 @@ value "depth (IF finite_4.a\<^sub>1
                   Trueif)
                 Trueif)"
 
-value "depth (reduce_alist  [(finite_4.a\<^sub>1, True)] 
+value "depth (reduce_alist  [(finite_4.a\<^sub>1, True)]
     (IF finite_4.a\<^sub>1 (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) (IF finite_4.a\<^sub>4 Falseif Trueif)) 
                       Trueif))"
 
@@ -74,7 +74,7 @@ value "depth (reduce_alist  [(finite_4.a\<^sub>1, False)]
     (IF finite_4.a\<^sub>1 (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) (IF finite_4.a\<^sub>4 Falseif Trueif)) 
                       Trueif))"
 
-lemma depth_mkIF: "depth (mkIF x t1 t2) \<le> Suc (min (depth t1) (depth t2))"
+lemma depth_mkIF: "depth (mkIF x t1 t2) \<le> Suc (max (depth t1) (depth t2))"
   unfolding mkIF_def by auto
 
 fun vars :: "'a ifex \<Rightarrow> 'a set"
@@ -206,12 +206,12 @@ next
      by (metis disjoint_iff_not_equal domIff insertCI keys_dom_lookup vars.simps(1))
   have "depth (reduce env (IF x t f)) =
           depth (mkIF x (reduce (Mapping.update x True env) t)
-      (reduce (Mapping.update x False env) f))" 
+      (reduce (Mapping.update x False env) f))"
         (is "_ = depth (mkIF x ?xt ?xf)")
       using mlxnone reduce.simps (1) [of env x t f] by simp
-  also have "... \<le> Suc (min (depth ?xt) (depth ?xf))"
+  also have "... \<le> Suc (max (depth ?xt) (depth ?xf))"
       using depth_mkIF by metis
-  also have "... \<le> Suc (min (depth t) (depth f))"
+  also have "... \<le> Suc (max (depth t) (depth f))"
       using drdt drdf by auto
   also have "... = depth (IF x t f)" by simp
   finally show ?case .
@@ -479,7 +479,7 @@ next
 qed
 
 definition depth_path :: "'a ifex \<Rightarrow> nat"
-  where "depth_path bdd = (LEAST n. \<exists>eval. n = length (path eval bdd) \<and>
+  where "depth_path bdd = (GREATEST n. \<exists>eval. n = length (path eval bdd) \<and>
                             vars bdd \<subseteq> Mapping.keys eval)"
 
 lemma
@@ -507,16 +507,16 @@ lemma depth_path_exists:
   shows "\<exists>n::nat. depth_path bdd = n" by simp
 
 lemma "depth_path Trueif = 0" and "depth_path Falseif = 0"
-  unfolding depth_path_def by simp_all
+  unfolding depth_path_def by (simp add: Greatest_equality)+
 
-lemma "depth (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)) = 1"
+lemma "depth (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)) = 2"
   unfolding depth.simps by simp
 
 lemma "depth (reduce Mapping.empty (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif))) = 0"
   unfolding depth.simps reduce.simps mkIF_def by (simp)
 
-lemma "depth_path (IF a\<^sub>1 Falseif Falseif) = 1" 
-proof (unfold depth_path_def, rule Least_equality)
+lemma "depth_path (IF a\<^sub>1 Falseif Falseif) = 1"
+proof (unfold depth_path_def, rule Greatest_equality)
   show "(\<exists>eval.
         1 = length (path eval (IF a\<^sub>1 Falseif Falseif)) \<and>
         vars (IF a\<^sub>1 Falseif Falseif) \<subseteq> Mapping.keys eval)"
@@ -530,11 +530,11 @@ proof (unfold depth_path_def, rule Least_equality)
     fix y :: nat
     show "(\<exists>eval.
             y = length (path eval (IF a\<^sub>1 Falseif Falseif)) \<and>
-            vars (IF a\<^sub>1 Falseif Falseif) \<subseteq> Mapping.keys eval) \<Longrightarrow> 1 \<le> y "
+            vars (IF a\<^sub>1 Falseif Falseif) \<subseteq> Mapping.keys eval) \<Longrightarrow> y \<le> 1"
     proof -
       assume e: "\<exists>eval::'a env_bool. y = length (path eval (IF a\<^sub>1 Falseif Falseif)) \<and> 
         vars (IF a\<^sub>1 Falseif Falseif) \<subseteq> Mapping.keys eval"
-      show "1 \<le> y"
+      show "y \<le> 1"
       proof -
       from e obtain eval
         where y: "y = length (path eval (IF a\<^sub>1 Falseif Falseif))" and
@@ -553,7 +553,7 @@ value "depth (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
 
 lemma "depth_path (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif))) = 3" (is "depth_path ?IF = 3")
-proof (unfold depth_path_def, rule Least_equality)
+proof (unfold depth_path_def, rule Greatest_equality)
   show "(\<exists>eval.
         3 = length (path eval ?IF) \<and>
         vars ?IF \<subseteq> Mapping.keys eval)"
@@ -567,11 +567,11 @@ proof (unfold depth_path_def, rule Least_equality)
     fix y :: nat
     show "(\<exists>eval.
             y = length (path eval ?IF) \<and>
-            vars ?IF \<subseteq> Mapping.keys eval) \<Longrightarrow> 3 \<le> y "
+            vars ?IF \<subseteq> Mapping.keys eval) \<Longrightarrow> y \<le> 3"
     proof -
       assume e: "\<exists>eval::'a env_bool. y = length (path eval ?IF) \<and> 
         vars ?IF \<subseteq> Mapping.keys eval"
-      show "3 \<le> y"
+      show "y \<le> 3"
       proof -
       from e obtain eval
         where y: "y = length (path eval ?IF)" and
@@ -586,31 +586,31 @@ proof (unfold depth_path_def, rule Least_equality)
 qed
 
 lemma "depth_path (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
-       (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)) = 2" (is "depth_path ?IF = 2")
-proof (unfold depth_path_def, rule Least_equality)
+       (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)) = 3" (is "depth_path ?IF = 3")
+proof (unfold depth_path_def, rule Greatest_equality)
   show "(\<exists>eval.
-        2 = length (path eval ?IF) \<and>
+        3 = length (path eval ?IF) \<and>
         vars ?IF \<subseteq> Mapping.keys eval)"
-  proof (rule exI [of _ "Mapping.of_alist [(a\<^sub>1,False)]"], rule conjI)
-    show "2 = length (path (Mapping.of_alist [(a\<^sub>1, False)]) ?IF)"
+  proof (rule exI [of _ "Mapping.of_alist [(a\<^sub>1,True)]"], rule conjI)
+    show "3 = length (path (Mapping.of_alist [(a\<^sub>1, True)]) ?IF)"
       unfolding path.simps by (simp add: lookup_of_alist)
-    show "vars ?IF \<subseteq> Mapping.keys (Mapping.of_alist [(a\<^sub>1, False)])"
+    show "vars ?IF \<subseteq> Mapping.keys (Mapping.of_alist [(a\<^sub>1, True)])"
       by simp
     qed
   next
     fix y :: nat
     show "(\<exists>eval.
             y = length (path eval ?IF) \<and>
-            vars ?IF \<subseteq> Mapping.keys eval) \<Longrightarrow> 2 \<le> y "
+            vars ?IF \<subseteq> Mapping.keys eval) \<Longrightarrow> y \<le> 3"
     proof -
       assume e: "\<exists>eval::'a env_bool. y = length (path eval ?IF) \<and> 
         vars ?IF \<subseteq> Mapping.keys eval"
-      show "2 \<le> y"
+      show "y \<le> 3"
       proof -
       from e obtain eval
         where y: "y = length (path eval ?IF)" and
                  vars: "vars ?IF \<subseteq> Mapping.keys eval" by auto
-      from vars 
+      from vars
       have a1: "a\<^sub>1 \<in> Mapping.keys eval" by simp
       have "path eval ?IF = [a\<^sub>1, a\<^sub>1, a\<^sub>1] \<or> path eval ?IF = [a\<^sub>1, a\<^sub>1]"
       proof (cases "Mapping.lookup eval a\<^sub>1 = None")
@@ -647,28 +647,28 @@ lemma "chemins Trueif = [[]]" by simp
 
 lemma "chemins (IF a1 Falseif Falseif) = [[a1],[a1]]" by simp
 
-lemma "chemins_set (Falseif) = {[]}" and "chemins_set (Trueif) = {[]}" 
+lemma "set (chemins Falseif) = {[]}" and "set (chemins Trueif) = {[]}" 
   unfolding chemins_set_def by simp_all
 
-lemma "chemins_set (IF a1 Falseif Falseif) = {[a1]}" 
+lemma "set (chemins (IF a1 Falseif Falseif)) = {[a1]}" 
   unfolding chemins_set_def by simp
 
 value "chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
 
-value "chemins_set (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
-       (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
+value "set (chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
+       (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif))))"
 
 lemma
   path_is_chemin:
   assumes v: "vars bdd \<subseteq> Mapping.keys eval"
-  shows "path eval bdd \<in> chemins_set bdd"
+  shows "path eval bdd \<in> set (chemins bdd)"
 using v proof (induction bdd arbitrary: eval)
   case Trueif
-  then show ?case by (simp add: chemins_set_def)
+  then show ?case by simp
 next
   case Falseif
-  then show ?case by (simp add: chemins_set_def)
+  then show ?case by simp
 next
   case (IF x1 bdd1 bdd2)
   show ?case
@@ -678,8 +678,8 @@ next
   next
     case False
     then obtain x11 where m: "Mapping.lookup eval x1 = Some x11" by auto
-    have p1: "path eval bdd1 \<in> chemins_set bdd1" 
-      and p2: "path eval bdd2 \<in> chemins_set bdd2"
+    have p1: "path eval bdd1 \<in> set (chemins bdd1)" 
+      and p2: "path eval bdd2 \<in> set (chemins bdd2)"
       using IF.IH (1,2) using IF.prems by simp_all
     show ?thesis
       using m p1 p2 unfolding path.simps chemins_set_def 
@@ -687,33 +687,31 @@ next
   qed
 qed
 
-definition "min_chemins bdd = min_list (map length (chemins bdd))"
+fun max_list :: "'a::ord list \<Rightarrow> 'a" where
+  "max_list (x # xs) = (case xs of [] \<Rightarrow> x | _ \<Rightarrow> max x (max_list xs))"
 
-(*fun min_chemins :: "'a list list \<Rightarrow> nat"
-  where "min_chemins [] = 0" |
-  "min_chemins [l] = length l" |
-  "min_chemins (l # la # lb) = min (length l) (min_chemins (la # lb))"*)
+definition "max_chemins bdd = max_list (map length (chemins bdd))"
 
-value "min_chemins Falseif"
+value "max_chemins Falseif"
 
-value "min_chemins Trueif"
+value "max_chemins Trueif"
 
-value "min_chemins (IF a\<^sub>1 Falseif Falseif)"
+value "max_chemins (IF a\<^sub>1 Falseif Falseif)"
 
 value "chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
 
-value "min_chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
+value "max_chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
 
-lemma chemins_notempty[simp]: "chemins bdd \<noteq> []" 
+lemma chemins_nonempty[simp]: "chemins bdd \<noteq> []" 
   by (induction bdd) simp_all
 
 lemma chemins_finite[simp]: "finite (set (chemins bdd))"
   by (induction bdd) simp_all
 
 lemma chemins_map: "chemins (IF x1 bdd1 bdd2) = map (Cons x1) (append (chemins bdd1) (chemins bdd2))"
-  by simp
+  using chemins.simps (3) by simp
 
 lemma
   assumes a: "a \<in> set (chemins bdd1) \<union> set (chemins bdd1)"
@@ -727,279 +725,127 @@ lemma
   using a unfolding chemins_map by auto
 
 lemma
-  min_list_in:
+  max_list_in:
   fixes l :: "'a::ord list"
   assumes l: "l \<noteq> []"
-  shows "\<exists>x\<in>(set l). x = min_list l"
-  using l by (induct l, auto) (metis list.case_eq_if min_def)
+  shows "\<exists>x\<in>(set l). x = max_list l"
+  using l by (induct l, auto) (metis list.case_eq_if max_def)
 
 lemma
-  min_list_list_in:
+  max_list_list_in:
   fixes l :: "'a list list"
   assumes l: "l \<noteq> []"
-  shows "\<exists>x\<in>(set l). length x = min_list (map length l)"
+  shows "\<exists>x\<in>(set l). length x = max_list (map length l)"
   using l by (induct l, auto)
-   (metis list.case_eq_if list.map_disc_iff min_def)
+   (metis list.case_eq_if list.map_disc_iff max_def)
+
+
+lemma max_list_Max: 
+  assumes xs: "xs \<noteq> []"
+  shows "max_list xs = Max (set xs)"
+  using xs by (induction xs rule: induct_list012)(auto)
 
 lemma
-  min_chemins_in:
-  shows "\<exists>l\<in>set(chemins bdd). length l = min_chemins bdd"
-  unfolding min_chemins_def
-  apply (rule min_list_list_in)
-  using chemins_notempty by auto
+  max_chemins_in:
+  shows "\<exists>l\<in>set(chemins bdd). length l = max_chemins bdd"
+  unfolding max_chemins_def
+  apply (rule max_list_list_in)
+  using chemins_nonempty by auto
 
-lemma 
-  assumes a: "a \<in> A" and ne: "a \<noteq> Min A" and f: "finite A"
-  shows "Min A \<le> a"
+lemma
+  assumes a: "a \<in> A" and ne: "a \<noteq> Max A" and f: "finite A"
+  shows "a \<le> Max A"
   using a ne f by simp
 
-lemma "min_chemins (IF x bdd1 bdd2) =
-    1 + min (min_chemins bdd1) (min_chemins bdd2)"
+lemma
+  max_list_map:
+  fixes l :: "nat list"
+  assumes l: "l \<noteq> []"
+  shows "max_list (map (\<lambda>x. x + 1) l) = 1 + max_list l"
+  using l by (induct l, auto) (simp add: list.case_eq_if)
+
+lemma max_list_append:
+  fixes l :: "nat list"
+  assumes l: "l \<noteq> []" and m: "m \<noteq> []"
+  shows "max_list (l @ m) = max (max_list l) (max_list m)"
+  using l m by (induct l, auto) (simp add: list.case_eq_if max.assoc)
+
+lemma max_chemins_IF:
+  "max_chemins (IF x1 bdd1 bdd2) = 
+      1 + max (max_chemins bdd1) (max_chemins bdd2)"
 proof -
-  obtain l
-    where lin: "l \<in> set (chemins (IF x bdd1 bdd2))"
-      and ll: "length l = min_chemins (IF x bdd1 bdd2)"
-    using min_chemins_in [of "(IF x bdd1 bdd2)"] by auto
-  from set_chemins_IF_cons [OF lin]
-  obtain la where l1_set: "la \<in> set (chemins bdd1) \<union> set (chemins bdd2)"
-    and l_Cons: "l = x # la" by auto
-  show ?thesis
-  proof (cases "la \<in> set (chemins bdd1)")
-    case True
-    have "length la = min_chemins bdd1"
-    proof (rule ccontr)
-      assume contr: "length la \<noteq> min_chemins bdd1"
-      then obtain lb :: "'a list" 
-        where llb_min: "length lb = min_chemins bdd1" 
-          and llb_in: "lb \<in> set (chemins bdd1)"
-        using min_chemins_in [of bdd1] by auto
-      have ne: "map length (chemins bdd1) \<noteq> []" by simp
-      have llain: "length la \<in> (set (map length (chemins bdd1)))"
-        using True by simp
-      have lbla: "length lb < length la" 
-        using contr True  
-        using llb_min
-        unfolding min_chemins_def
-        unfolding min_list_Min [OF ne]
-        apply auto using llain
-        by (simp add: order_less_le)
-      have "x # lb \<in> set (chemins (IF x bdd1 bdd2))"
-        and "length (x # lb) < length (x # la)"
-        using llb_in lbla by simp_all
-      thus False using ll using l_Cons llb_in apply auto
-        unfolding min_chemins_def
-        using min_list_Min try
-      
-        show False sorry
-  next
-    case False
-    then show ?thesis sorry
-  qed
-  
-  obtain l1 where l1in: "l1 \<in> set (chemins bdd1)"
-      and ll1: "length l1 = min_chemins bdd1"
-    using min_chemins_in [of bdd1] by auto
-  obtain l2 where l2in: "l2 \<in> set (chemins bdd2)"
-      and ll2: "length l2 = min_chemins bdd2"
-    using min_chemins_in [of bdd2] by auto
-  
-  show ?thesis
-    unfolding ll [symmetric] ll1 [symmetric] ll2 [symmetric] try
+  have m: "map length (map ((#) x1) (chemins bdd1 @ chemins bdd2)) = 
+    map (\<lambda>x. x + 1) (map length (chemins bdd1 @ chemins bdd2))"
+    by (induct "(chemins bdd1 @ chemins bdd2)", auto)
+  have "max_chemins (IF x1 bdd1 bdd2) =
+    max_list (map length (map ((#) x1) (chemins bdd1 @ chemins bdd2)))"
+    unfolding max_chemins_def [of "(IF x1 bdd1 bdd2)"]
+    unfolding chemins_map ..
+  also have "max_list (map length (map ((#) x1) (chemins bdd1 @ chemins bdd2))) =
+    1 + max_list (map length (chemins bdd1 @ chemins bdd2))"
+    unfolding m
+    by (rule max_list_map, simp)
+  also have "... = 1 + max_list (map length (chemins bdd1) @ map length (chemins bdd2))"
+    by simp
+  also have "... = 1 + max (max_list (map length (chemins bdd1))) (max_list (map length (chemins bdd2)))"
+    using max_list_append by simp
+  also have "... = 1 + max (max_chemins bdd1) (max_chemins bdd2)"
+    unfolding max_chemins_def [symmetric]..
+  finally show ?thesis .
+qed
 
-
-    case True
-  show ?thesis
-    unfolding min_chemins_def unfolding chemins_map
-    using min_list.simps True apply auto
-
-
-lemma "min_chemins (chemins bdd) = depth bdd"
+theorem depth_eq_max_chemins: "depth bdd = max_chemins bdd"
 proof (induction bdd)
   case Trueif
-  then show ?case by simp
+  then show ?case unfolding max_chemins_def by auto
 next
   case Falseif
-  then show ?case by simp
+  then show ?case unfolding max_chemins_def by auto
 next
   case (IF x1 bdd1 bdd2)
-  have "depth (IF x1 bdd1 bdd2) = 1 + min (depth bdd1) (depth bdd2)" by simp
-  have "chemins (IF x1 bdd1 bdd2) = 
-    append (map (Cons x1) (chemins bdd1)) (map (Cons x1) (chemins bdd2))" by simp
-  have "min_chemins (chemins (IF x1 bdd1 bdd2)) = 
-    1 + min_chemins (append (chemins bdd1) (chemins bdd2))"
-    unfolding chemins.simps using min_chemins.simps apply auto
-    try
-
-  hence "min_chemins (chemins (IF x1 bdd1 bdd2)) =
-      1 + min (min_chemins (chemins bdd1)) (min_chemins (chemins bdd2))"
-    using min_chemins.simps
-    apply auto
-    try
-
-  then show ?case sorry
-qed
-
-  quickcheck
-  try
-
-
-
-value "chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
-       (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
-
-value "min_chemins (chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
-       (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif))))"
-
-instantiation list :: (type) linorder
-begin
-
-definition "less_eq l m == (length l \<le> length m)"
-
-definition "less l m == (length l < length m)"
-
-instance
-proof
-  fix x :: "'a list" and y :: "'a list" and z :: "'a list"
-  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" 
-    unfolding less_list_def less_eq_list_def by auto
-  show "x \<le> x" using less_eq_list_def by auto
-  assume "x \<le> y" and "y \<le> z" thus "x \<le> z" unfolding less_eq_list_def by simp
-  assume "x \<le> y" and "y \<le> x" thus "x = y" try
-
-
-definition min_chemines :: "'a ifex \<Rightarrow> nat"
-  where "min_chemines bdd = length (Min (chemins_set bdd))"
-
-lemma "depth bdd = depth_path bdd" try
-proof (induct bdd)
-  case Trueif
-  then show ?case unfolding depth.simps depth_path_def by simp
-next
-  case Falseif
-  then show ?case unfolding depth.simps depth_path_def by simp
-next
-  case (IF x1 bdd1 bdd2)
-  obtain env1 where "(LEAST n.
-            \<exists>eval. n = length (path eval bdd1) \<and> vars bdd1 \<subseteq> Mapping.keys eval) 
-          =
-        depth_path bdd1" using depth_path_def by metis
-  then obtain n where "(\<exists>eval. n = length (path eval bdd1) \<and> vars bdd1 \<subseteq> Mapping.keys eval)"
-    try
-  obtain env1 where "depth_path bdd1 = length (path env1 bdd1)" and
-                            "vars bdd1 \<subseteq> Mapping.keys env1"
-    unfolding depth_path_def find_theorems "(LEAST n. _)" try
   show ?case
-  proof (cases "Mapping.lookup env x1 = None")
-    case True
-    
-qed
-  
-
-lemma
-  assumes x: "x \<notin> Mapping.keys env"
-  shows "depth (reduce env (IF x b1 b2)) \<le> depth (IF x b1 b2)"
-  using x proof (induct rule: reduce.induct)
-  case ("2_1" env)
-  show ?case by simp
-next
-  case ("2_2" env)
-  show ?case by simp
-next
-  case (1 uu x t1 t2)
-  from "1.prems" have "Mapping.lookup uu y = None" try
-  show ?case using "1.hyps" and "1.prems" sorry
-qed
-
-proof (induct b)
-  case Trueif
-  then show ?case by simp
-next
-  case Falseif
-  then show ?case by simp
-next
-  case (IF x1 b1 b2)
-  then show ?case sorry
-qed
-
-
-lemma "depth (reduce_alist [] b) \<le> depth b"
-proof (induct b)
-  case Trueif
-  show ?case by simp
-next
-  case Falseif
-  show ?case by simp
-next
-  case (IF x1 b1 b2)
-  show ?case 
-    unfolding reduce_alist.simps 
-  proof (simp)
-    have "depth (mkIF x1 (reduce_alist [(x1, True)] b1) (reduce_alist [(x1, False)] b2))
-    \<le> Suc (min (depth (reduce_alist [(x1, True)] b1)) (depth (reduce_alist [(x1, False)] b2)))"
-      by (rule depth_mkIF)
-    have "depth (reduce_alist [(x1, True)] b1) \<le> depth b1 + 1"
-    proof (induct b1)
-      case Trueif
-      then show ?case by simp
-    next
-      case Falseif
-      then show ?case by simp
-    next
-      case (IF x2 b11 b12)
-      show ?case proof (cases "x1 = x2")
-        case True
-        show ?thesis unfolding True reduce_alist.simps 
-          apply simp using IF.hyps (1)
-          apply auto unfolding True
-          using suc_min
-        try
-        by (metis add.commute le_add_same_cancel2 reduce_alist.elims reduce_alist.simps(1) zero_order(1))
-    qed
-      try
-      show "depth (mkIF x1 (reduce_alist [(x1, True)] b1) (reduce_alist [(x1, False)] b2))
-    \<le> Suc (min (depth b1) (depth b2))"
-      using IF.hyps using depth_mkIF
-    
-         try
-  proof (cases "Mapping.lookup env x1")
-    case None
-    have "depth (mkIF x1 (reduce (Mapping.update x1 True env) b1) (reduce (Mapping.update x1 False env) b2)) 
-          \<le> depth (IF x1 b1 b2)"
-      unfolding depth.simps (3)
-      using IF.hyps (1) [of "(Mapping.update x1 True env)"]
-      using IF.hyps (2) [of "(Mapping.update x1 False env)"]
-      unfolding mkIF_def by auto
-    thus ?thesis using None unfolding reduce.simps by simp
+  proof (cases "max_chemins bdd1 \<le> max_chemins bdd2")
+    case True hence d: "depth bdd1 \<le> depth bdd2" using IF.IH by simp
+    have dIF: "depth (IF x1 bdd1 bdd2) = 1 + (depth bdd2)" 
+      using d by simp
+    have "max_chemins (IF x1 bdd1 bdd2) =
+      1 + max (max_chemins bdd1) (max_chemins bdd2)"
+      by (rule max_chemins_IF)
+    hence mIF: "max_chemins (IF x1 bdd1 bdd2) = 1 + (max_chemins bdd2)"
+      using True by simp
+    show ?thesis unfolding dIF mIF using IF.IH (2) by simp
   next
-    case (Some b)
-    show ?thesis
-    proof (cases b)
-      case True note b = True
-      show ?thesis
-      proof (cases "depth b1 \<le> depth b2")
-        case True hence db1: "depth (IF x1 b1 b2) = Suc (depth b1)" by simp
-        show ?thesis unfolding reduce.simps Some using b using db1
-          by (simp add: IF.hyps(1) le_SucI)
-      next
-        case False hence db2: "depth (IF x1 b1 b2) = Suc (depth b2)" by simp
-        show ?thesis unfolding reduce.simps Some using b using IF.hyps(1,2) [of env] using db2
-          apply auto try
-
-      qed
-      
-        using Some unfolding reduce.simps using True apply simp sorry
-    next
-      case False
-      then show ?thesis sorry
-    qed
-      unfolding reduce.simps
-    have "depth (reduce env (IF x1 b1 b2)) \<le> depth (IF x1 b1 b2)" try
-    have "depth (reduce env (if b then b1 else b2)) \<le> depth (IF x1 b1 b2)"
-      using IF.hyps [of env] apply (cases b) apply auto try
-      unfolding reduce.simps
-
-    show ?thesis unfolding reduce.simps
+    case False hence d: "depth bdd2 < depth bdd1" using IF.IH by simp
+    have dIF: "depth (IF x1 bdd1 bdd2) = 1 + (depth bdd1)" 
+      using d by simp
+    have "max_chemins (IF x1 bdd1 bdd2) =
+      1 + max (max_chemins bdd1) (max_chemins bdd2)"
+      by (rule max_chemins_IF)
+    hence mIF: "max_chemins (IF x1 bdd1 bdd2) = 1 + (max_chemins bdd1)"
+      using False by simp
+    show ?thesis unfolding dIF mIF using IF.IH (1) by simp
   qed
+qed
+
+corollary depth_path_le_max_chemins: 
+  "depth_path (bdd::'a ifex) \<le> max_chemins bdd"
+proof (rule ccontr)
+  assume "\<not> depth_path bdd \<le> max_chemins bdd"
+  hence "\<exists>eval. length (path eval bdd) > max_chemins bdd \<and> vars bdd \<subseteq> Mapping.keys eval"
+    unfolding depth_path_def using depth_path_exists [of bdd]
+    by auto (smt (z3) GreatestI_nat le_refl less_imp_le_nat nat_neq_iff valuation_exists)
+  then obtain eval where leval: "length (path eval bdd) > max_chemins bdd" 
+    and vbdd: "vars bdd \<subseteq> Mapping.keys eval" by auto
+  show False 
+    using path_is_chemin [OF vbdd] leval
+    unfolding max_chemins_def 
+    using chemins_nonempty [of bdd]
+    by auto (metis (no_types, lifting) List.finite_set Max_ge imageI \<open>chemins bdd \<noteq> []\<close> le_imp_less_Suc list.map_disc_iff list.set_map max_list_Max not_less_eq)
+qed
+
+corollary "depth_path bdd \<le> depth bdd"
+  by (simp add: depth_eq_max_chemins depth_path_le_max_chemins)
+
 
 (*datatype ifex = CIF bool | VIF nat | IF ifex ifex ifex*)
 
