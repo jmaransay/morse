@@ -846,6 +846,68 @@ qed
 corollary "depth_path bdd \<le> depth bdd"
   by (simp add: depth_eq_max_chemins depth_path_le_max_chemins)
 
+section\<open>Free Binary Decision Diagrams\<close>
+
+text\<open>Free binary decision diagrams (FBDDs) are graph-based 
+  data structures representing Boolean functions with the 
+  constraint (additional to binary decision diagram) that 
+  each variable is tested at most once during the computation.\<close>
+
+fun fbdd :: "'a ifex \<Rightarrow> 'a set \<Rightarrow> bool" where
+  "fbdd (IF x t1 t2) X =
+    (x \<notin> X \<and> fbdd t1 (insert x X) \<and> fbdd t2 (insert x X))" |
+  "fbdd _ _ = True"
+
+lemma
+  assumes "fbdd bdd1 env" and "fbdd bdd2 env" 
+  shows "depth_path (IF x1 bdd1 bdd2) = 1 + max (depth_path bdd1) (depth_path bdd2)"
+  nitpick
+proof -
+  
+  try
+
+value "depth_path (IF finite_1.a\<^sub>1 Trueif (IF finite_1.a\<^sub>1 Trueif Trueif))"
+
+  value "bdd2 = IF a\<^sub>1 Trueif Trueif"
+
+
+    x1 = a\<^sub>1
+
+lemma assumes f: "fbdd bdd env"
+  shows "depth bdd = depth_path bdd" 
+  using f proof (induction bdd arbitrary: env)
+  case Trueif
+  then show ?case
+    by (metis bot_nat_0.extremum_unique depth.simps(1) depth_eq_max_chemins depth_path_le_max_chemins)
+next
+  case Falseif
+  then show ?case
+    by (metis bot_nat_0.extremum_uniqueI depth.simps(2) depth_eq_max_chemins depth_path_le_max_chemins)
+next
+  case (IF x1 bdd1 bdd2)
+  then show ?case 
+  proof -
+    from IF.prems (1)
+    have fbddbdd1: "fbdd bdd1 (insert x1 env)"
+      and fbddbdd2: "fbdd bdd2 (insert x1 env)"
+      unfolding fbdd.simps by simp_all
+    hence dbbd1: "depth bdd1 = depth_path bdd1" and 
+      dbdd2: "depth bdd2 = depth_path bdd2"
+      using IF.IH (1,2) by simp_all
+    show ?thesis
+    proof (cases "(depth bdd1) < (depth bdd2)")
+      case True
+      hence "max (depth bdd1) (depth bdd2) = (depth bdd2)" by simp
+      show ?thesis unfolding depth_path_def
+      unfolding depth.simps depth_path_def  
+    
+qed
+
+
+
+
+
+
 
 (*datatype ifex = CIF bool | VIF nat | IF ifex ifex ifex*)
 
