@@ -739,7 +739,6 @@ lemma
   using l by (induct l, auto)
    (metis list.case_eq_if list.map_disc_iff max_def)
 
-
 lemma max_list_Max: 
   assumes xs: "xs \<noteq> []"
   shows "max_list xs = Max (set xs)"
@@ -853,32 +852,56 @@ text\<open>Free binary decision diagrams (FBDDs) are graph-based
   constraint (additional to binary decision diagram) that 
   each variable is tested at most once during the computation.\<close>
 
-fun fbdd :: "'a ifex \<Rightarrow> 'a set \<Rightarrow> bool" where
-  "fbdd (IF x t1 t2) X =
-    (x \<notin> X \<and> fbdd t1 (insert x X) \<and> fbdd t2 (insert x X))" |
-  "fbdd _ _ = True"
+abbreviation "fbdd == ifex_no_twice"
+
+value "fbdd (IF x1 Trueif Falseif)"
+
+value "fbdd (IF x1 (IF x1 Trueif Falseif) Falseif)"
 
 lemma
-  assumes "fbdd bdd1 env" and "fbdd bdd2 env" 
+  assumes f: "fbdd (IF x1 bdd1 bdd2)"
+  shows "fbdd bdd1" using f by simp
+
+lemma
+  assumes f: "fbdd (IF x1 bdd1 bdd2)"
+  shows "fbdd bdd2" using f by simp
+
+lemma
+  assumes f: "fbdd (IF x1 bdd1 bdd2)"
+  shows "x1 \<notin> vars (bdd1)" using f by simp
+
+lemma
+  assumes f: "fbdd (IF x1 bdd1 bdd2)"
+  shows "x1 \<notin> vars (bdd2)" using f by simp
+
+lemma
+  assumes f: "fbdd (IF x1 bdd1 bdd2)" 
   shows "depth_path (IF x1 bdd1 bdd2) = 1 + max (depth_path bdd1) (depth_path bdd2)"
-  nitpick
-proof -
+proof (cases "depth_path bdd1 < depth_path bdd2")
+  case True
+  obtain n where g: "(GREATEST n.
+      \<exists>eval. n = length (path eval bdd2) \<and> vars bdd2 \<subseteq> Mapping.keys eval) =
+      n" by simp
+  have "(\<exists>eval. n = length (path eval bdd2) \<and> vars bdd2 \<subseteq> Mapping.keys eval)"
+    using Greatest_equality [OF ]
   
-  try
+    unfolding depth_path_def
+    using Greatest_equality
+    unfolding depth_path_def using Greatest_equality apply auto try
+    find_theorems "(GREATEST n. ?P n)"
+    then obtain eval :: "'a env_bool"
+    where "n = length (path eval bdd2) \<and> vars bdd2 \<subseteq> Mapping.keys eval" 
+    unfolding depth_path_def
+    unfolding Greatest_def apply auto
+    try using True unfolding depth_path_def
+  
 
-value "depth_path (IF finite_1.a\<^sub>1 Trueif (IF finite_1.a\<^sub>1 Trueif Trueif))"
-
-  value "bdd2 = IF a\<^sub>1 Trueif Trueif"
-
-
-    x1 = a\<^sub>1
-
-lemma assumes f: "fbdd bdd env"
+lemma assumes f: "fbdd bdd"
   shows "depth bdd = depth_path bdd" 
-  using f proof (induction bdd arbitrary: env)
+  using f proof (induction bdd)
   case Trueif
   then show ?case
-    by (metis bot_nat_0.extremum_unique depth.simps(1) depth_eq_max_chemins depth_path_le_max_chemins)
+    by (metis bot_nat_0.extremum_uniqueI depth.simps(1) depth_eq_max_chemins depth_path_le_max_chemins)
 next
   case Falseif
   then show ?case
@@ -887,13 +910,9 @@ next
   case (IF x1 bdd1 bdd2)
   then show ?case 
   proof -
-    from IF.prems (1)
-    have fbddbdd1: "fbdd bdd1 (insert x1 env)"
-      and fbddbdd2: "fbdd bdd2 (insert x1 env)"
-      unfolding fbdd.simps by simp_all
-    hence dbbd1: "depth bdd1 = depth_path bdd1" and 
+    have dbbd1: "depth bdd1 = depth_path bdd1" and 
       dbdd2: "depth bdd2 = depth_path bdd2"
-      using IF.IH (1,2) by simp_all
+      using IF.IH (1,2) IF.prems by simp_all
     show ?thesis
     proof (cases "(depth bdd1) < (depth bdd2)")
       case True
