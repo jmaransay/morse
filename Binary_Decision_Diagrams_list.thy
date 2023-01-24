@@ -704,7 +704,7 @@ value "chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falsei
 value "max_chemins (IF a\<^sub>1 (IF a\<^sub>1 (IF a\<^sub>1 Falseif Falseif) Falseif)
        (IF a\<^sub>1 Falseif (IF a\<^sub>1 Falseif Falseif)))"
 
-lemma chemins_nonempty[simp]: "chemins bdd \<noteq> []" 
+lemma chemins_nonempty[simp]: "chemins bdd \<noteq> []"
   by (induction bdd) simp_all
 
 lemma chemins_finite[simp]: "finite (set (chemins bdd))"
@@ -875,10 +875,59 @@ lemma
   shows "x1 \<notin> vars (bdd2)" using f by simp
 
 lemma
-  assumes f: "fbdd (IF x1 bdd1 bdd2)" 
-  shows "depth_path (IF x1 bdd1 bdd2) = 1 + max (depth_path bdd1) (depth_path bdd2)"
+  assumes g: "P (k::nat)"
+  shows "P (LEAST n. P n)"
+  by (rule LeastI, rule g)
+
+lemma
+  assumes p: "(LEAST n. P n) = n"
+  shows "P (n::nat)" using p try
+
+lemma
+  assumes p: "(GREATEST n. P n) = n"
+  shows "P (n::nat)" using p try
+
+  apply (rule GreatestI_nat) using g
+  apply simp try
+
+lemma
+  assumes f: "fbdd (IF x bdd1 bdd2)"
+  shows "depth_path (IF x bdd1 bdd2) = 1 + max (depth_path bdd1) (depth_path bdd2)"
 proof (cases "depth_path bdd1 < depth_path bdd2")
   case True
+  show ?thesis using f True
+  proof (induction bdd2)
+    case Trueif
+    then show ?case
+      by (metis bot_nat_0.extremum_strict bot_nat_0.extremum_unique depth.simps(1) depth_eq_max_chemins depth_path_le_max_chemins)  sorry
+  next
+    case Falseif
+    then show ?case
+      by (metis depth.simps(2) depth_eq_max_chemins depth_path_le_max_chemins le_eq_less_or_eq not_less_zero)
+  next
+    case (IF x1 bdd11 bdd12)
+    have "fbdd (IF x1 bdd1 bdd11)" using IF.prems (1) apply auto try
+    then show ?case
+  qed
+  
+  obtain n1 n2 where n1: "depth_path bdd1 = n1" and n2: "depth_path bdd2 = n2"
+    (*using depth_path_exists [of ]*) by simp_all
+  have "(\<exists>eval. n2 = length (path eval bdd2) \<and> vars bdd2 \<subseteq> Mapping.keys eval)"
+    using n2 unfolding depth_path_def apply auto try
+
+    show "\<exists>eval. n2 = length (path eval bdd2) \<and> vars bdd2 \<subseteq> Mapping.keys eval"
+      using n2
+      unfolding depth_path_def [of bdd2] try apply auto try
+      
+      unfolding Greatest_def apply auto
+
+
+  from n1 obtain eval1
+    where "n1 = length (path eval1 bdd2) \<and> vars bdd1 \<subseteq> Mapping.keys eval1"
+    apply (rule GreatestI_nat)
+    unfolding depth_path_def [of bdd1]
+    using GreatestI_nat  apply auto try
+
   obtain n where g: "(GREATEST n.
       \<exists>eval. n = length (path eval bdd2) \<and> vars bdd2 \<subseteq> Mapping.keys eval) =
       n" by simp
