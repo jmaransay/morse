@@ -4,7 +4,7 @@ theory BDT
     "HOL-Library.Tree"
 begin
 
-text\<open>The following file can be processed with Isabelle-2021-1\<close>
+text\<open>The following file can be processed with Isabelle-2022\<close>
 
 section\<open>BDT\<close>
 
@@ -731,6 +731,16 @@ definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where "cone X K = ((\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x})  
                       \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}))"
 
+text\<open>There cannot be cones over an empty set of vertexes\<close>
+
+lemma "\<not> cone {} K" unfolding cone_def by simp
+
+text\<open>The trivial simplicial complex is a cone over a non-empty vertex set.\<close>
+
+lemma cone_emtpy:
+  assumes v: "V \<noteq> {}" shows "cone V {}"
+  unfolding cone_def using v by auto
+
 lemma cone_not_empty:
   assumes a: "(\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t})"
   shows "cone X K"
@@ -776,37 +786,40 @@ qed
 
 lemma cost_eq_link_ext_impl_cone:
   assumes c: "cost x V K = link_ext x V K"
-    and x: "x \<in> V" and p: "K \<subseteq> powerset V"
+    and x: "x \<in> V" and p: "K \<subseteq> powerset V" and p1: "K \<noteq> {}"
   shows "cone V K"
-proof (unfold cone_def, rule bexI [OF _ x], rule exI [of _ "cost x V K"], rule conjI)
-  show "cost x V K \<subseteq> powerset (V - {x})"
-    using p unfolding cost_def powerset_def by auto
-  show "K = cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
-  proof
-    show "cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t} \<subseteq> K"
-      using x p
-      using c
-      unfolding cost_def powerset_def link_ext_def by auto
-    show "K \<subseteq> cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}" 
-    proof (subst c, unfold cost_def link_ext_def powerset_def, rule)
-      fix xa
-      assume xa: "xa \<in> K"
-      show "xa \<in> {s \<in> Pow V. x \<notin> s \<and> insert x s \<in> K} \<union>
+proof (unfold cone_def)
+  show "\<exists>x\<in>V. \<exists>T\<subseteq>powerset (V - {x}). K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  proof (rule bexI [OF _ x], rule exI [of _ "cost x V K"], rule conjI)
+    show "cost x V K \<subseteq> powerset (V - {x})"
+      using p unfolding cost_def powerset_def by auto
+    show "K = cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
+    proof
+      show "cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t} \<subseteq> K"
+        using x p
+        using c
+        unfolding cost_def powerset_def link_ext_def by auto
+      show "K \<subseteq> cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}" 
+      proof (subst c, unfold cost_def link_ext_def powerset_def, rule)
+        fix xa
+        assume xa: "xa \<in> K"
+        show "xa \<in> {s \<in> Pow V. x \<notin> s \<and> insert x s \<in> K} \<union>
                 {s. \<exists>t\<in>{s \<in> Pow (V - {x}). s \<in> K}. s = insert x t}"
-      proof (cases "x \<in> xa")
-        case False
-        then show ?thesis using xa c p 
-          unfolding cost_def link_ext_def powerset_def by blast
-      next
-        case True
-        have "xa - {x} \<in> {s \<in> Pow V. x \<notin> s \<and> insert x s \<in> K}"
-          using xa p True unfolding powerset_def
-          using mk_disjoint_insert by fastforce
-        hence "xa - {x} \<in> {s \<in> Pow (V - {x}). s \<in> K}"
-          using c unfolding cost_def link_ext_def powerset_def by simp
-        hence "xa \<in> {s. \<exists>t\<in>{s \<in> Pow (V - {x}). s \<in> K}. s = insert x t}"
-          using True by auto
-        thus ?thesis by fast
+        proof (cases "x \<in> xa")
+          case False
+          then show ?thesis using xa c p 
+            unfolding cost_def link_ext_def powerset_def by blast
+        next
+          case True
+          have "xa - {x} \<in> {s \<in> Pow V. x \<notin> s \<and> insert x s \<in> K}"
+            using xa p True unfolding powerset_def
+            using mk_disjoint_insert by fastforce
+          hence "xa - {x} \<in> {s \<in> Pow (V - {x}). s \<in> K}"
+            using c unfolding cost_def link_ext_def powerset_def by simp
+          hence "xa \<in> {s. \<exists>t\<in>{s \<in> Pow (V - {x}). s \<in> K}. s = insert x t}"
+            using True by auto
+          thus ?thesis by fast
+        qed
       qed
     qed
   qed
@@ -990,7 +1003,7 @@ lemma evaluation_cone_not_evaders:
   assumes k: "K \<subseteq> powerset X"
     and c: "cone X K" and X: "X \<noteq> {}" and f: "finite X" and xl: "(X, l) \<in> sorted_variables"
   shows "evaluation l K \<in> not_evaders"
-proof -
+  proof -
   from c and X obtain x :: nat and T :: "nat set set"
     where x: "x \<in> X" and cs: "T \<subseteq> powerset (X - {x})" and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
     unfolding cone_def by auto

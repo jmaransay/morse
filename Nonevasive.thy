@@ -6,19 +6,24 @@ begin
 
 function nonevasive :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where
-  "V = {} \<Longrightarrow> nonevasive V K = False"
+  "V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> nonevasive V K = True"
+  | "V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> nonevasive V K = False"
+  | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> nonevasive V K = True"
   | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> nonevasive V K = True"
-  | "V = {x} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> nonevasive V K = False"
-  | "2 \<le> card V \<Longrightarrow> nonevasive V K =
+  | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> nonevasive V K = False"
+  | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> nonevasive V K = True"
+  | "2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> nonevasive V K =
     (\<exists>x\<in>V. nonevasive (V - {x}) (link_ext x V K) \<and> nonevasive (V - {x}) (cost x V K))"
   | "\<not> finite V \<Longrightarrow> nonevasive V K = False"
-  unfolding link_ext_def cost_def
 proof -
   fix P :: "bool" and x :: "(nat set \<times> nat set set)"
-  assume ee: "(\<And>V K. V = {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and ene: "(\<And>V xa K. V = {xa} \<Longrightarrow> K = {{}, {xa}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)" 
-      and se: "(\<And>V xa K. V = {xa} \<Longrightarrow> K \<noteq> {{}, {xa}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and sc: "(\<And>V K. 2 \<le> card V \<Longrightarrow> x = (V, K) \<Longrightarrow> P)" 
+  assume ee: "(\<And>V K. V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
+      and ene: "(\<And>V K. V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)" 
+      and se: "(\<And>V xa K. V = {xa} \<Longrightarrow> K = {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
+      and sc: "(\<And>V xa K. V = {xa} \<Longrightarrow> K = {{}, {xa}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)" 
+      and sn: "(\<And>V xa K. V = {xa} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{}, {xa}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
+      and e2: "(\<And>V K. 2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
+      and en2: "(\<And>V K. 2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
       and inf: "(\<And>V K. infinite V \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
   show P
   proof (cases "finite (fst x)")
@@ -30,53 +35,77 @@ proof -
     show P
     proof (cases "fst x = {}")
       case True note ve = True
-      show P using ee ve
-        by (metis eq_fst_iff)
+      show P
+      proof (cases "snd x = {{}}")
+        case True
+        show P
+          by (rule ee [of "fst x" "snd x"], intro ve, intro True) simp
       next
         case False
-        note vne = False
+        show P
+          by (rule ene [of "fst x" "snd x"], intro ve, intro False) simp
+      qed
+    next
+      case False note vne = False
       show P
       proof (cases "card (fst x) = 1")
         case True then obtain xa where f: "fst x = {xa}" by (rule card_1_singletonE)
         show P
-        proof (cases "snd x = {{xa},{}}")
+        proof (cases "snd x = {}")
           case True
           show P
-            by (metis True ene f insert_commute prod.collapse)            
+            by (rule se [of "fst x" xa "snd x"], intro f, intro True) simp
           next
           case False note kne = False
           show P
-            by (metis f insert_commute kne prod.collapse se)
+          proof (cases "snd x = {{},{xa}}")
+            case True
+            show P
+              by (rule sc [of "fst x" xa "snd x"], intro f, intro True) simp
+          next
+            case False
+            show P
+              by (rule sn [of "fst x" xa "snd x"], intro f, intro kne, intro False) simp
+          qed
         qed
       next
         case False
         have card2: "2 \<le> card (fst x)" using finitex vne False
           by (metis One_nat_def Suc_1 card_gt_0_iff le_SucE not_less not_less_eq_eq)
-        show P by (metis card2 prod.collapse sc)
+        show P
+        proof (cases "snd x = {}")
+          case True
+          show P
+            by (rule e2 [of "fst x" "snd x"], intro card2, intro True) simp
+        next
+          case False
+          show P
+            by (rule en2 [of "fst x" "snd x"], intro card2, intro False) simp
         qed
       qed
     qed
+  qed
 qed (auto)
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
   show "wf (measure (\<lambda>(V, K). card V))" by simp
   fix V :: "nat set" and K :: "nat set set" and x :: "nat"
-  assume c: "2 \<le> card V" and x: "x \<in> V"
+  assume c: "2 \<le> card V" and k: "K \<noteq> {}" and x: "x \<in> V"
   show "((V - {x}, cost x V K), V, K) \<in> measure (\<lambda>(V, K). card V)"
-    using c x by simp
+    using c k x by simp
   show "((V - {x}, link_ext x V K), V, K) \<in> measure (\<lambda>(V, K). card V)"
-    using c x by simp
+    using c k x by simp
 qed
 
 lemma nonevasiveI1:
   assumes v: "V = {x}" and k: "K = {{},{x}}"
   shows "nonevasive V K"
-  using nonevasive.simps (2) [OF v k] by fast
+  using nonevasive.simps (4) [OF v k] by fast
 
 lemma nonevasiveI2:
-  assumes v: "2 \<le> card V" 
+  assumes v: "2 \<le> card V" and kne: "K \<noteq> {}"
     and k: "(\<exists>x\<in>V. nonevasive (V - {x}) (link_ext x V K) \<and> nonevasive (V - {x}) (cost x V K))"
   shows "nonevasive V K"
-  unfolding nonevasive.simps (4) [OF v, of K] using k .
+  unfolding nonevasive.simps (7) [OF v kne] using k .
 
 lemma assumes c: "cone {x} K" shows "K = {{x},{}} \<or> K = {}"
   using c unfolding cone_def powerset_def by (cases "K = {}", auto)
