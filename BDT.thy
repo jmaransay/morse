@@ -737,8 +737,7 @@ lemma "\<not> cone {} K" unfolding cone_def by simp
 
 text\<open>The trivial simplicial complex is a cone over a non-empty vertex set.\<close>
 
-lemma cone_emtpy:
-  assumes v: "V \<noteq> {}" shows "cone V {}"
+lemma cone_empty: assumes v: "V \<noteq> {}" shows "cone V {}"
   unfolding cone_def using v by auto
 
 lemma cone_not_empty:
@@ -1138,6 +1137,76 @@ section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\
 
 function zero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where
+  "V = {} \<Longrightarrow> zero_collapsible V K = False"
+  | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> zero_collapsible V K = True"
+  | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> zero_collapsible V K = True"
+  | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> zero_collapsible V K = False"
+  (*This can be proven from the definition: | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> nonevasive V K = True"*)
+  | "2 \<le> card V \<Longrightarrow> zero_collapsible V K =
+    (\<exists>x\<in>V. cone (V - {x}) (link_ext x V K) \<and> zero_collapsible (V - {x}) (cost x V K))"
+  | "\<not> finite V \<Longrightarrow> zero_collapsible V K = False"
+proof -
+  fix P :: "bool" and x :: "(nat set \<times> nat set set)"
+  assume ee: "(\<And>V K. V = {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
+      and se: "(\<And>V xa K. V = {xa} \<Longrightarrow> K = {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
+      and sc: "(\<And>V xa K. V = {xa} \<Longrightarrow> K = {{}, {xa}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)" 
+      and sn: "(\<And>V xa K. V = {xa} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{}, {xa}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
+      and en2: "(\<And>V K. 2 \<le> card V \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
+      and inf: "(\<And>V K. infinite V \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
+  show P
+  proof (cases "finite (fst x)")
+    case False
+    show P
+      by (rule inf [of "fst x" "snd x"], intro False) auto
+  next
+    case True note finitex = True
+    show P
+    proof (cases "fst x = {}")
+      case True note ve = True
+      show P using ee True by (metis eq_fst_iff)
+      next
+      case False
+      note vne = False
+      show P
+      proof (cases "card (fst x) = 1")
+        case True then obtain xa where f: "fst x = {xa}" by (rule card_1_singletonE)
+        show P
+        proof (cases "snd x = {}")
+          case True
+          show P
+            by (rule se [of "fst x" xa "snd x"], intro f, intro True) simp
+          next
+          case False note kne = False
+          show P
+          proof (cases "snd x = {{},{xa}}")
+            case True
+            show P
+              by (rule sc [of "fst x" xa "snd x"], intro f, intro True) simp
+          next
+            case False
+            show P
+              by (rule sn [of "fst x" xa "snd x"], intro f, intro kne, intro False) simp
+          qed
+        qed
+      next
+        case False
+        have card2: "2 \<le> card (fst x)" using finitex vne False
+          by (metis One_nat_def Suc_1 card_gt_0_iff le_SucE not_less not_less_eq_eq)
+        show P using en2 [of "fst x" "snd x"] card2 False by simp
+         qed
+      qed
+    qed
+qed (auto)
+termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
+  show "wf (measure (\<lambda>(V, K). card V))" by simp
+  fix V :: "nat set" and K :: "nat set set" and x :: "nat"
+  assume c: "2 \<le> card V" and x: "x \<in> V"
+  show "((V - {x}, cost x V K), V, K) \<in> measure (\<lambda>(V, K). card V)"
+    using c  x by simp
+qed
+
+(*function zero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+  where
   "V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> zero_collapsible V K = True"
   | "V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> zero_collapsible V K = False"
   | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> zero_collapsible V K = True"
@@ -1226,6 +1295,7 @@ termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
   show "((V - {x}, cost x V K), V, K) \<in> measure (\<lambda>(V, K). card V)"
     using c k x by simp
 qed
+*)
 
 lemma shows "zero_collapsible {x} {}" by simp
 
@@ -1235,6 +1305,38 @@ lemma "link_ext x {x} {{}, {x}} = {{}}"
   unfolding link_ext_def powerset_def by auto
 
 lemma shows "zero_collapsible {x} {{}, {x}}" by simp
+
+lemma assumes "V \<noteq> {}" shows "cone V {}" try
+
+lemma v_ge_2: assumes two: "2 \<le> card V" shows "zero_collapsible V {}"
+  using two proof (induct "card V" arbitrary: V)
+  case 0
+  fix V :: "nat set"
+  assume "0 = card V" and "2 \<le> card V"
+  hence False by linarith
+  thus "zero_collapsible V {}" by fast
+next
+  case (Suc n)
+  assume two: "2 \<le> card V"
+  then obtain x where x: "x \<in> V" by fastforce
+  have n: "zero_collapsible (V - {x}) {}"
+  proof (cases "2 \<le> card (V - {x})")
+    case True
+    show ?thesis
+    proof (rule Suc.hyps (1))
+      show "n = card (V - {x})" using Suc.hyps (2) using x by simp
+      show "2 \<le> card (V - {x})" using True .
+    qed
+  next
+    case False hence "card (V - {x}) = 1" using x two Suc.hyps (2) by simp
+    then obtain y where V: "V - {x} = {y}" using card_1_singletonE by auto
+    show ?thesis unfolding V using zero_collapsible.simps (2) by simp
+  qed
+  show "zero_collapsible V {}"
+    unfolding zero_collapsible.simps (5) [OF two, of "{}"]
+    using two link_ext_empty [of _ V] cone_empty [of V] n x
+    by (metis cone_empty cost_empty zero_collapsible.simps(1))
+qed
 
 text\<open>There is always a valuation for which zero collapsible sets
  are not evasive.\<close>
@@ -1273,7 +1375,7 @@ next
       from Suc.prems (4) False Suc.prems (2)
       obtain x where x: "x \<in> X" and cl: "cone (X - {x}) (link_ext x X K)" 
         and ccc: "zero_collapsible (X - {x}) (cost x X K)" and xxne: "X - {x} \<noteq> {}"
-        using zero_collapsible.simps (7) [OF cardx kne]
+        using zero_collapsible.simps (5) [OF cardx]
         by (metis One_nat_def Suc.prems(3) card.empty card_Suc_Diff1)
     have "\<exists>l. (X - {x}, l) \<in> sorted_variables \<and> evaluation l (cost x X K) \<in> not_evaders"
     proof (rule Suc.hyps (1))
@@ -1352,7 +1454,7 @@ next
             have kx: "K = {{x}}" using False kne knee k_cases by simp
             have False 
               using Suc.prems(4) 
-              unfolding X kx using zero_collapsible.simps (5) [of "{x}" x K] by simp
+              unfolding X kx using zero_collapsible.simps (4) [of "{x}" x K] by simp
             thus ?thesis by simp
             qed
           qed
