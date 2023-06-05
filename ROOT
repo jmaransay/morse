@@ -5,7 +5,7 @@ session "Simplicial_complexes_and_boolean_functions_Alexander" (AFP) = Sepref_Pr
     Jordan_Normal_Form
     ROBDD
   theories
-    Alexander
+    (*Alexander
     BDD
     Bij_betw_simplicial_complex_bool_func
     Binary_operations
@@ -13,7 +13,7 @@ session "Simplicial_complexes_and_boolean_functions_Alexander" (AFP) = Sepref_Pr
     Evasive
     ListLexorder
     MkIfex
-    Simplicial_complex
+    Simplicial_complex*)
     BDT
   document_files
     "root.tex"

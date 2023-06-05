@@ -1306,8 +1306,6 @@ lemma "link_ext x {x} {{}, {x}} = {{}}"
 
 lemma shows "zero_collapsible {x} {{}, {x}}" by simp
 
-lemma assumes "V \<noteq> {}" shows "cone V {}" try
-
 lemma v_ge_2: assumes two: "2 \<le> card V" shows "zero_collapsible V {}"
   using two proof (induct "card V" arbitrary: V)
   case 0
