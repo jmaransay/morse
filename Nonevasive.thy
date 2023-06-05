@@ -194,7 +194,7 @@ using c f proof (induct "card V" arbitrary: V K)
   qed
 qed
 
-lemma 
+lemma
   assumes f: "finite V" and z: "zero_collapsible V K" shows "nonevasive V K"
 using z f proof (induct "card V" arbitrary: V K)
    case 0
@@ -203,70 +203,55 @@ using z f proof (induct "card V" arbitrary: V K)
    thus ?case by (rule ccontr)
  next
    case (Suc n)
-   from `cone V K` obtain x T
+   (*from `cone V K` obtain x T
      where K: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" and T: "T \<subseteq> powerset (V - {x})" 
-       and x: "x \<in> V" unfolding cone_def by auto
+       and x: "x \<in> V" unfolding cone_def by auto*)
    show ?case
    proof (cases "n = 0")
      case True
      hence "card V = 1" using Suc.hyps (2) by simp
-     hence v: "V = {x}" using x using card_1_singletonE [OF `card V = 1`] by auto
-     hence t: "T = {{}} \<or> T = {}" using T unfolding powerset_def by auto
+     then obtain x where v: "V = {x}" using card_1_singletonE [OF `card V = 1`] by auto
      show ?thesis
-     proof (cases "T = {}")
+     proof (cases "K = {}")
        case True
-       show ?thesis unfolding v K True using nonevasive.simps (2) by simp
+       show ?thesis unfolding v True using nonevasive.simps (2) by simp
      next
        case False note tne = False
        show ?thesis
-       proof (cases "T = {{}}")
+       proof (cases "K = {{}, {x}}")
         case True
-        show ?thesis unfolding v K True using nonevasive.simps (3)
+        show ?thesis unfolding v True using nonevasive.simps (3)
           by (simp add: insert_commute)
        next
-        case False with tne and t have False by simp
-        thus ?thesis by (rule ccontr)
+         case False 
+         have False using zero_collapsible.simps (4) [OF v tne False] 
+           using Suc.prems (1) by simp
+         thus ?thesis by (rule ccontr)
        qed
      qed
    next
     case False
     hence "2 \<le> Suc n" by simp
     hence two: "2 \<le> card V" using Suc.hyps (2) by simp
-    from two obtain y where y: "y \<in> V" and ynex: "y \<noteq> x" and xvy: "x \<in> V - {y}"
-      using x Suc.prems (2)
-      by (metis card_le_Suc0_iff_eq insertE insert_Diff not_less_eq_eq numeral_2_eq_2)
-    have lp: "link_ext y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
-      using T unfolding link_ext_def powerset_def by auto
-    have cp: "cost y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
-      using T unfolding cost_def powerset_def by auto
-    show ?thesis unfolding nonevasive.simps (5) [OF two]
-    proof (rule bexI [OF _ y], rule conjI)
-      show "nonevasive (V - {y}) (link_ext y V K)"
-      proof (rule Suc.hyps(1))
-        show "n = card (V - {y})" using y Suc.hyps (2) by simp
-        show "cone (V - {y}) (link_ext y V K)"
-          unfolding link_ext_cone_eq [OF x ynex [symmetric] T K]
-          unfolding cone_def
-          by (rule bexI [OF _ xvy], rule exI [of _ "link_ext y (V - {x}) T"], rule conjI) 
-            (intro lp, fast)
-        show "finite (V - {y})" using `finite V` by fast
+    obtain x where x: "x \<in> V" and cl: "cone (V - {x}) (link_ext x V K)" 
+      and ccc: "zero_collapsible (V - {x}) (cost x V K)" and xxne: "V - {x} \<noteq> {}"
+      using zero_collapsible.simps (5) [OF two, of K]
+      by (metis Suc.prems(1) zero_collapsible.simps(1))
+    show ?thesis
+    proof (unfold nonevasive.simps (5) [OF two, of K], rule bexI [OF _ x], rule conjI)
+      show "nonevasive (V - {x}) (cost x V K)" 
+      proof (rule Suc.hyps)
+        show "n = card (V - {x})" using x `Suc n = card V` by simp
+        show "zero_collapsible (V - {x}) (cost x V K)" using ccc .
+        show "finite (V - {x})" using `finite V` by simp
       qed
-      show "nonevasive (V - {y}) (cost y V K)"
-      proof (rule Suc.hyps(1))
-        show "n = card (V - {y})" using y Suc.hyps (2) by simp
-        show "cone (V - {y}) (cost y V K)"
-          unfolding cost_cone_eq [OF x ynex [symmetric] T K]
-          unfolding cone_def
-          by (rule bexI [OF _ xvy], rule exI [of _ "cost y (V - {x}) T"], rule conjI)
-            (intro cp, fast)
-        show "finite (V - {y})" using `finite V` by fast
+      show "nonevasive (V - {x}) (link_ext x V K)"
+      proof (rule cone_nonevasive)
+        show "finite (V - {x})" using `finite V` by simp
+        show "cone (V - {x}) (link_ext x V K)" using cl .
       qed
     qed
   qed
 qed
-
-  
-  sorry
-
 
 end
