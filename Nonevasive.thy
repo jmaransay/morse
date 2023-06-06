@@ -255,4 +255,179 @@ using z f proof (induct "card V" arbitrary: V K)
   qed
 qed
 
+lemma
+  sorted_variables_remove:
+  assumes vl: "(V, l) \<in> sorted_variables" and x: "x \<in> V" and f: "finite V"
+  shows "(V - {x}, remove1 x l) \<in> sorted_variables"
+  using vl x f proof (induct "card V" arbitrary: V l)
+  case 0 from "0.hyps" "0.prems" (3) have "V = {}" by simp
+  with "0.prems" (2) have False by fast
+  thus "(V - {x}, remove1 x l) \<in> sorted_variables" by (rule ccontr)
+next
+  case (Suc n)
+  from Suc.prems (1) obtain A l' y where v: "V = insert y A" and l: "l = y # l'" 
+      and al: "(A, l') \<in> sorted_variables" and y: "y \<notin> A"
+    using sorted_variables.simps [of V l] using `x \<in> V` by auto
+  show "(V - {x}, remove1 x l) \<in> sorted_variables"
+  proof (cases "V - {x} = {}")
+    case True hence v: "V = {x}" using `x \<in> V` by auto hence l: "l = [x]"
+      using \<open>(V, l) \<in> sorted_variables\<close> \<open>V = insert y A\<close> \<open>l = y # l'\<close> 
+      using sorted_variables_length_coherent by fastforce
+    show ?thesis unfolding v l
+      by (simp add: sorted_variables.intros(1))
+  next
+    case False note vxne = False
+    show ?thesis
+    proof (cases "x = y")
+      case True
+      show ?thesis unfolding True unfolding v l using al y by simp
+    next
+      case False
+      have yax: "y \<notin> A - {x}" using False \<open>V = insert y A\<close> using y by blast
+      have vx: "V - {x} = insert y (A - {x})" using \<open>V = insert y A\<close> y False by auto
+      have rxl: "remove1 x l = y # (remove1 x l')" using \<open>l = y # l'\<close> False by simp
+      have axr: "(A - {x}, remove1 x l') \<in> sorted_variables"
+      proof (rule Suc.hyps (1))
+        show "n = card A" using \<open>V = insert y A\<close> y \<open>Suc n = card V\<close> `finite V`
+          by auto
+        show "(A, l') \<in> sorted_variables" by (rule al)
+        show "x \<in> A" using `x \<in> V` \<open>V = insert y A\<close> y False by simp
+        show "finite A" using `finite V` \<open>V = insert y A\<close> by simp
+      qed
+      show ?thesis unfolding vx rxl
+        by (intro sorted_variables.intros (2), rule axr, rule yax)
+    qed
+  qed
+qed
+
+lemma
+  assumes k: "K \<subseteq> powerset V" and vl: "(V, l) \<in> sorted_variables"
+    and f: "finite V"
+    and ene: "evaluation l K \<in> not_evaders" and x: "x \<in> V"
+  shows "evaluation (remove1 x l) (link_ext x V K) \<in> not_evaders"
+  using k vl f ene x proof (induct "card V" arbitrary: V l K)
+  case 0 have v: "V = {}" using "0.hyps" "0.prems"(3) by force
+  hence False using `x \<in> V` by fast 
+  thus "evaluation (remove1 x l) (link_ext x V K) \<in> not_evaders" by (rule ccontr)
+next
+  case (Suc n) thm evaluation.simps
+  
+  hence "l = []" using "Suc.prems"(5) by auto
+  have "K = {} \<or> K = {{}}" using v "0.prems" (1) try
+    using "0.prems"(5) by auto
+  from evaluation.simps
+
+lemma
+  assumes k: "K \<subseteq> powerset V" and vl: "(V, l) \<in> sorted_variables"
+    and ene: "evaluation l K \<in> not_evaders" and x: "x \<in> V"
+  shows "(V - {x}, remove1 x l) \<in> sorted_variables"
+    and "evaluation (remove1 x l) (link_ext x V K) \<in> not_evaders"
+proof -
+  from vl obtain A l' y where v: "V = insert y A" and l: "l = y # l'" 
+      and al: "(A, l') \<in> sorted_variables" and y: "y \<notin> A"
+    using sorted_variables.simps [of V l] using x by auto
+  have "(V - {x}, remove1 x l) \<in> sorted_variables"
+  proof (cases "V - {x} = {}")
+    case True hence v: "V = {x}" using x by auto hence l: "l = [x]" 
+      using vl using \<open>V = insert y A\<close> \<open>l = y # l'\<close> sorted_variables_length_coherent 
+      by fastforce
+    show ?thesis unfolding v l
+      by (simp add: sorted_variables.intros(1))
+  next
+    case False note vxne = False
+    show ?thesis
+    proof (cases "x = y")
+      case True
+      show ?thesis unfolding True unfolding v l using al y by simp
+    next
+      case False
+      have vx: "V - {x} = insert y (A - {x})" using \<open>V = insert y A\<close> y False by auto
+      have rxl: "remove1 x l = y # (remove1 x l')" using \<open>l = y # l'\<close> False by simp
+      have "(A - {x}, remove1 x l') \<in> sorted_variables"
+      show ?thesis unfolding vx rxl
+      proof (intro sorted_variables.intros (2))
+        show "(A - {x}, remove1 x l') \<in> sorted_variables" 
+          using al using sorted_variables.intros
+
+    have "(V - {x}, remove1 x l) \<in> sorted_variables"
+    using vl x using sorted_variables.simps
+    using False remove1_idem sorted_variables_coherent vl by fastforce
+  have "K = link_ext x V K" using False k unfolding link_ext_def powerset_def apply auto try
+
+lemma assumes k: "K \<subseteq> powerset V" and x: "V \<noteq> {}" and f: "finite V" 
+  and l: "\<exists>l. (V, l) \<in> sorted_variables \<and> evaluation l K \<in> not_evaders"
+  shows "nonevasive V K"
+  using x k f l proof (induct "card V" arbitrary: V K)
+  case 0 have v: "V = {}" using "0.prems" (3) "0.hyps" by simp  
+  hence False using "0.prems" (1) by fast
+  thus "nonevasive V K" by (rule ccontr)
+next
+  case (Suc n)
+  show "nonevasive V K"
+  proof (cases "n = 0")
+    case True
+    then obtain x where v: "V = {x}" using Suc.hyps (2)
+      by (metis One_nat_def card_1_singletonE)
+    show ?thesis
+    proof (cases "K = {} \<or> K = {{x}, {}}")
+      case True
+      show ?thesis using True using nonevasive.simps (2,3) [OF v, of K] by blast
+    next
+      case False
+      have k: "K = {{x}} \<or> K = {{}}"
+        unfolding powerset_def using v using False
+        by (metis Suc.prems(2) doubleton_eq_iff powerset_singleton_cases)
+      from Suc.prems (4)
+      obtain l where vl: "(V, l) \<in> sorted_variables" and el: "evaluation l K \<in> not_evaders"
+        by auto
+      have l: "l = [x]"
+        using sorted_variables_coherent [OF vl]
+        using sorted_variables_length_coherent [OF vl]
+        unfolding v
+        by (metis card_1_singleton_iff empty_iff length_0_conv length_Suc_conv list.set(1) list.set_intros(1) list.simps(15) set_ConsD)
+      show ?thesis
+      proof (cases "K = {{x}}")
+        case True
+        have "evaluation l K = [True, False]"
+          unfolding l True
+          unfolding evaluation.simps link_ext_def cost_def powerset_def
+          using evaluation.simps (1,2) using v apply auto
+          by (smt (verit, ccfv_threshold) Suc.prems(1) append.left_neutral append_Cons bot.extremum emptyE empty_Collect_eq evaluation.simps(1) evaluation.simps(2))
+        hence "evaluation l K \<notin> not_evaders"
+          using tf_not_not_evader by simp
+        hence False using el by simp
+        thus ?thesis by (rule ccontr)
+      next
+        case False hence k: "K = {{}}" using k by fast
+        have "evaluation l K = [False, True]"
+          unfolding l k
+          unfolding evaluation.simps link_ext_def cost_def powerset_def
+          using evaluation.simps (1,2) using v by auto
+        hence "evaluation l K \<notin> not_evaders"
+          using ft_not_not_evader by simp
+        hence False using el by simp
+        thus ?thesis by (rule ccontr)
+      qed
+    qed
+  next
+    case False
+    hence two: "2 \<le> card V" using Suc.hyps (2) by simp
+    obtain x where x: "x \<in> V" using two by fastforce
+    have ne_link: "nonevasive (V - {x}) (link_ext x V K)"
+    proof (rule Suc.hyps (1))
+      show "n = card (V - {x})" using x Suc.hyps (2) by simp
+      show "V - {x} \<noteq> {}" using False \<open>n = card (V - {x})\<close> by force
+      show "link_ext x V K \<subseteq> powerset (V - {x})" 
+        using Suc.prems (2)
+        using link_ext_def powerset_def by force
+      show "finite (V - {x})" using Suc.prems(3) by blast
+      show "\<exists>l. (V - {x}, l) \<in> sorted_variables \<and> evaluation l (link_ext x V K) \<in> not_evaders"
+        using Suc
+    from Suc
+    show "nonevasive V K" unfolding nonevasive.simps (5) [OF two, of K]
+  hence k: "K = {} \<or> K = {{}}" using "0.prems" (1) unfolding powerset_def by auto
+  show "nonevasive V K" unfolding v using k using nonevasive.simps
+
+
+
 end

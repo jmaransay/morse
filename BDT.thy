@@ -709,7 +709,7 @@ lemma true_evader: "[True] \<notin> not_evaders"
 lemma false_evader: "[False] \<notin> not_evaders"
   by (smt (verit, best) Cons_eq_append_conv append_is_Nil_conv length_0_conv not_Cons_self2 not_evaders.cases)
 
-lemma "[True, False] \<notin> not_evaders"
+lemma tf_not_not_evader: "[True, False] \<notin> not_evaders"
 proof (rule ccontr, safe)
   assume "[True, False] \<in> not_evaders"
   show False
@@ -717,7 +717,7 @@ proof (rule ccontr, safe)
     by (smt (verit, ccfv_threshold) \<open>[True, False] \<in> not_evaders\<close> append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
 qed
 
-lemma "[False, True] \<notin> not_evaders"
+lemma ft_not_not_evader: "[False, True] \<notin> not_evaders"
 proof (rule ccontr, safe)
   assume "[False, True] \<in> not_evaders"
   show False
