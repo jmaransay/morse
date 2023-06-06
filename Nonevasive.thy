@@ -195,6 +195,7 @@ using c f proof (induct "card V" arbitrary: V K)
 qed
 
 lemma
+  zerocollapsible__nonevasive:
   assumes f: "finite V" and z: "zero_collapsible V K" shows "nonevasive V K"
 using z f proof (induct "card V" arbitrary: V K)
    case 0
