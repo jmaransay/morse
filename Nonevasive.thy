@@ -300,17 +300,21 @@ next
   qed
 qed
 
+lemma "evaluation (remove1 x l) (link_ext x V K) = filter (%y. y = True) (evaluation l K)"
+
 lemma
   assumes k: "K \<subseteq> powerset V" and vl: "(V, l) \<in> sorted_variables"
     and f: "finite V"
     and ene: "evaluation l K \<in> not_evaders" and x: "x \<in> V"
   shows "evaluation (remove1 x l) (link_ext x V K) \<in> not_evaders"
-  using k vl f ene x proof (induct "card V" arbitrary: V l K)
+  thm not_evaders.intros evaluation.simps thm link_ext_def
+  using k vl f ene x proof (induct l arbitrary: V l K rule: list.induct)
+  case Nil have "V = {}" using Nil.prems (2) using Nil using sorted_variables.simps [of "{}" "[]"] Nil
   case 0 have v: "V = {}" using "0.hyps" "0.prems"(3) by force
   hence False using `x \<in> V` by fast 
   thus "evaluation (remove1 x l) (link_ext x V K) \<in> not_evaders" by (rule ccontr)
 next
-  case (Suc n) thm evaluation.simps
+  case (Suc n)
   
   hence "l = []" using "Suc.prems"(5) by auto
   have "K = {} \<or> K = {{}}" using v "0.prems" (1) try
