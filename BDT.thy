@@ -92,6 +92,13 @@ lemma sorted_variables_coherent:
   assumes al: "(A, l) \<in> sorted_variables"
   shows "A = set l" using al by (induct, simp_all)
 
+lemma sorted_variables_distinct:
+  assumes al: "(A, l) \<in> sorted_variables"
+  shows "distinct l"
+  using al card_distinct sorted_variables_coherent sorted_variables_length_coherent 
+  by blast
+
+
 section\<open>Powerset\<close>
 
 text\<open>We use the term ``powerset'' just as a synonym of @{term Pow}.\<close>

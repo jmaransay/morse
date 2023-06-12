@@ -300,7 +300,334 @@ next
   qed
 qed
 
-lemma "evaluation (remove1 x l) (link_ext x V K) = filter (%y. y = True) (evaluation l K)"
+lemma length_evaluation: "length (evaluation l K) = 2^(length l)"
+proof (induct l arbitrary: K)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a l)
+  then show ?case 
+    unfolding evaluation.simps 
+    unfolding length_append 
+    unfolding Cons.hyps [of "link_ext a (set (a # l)) K"]
+    unfolding Cons.hyps [of "cost a (set (a # l)) K"] by simp
+qed
+
+lemma evaluation_link_ext:
+  assumes v: "(V, l) \<in> sorted_variables"
+    and l: "1 \<le> length l"
+  shows "take (2^(length l - 1)) (evaluation l K) = evaluation (tl l) (link_ext (hd l) V K)"
+proof (cases l)
+  case Nil
+  have False using Nil l by auto
+  thus ?thesis by (rule ccontr)
+next
+  case (Cons x l)
+  note l = Cons
+  show ?thesis
+  proof (cases "l = []")
+    case True
+    have v: "V = {x}" using v unfolding l True using sorted_variables.intros
+      by (metis list.simps(15) sorted_variables_coherent)
+    then show ?thesis unfolding True v l by auto
+  next
+    case False
+    have s: "set (x # l) = V" 
+      using sorted_variables_coherent [symmetric, OF v] unfolding l .
+    show ?thesis
+      unfolding evaluation.simps l list.sel (1,3)
+      unfolding s
+      using length_evaluation by simp
+  qed
+qed
+
+lemma evaluation_cost:
+  assumes v: "(V, l) \<in> sorted_variables"
+    and l: "1 \<le> length l"
+  shows "drop (2^(length l - 1)) (evaluation l K) = evaluation (tl l) (cost (hd l) V K)"
+proof (cases l)
+  case Nil
+  have False using Nil l by auto
+  thus ?thesis by (rule ccontr)
+next
+  case (Cons x l)
+  note l = Cons
+  show ?thesis
+  proof (cases "l = []")
+    case True
+    have v: "V = {x}" using v unfolding l True using sorted_variables.intros
+      by (metis list.simps(15) sorted_variables_coherent)
+    then show ?thesis unfolding True v l by auto
+  next
+    case False
+    have s: "set (x # l) = V" 
+      using sorted_variables_coherent [symmetric, OF v] unfolding l .
+    show ?thesis
+      unfolding evaluation.simps l list.sel (1,3)
+      unfolding s
+      using length_evaluation by simp
+  qed
+qed
+
+function take_rep :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list"
+  where
+  "take_rep n [] = []"
+  | "take_rep 0 l = l"
+  | "l \<noteq> [] \<Longrightarrow> n \<noteq> 0 \<Longrightarrow> take_rep n l = (take n l) @ (take_rep n (drop n (drop n l)))"
+by (auto+)
+termination
+  by (relation "measure(\<lambda>(n,l). n + length l)") (simp+)
+
+(*TODO: take_rep fails with 'value', but works with the simplifier;
+  the last rule in the definition is not an equation*)
+
+lemma "take_rep 1 [0::int,1,2,3,4,5,6,7] = [0,2,4,6]" by simp
+
+lemma "take_rep 2 [0::int,1,2,3,4,5,6,7] = [0,1,4,5]" by simp
+
+lemma "take_rep 4 [0::int,1,2,3,4,5,6,7] = [0,1,2,3]" by simp
+
+lemma take_rep_take:
+  assumes l: "length l = 2 * n" shows "take_rep n l = take n l"
+proof (cases "n = 0")
+  case True
+  show ?thesis using True l by auto
+next
+  case False note ng0 = False
+  show ?thesis
+  proof (cases "l = []")
+    case True
+    then show ?thesis unfolding True by simp
+  next
+    case False
+    then show ?thesis 
+      unfolding take_rep.simps (3) [OF False ng0]
+      using l by simp
+  qed
+qed
+
+lemma length_take_rep_2:
+  assumes l: "length l = 2 * n"
+  shows "length (take_rep n l) = n" 
+  unfolding take_rep_take [OF l] by (simp add: l)
+
+lemma 
+  assumes l: "length l = k" and i: "i + j = k"
+  shows "\<exists>m m'. l = m @ m' \<and> length m = i \<and> length m' = j"
+  apply (rule exI [of _ "take i l"], rule exI [of _ "drop i l"], rule conjI, simp)
+  using i l by force
+
+lemma take_rep_append:
+  assumes ll: "length l = (2 * k) * n" and ll': "length l' = (2 * k') * n"
+  shows "take_rep n (l @ l') = take_rep n l @ take_rep n l'"
+using ll ll' proof (induct k arbitrary: l l')
+  case 0
+  then show ?case by simp
+next
+  case (Suc k)
+  show ?case
+  proof (cases "n = 0")
+    case True
+    show ?thesis unfolding True by simp
+  next
+    case False
+    have lne: "l \<noteq> []" using False Suc.prems(1) by fastforce
+    define l2 where "l2 = take (2 * n) l"
+    define l3 where "l3 = drop (2 * n) l"
+    have l_append: "l = l2 @ l3" using l2_def l3_def by simp
+    have l2l3l'ne: "(l2 @ l3) @ l' \<noteq> []" using lne l2_def l3_def by simp
+    have ll2: "length l2 = 2 * n"
+      using l2_def l_append Suc.prems (1) by fastforce
+    have ll3: "length l3 = 2 * k * n"
+      using l3_def l_append Suc.prems (1) by fastforce
+    have t: "take_rep n l = (take n l2) @ (take_rep n l3)"
+      unfolding take_rep.simps (3) [OF lne False]
+      unfolding l_append
+      by (metis append_same_eq append_take_drop_id drop_drop l3_def l_append mult.commute mult_2_right take_add take_drop)
+    have tl2l3l': "take n ((l2 @ l3) @ l') = take n l2" using l2_def
+      using ll2 by fastforce
+    have tl2l3: "take n (l2 @ l3) = take n l2" using l2_def
+      using ll2 by fastforce
+    have ddl2l3l': "drop n (drop n ((l2 @ l3) @ l')) = l3 @ l'" using ll2 by simp
+    have ddl2l3: "drop n (drop n (l2 @ l3)) = l3" using ll2 by simp
+    have hyp: "take_rep n (l3 @ l') = take_rep n l3 @ take_rep n l'"
+      by (rule Suc.hyps, intro ll3, intro Suc.prems (2))
+    show ?thesis
+      apply (subst l_append) 
+      apply (subst take_rep.simps (3) [OF l2l3l'ne False])
+      apply (subst take_rep.simps (3) [OF lne False])
+      unfolding l_append unfolding tl2l3l' tl2l3 ddl2l3l' ddl2l3 
+      apply (subst append_assoc)
+      apply (subst hyp) ..
+  qed
+qed
+
+lemma "take_rep 1 ([a\<^sub>1, a\<^sub>1, a\<^sub>1] @ [a\<^sub>1, a\<^sub>1, a\<^sub>1]) = ([a\<^sub>1, a\<^sub>1, a\<^sub>1])" by simp
+
+lemma "take_rep 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] = ([a\<^sub>1, a\<^sub>1])" by simp
+
+lemma "take_rep 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] @ take_rep 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] = ([a\<^sub>1, a\<^sub>1, a\<^sub>1, a\<^sub>1])" by simp
+
+lemma take_rep_power_append:
+  assumes k: "k < m" and lm: "length l = 2^m" and lm': "length l' = 2^m"
+  shows "take_rep (2^k) (l @ l') = take_rep (2^k) l @ take_rep (2^k) l'"
+proof(rule take_rep_append [of _ "2^(m-k-1)" _ _ "2^(m-k-1)"])
+  show "length l = 2 * 2 ^ (m - k - 1) * 2 ^ k"
+    using lm k
+    by (metis Groups.mult_ac(2) add_diff_inverse_nat less_or_eq_imp_le not_less power_add power_minus_mult zero_less_diff)
+  show "length l' = 2 * 2 ^ (m - k - 1) * 2 ^ k"
+    using lm' k
+    by (metis Groups.mult_ac(2) add_diff_inverse_nat less_or_eq_imp_le not_less power_add power_minus_mult zero_less_diff)
+qed
+
+lemma remove1_head: "remove1 x (x # l) = l" by simp
+
+lemma remove1_reduce:
+  assumes n: "n \<noteq> 0" and n': "n < length (x # l)" and d: "distinct (x # l)"
+  shows "remove1 ((x # l) ! n) (x # l) = x # (remove1 (l ! (n - 1)) l)"
+  using remove1.simps n d n' by auto
+
+lemma nth_not_zero: assumes "n \<noteq> 0" shows "(x # l) ! n = l ! (n - 1)"
+  using assms(1) by auto
+
+(*The case where "n = 0" is later used in the proof of the general case for "n"*)
+
+lemma evaluation_nth_0_link_ext:
+  assumes v: "(V, l) \<in> sorted_variables" and l: "0 < length l"
+  shows "take_rep (2^((length l - 1) - 0)) (evaluation l K) =
+          evaluation (remove1 (nth l 0) l) (link_ext (nth l 0) V K)"
+proof -
+  have one: "1 \<le> length l" using l by linarith
+  then obtain x l' where l_cons: "l = x # l'" by (metis length_0_conv neq_Nil_conv not_one_le_zero)
+  have tt: "take_rep (2 ^ (length (x # l') - 1)) (evaluation (x # l') K) =
+    take (2 ^ (length (x # l') - 1)) (evaluation (x # l') K)"
+  proof (rule take_rep_take [of "(evaluation (x # l') K)" "2 ^ (length (x # l') - 1)"])
+    have t: "2 * 2 ^ (length (x # l') - 1) = 2 ^ (length (x # l'))" by simp
+    show "length (evaluation (x # l') K) = 2 * 2 ^ (length (x # l') - 1)"
+      by (unfold t, rule length_evaluation)
+  qed
+  show ?thesis
+    unfolding l_cons 
+    unfolding minus_nat.diff_0 
+    unfolding tt
+    unfolding nth_Cons_0 [of x "l'"]
+    using evaluation_link_ext l_cons v by fastforce
+qed
+
+lemma evaluation_nth_link_ext:
+  assumes v: "(V, l) \<in> sorted_variables" and l: "n < length l"
+  shows "take_rep (2^((length l - 1) - n)) (evaluation l K) =
+          evaluation (remove1 (nth l n) l) (link_ext (nth l n) V K)"
+proof (cases "n = 0")
+  case True
+  show ?thesis using evaluation_nth_0_link_ext [OF v] True l by simp
+next
+  case False
+  show ?thesis
+  using v l False proof (induction l arbitrary: n V K rule: list.induct)
+  case Nil
+  have False using Nil.prems (2) by simp
+  thus ?case by (rule ccontr)
+next
+  case (Cons x l)
+  have lrw: "length (x # l) - 1 - n = length l - 1 - (n - 1)"
+    using Cons.prems(3) by auto
+  have set_rw: "set (x # remove1 (l ! (n - 1)) l) = V - {l ! (n - 1)}"
+    using Cons.prems (1)
+    by (metis Cons.prems(2) Cons.prems(3) nth_not_zero remove1_reduce set_remove1_eq sorted_variables_coherent sorted_variables_distinct)
+  (*This is probably the key step in the proof, since the "link" commutes we can 
+    later rewrite the thesis to apply the induction hypothesis:*)
+  have link_ext_x_l: "link_ext x (V - {l ! (n - 1)}) (link_ext (l ! (n - 1)) V K)
+    = link_ext (l ! (n - 1)) (V - {x}) (link_ext x V K)"
+  proof (rule link_ext_commute)
+    show "l ! (n - 1) \<in> V" and "x \<in> V" using Cons.prems (1,2,3)
+      using sorted_variables_coherent by force+
+  qed
+  have take_rep_link: "take_rep (2 ^ (length l - 1 - (n - 1)))
+     (evaluation l (link_ext x (set (x # l)) K)) =
+    evaluation (remove1 (l ! (n - 1)) l)
+     (link_ext x (set (x # remove1 (l ! (n - 1)) l)) (link_ext (l ! (n - 1)) V K))"
+    unfolding sorted_variables_coherent [symmetric, OF Cons.prems(1)]
+    unfolding set_rw
+    unfolding link_ext_x_l
+  proof (cases "n = 1")
+    case False
+    show "take_rep (2 ^ (length l - 1 - (n - 1))) (evaluation l (link_ext x V K)) =
+      evaluation (remove1 (l ! (n - 1)) l) (link_ext (l ! (n - 1)) (V - {x}) (link_ext x V K))"
+    proof (rule Cons (1))
+      show "(V - {x}, l) \<in> sorted_variables" 
+        using Cons.prems (1)
+        using sorted_variables.cases by force
+      show "n - 1 < length l" using Cons.prems (2,3) by simp
+      show "n - 1 \<noteq> 0" using False Cons.prems (3) by simp
+    qed
+  next
+    case True
+    have one: "1 - 1 = (0::nat)" by linarith
+    show "take_rep (2 ^ (length l - 1 - (n - 1))) (evaluation l (link_ext x V K)) =
+      evaluation (remove1 (l ! (n - 1)) l) (link_ext (l ! (n - 1)) (V - {x}) (link_ext x V K))"
+      unfolding True one  
+    proof (rule evaluation_nth_0_link_ext)
+      show "(V - {x}, l) \<in> sorted_variables" 
+        using Cons.prems (1)
+        using sorted_variables.cases by force
+      show "0 < length l" using Cons.prems (2,3) True by auto
+    qed
+  qed
+  have link_ext_cost_x_l: "cost x (V - {l ! (n - 1)}) (link_ext (l ! (n - 1)) V K)
+    = link_ext (l ! (n - 1)) (V - {x}) (cost x V K)"
+  proof (rule link_ext_cost_commute [symmetric])
+    show "l ! (n - 1) \<in> V" and "x \<in> V" using Cons.prems (1,2,3)
+      using sorted_variables_coherent by force+
+    show "x \<noteq> l ! (n - 1)" using sorted_variables_distinct [OF Cons.prems (1)]
+      using Cons.prems(2) Cons.prems(3) by auto
+  qed
+  have take_rep_cost: "take_rep (2 ^ (length l - 1 - (n - 1)))
+     (evaluation l (cost x (set (x # l)) K)) =
+    evaluation (remove1 (l ! (n - 1)) l)
+     (cost x (set (x # remove1 (l ! (n - 1)) l)) (link_ext (l ! (n - 1)) V K))"
+    unfolding sorted_variables_coherent [symmetric, OF Cons.prems(1)]
+    unfolding set_rw
+    unfolding link_ext_cost_x_l
+  proof (cases "n = 1")
+  case False
+  show "take_rep (2 ^ (length l - 1 - (n - 1))) (evaluation l (cost x V K)) =
+      evaluation (remove1 (l ! (n - 1)) l) (link_ext (l ! (n - 1)) (V - {x}) (cost x V K))"
+    proof (rule Cons (1))
+      show "(V - {x}, l) \<in> sorted_variables" 
+        using Cons.prems (1)
+        using sorted_variables.cases by force
+      show "n - 1 < length l" using Cons.prems (2,3) by simp
+      show "n - 1 \<noteq> 0" using False Cons.prems (3) by simp
+    qed
+  next
+    case True
+    have one: "1 - 1 = (0::nat)" by linarith
+    show "take_rep (2 ^ (length l - 1 - (n - 1))) (evaluation l (cost x V K)) =
+      evaluation (remove1 (l ! (n - 1)) l) (link_ext (l ! (n - 1)) (V - {x}) (cost x V K))"
+      unfolding True one  
+    proof (rule evaluation_nth_0_link_ext)
+      show "(V - {x}, l) \<in> sorted_variables" 
+        using Cons.prems (1)
+        using sorted_variables.cases by force
+      show "0 < length l" using Cons.prems (2,3) True by auto
+    qed
+  qed
+  show ?case
+    unfolding evaluation.simps 
+    unfolding remove1_reduce [OF Cons.prems (3) Cons.prems (2) sorted_variables_distinct [OF Cons.prems (1)]]
+    unfolding nth_not_zero [OF Cons.prems (3)]
+    unfolding evaluation.simps unfolding lrw 
+    unfolding take_rep_link [symmetric] take_rep_cost [symmetric]
+  proof (rule take_rep_power_append [of _ "length l"])
+    show "length l - 1 - (n - 1) < length l"
+      using Cons.prems(2) Cons.prems(3) by force
+    show "length (evaluation l (link_ext x (set (x # l)) K)) = 2 ^ length l" 
+      and "length (evaluation l (cost x (set (x # l)) K)) = 2 ^ length l"
+      by (rule length_evaluation)+
+  qed
+ qed
+qed
 
 lemma
   assumes k: "K \<subseteq> powerset V" and vl: "(V, l) \<in> sorted_variables"
