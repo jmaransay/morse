@@ -4,16 +4,18 @@ theory Nonevasive
     "BDT"
 begin
 
-function nonevasive :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+section\<open>Definition of \emph{non-evasive}\<close>
+
+function non_evasive :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where
-  "V = {} \<Longrightarrow> nonevasive V K = False"
-  | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> nonevasive V K = True"
-  | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> nonevasive V K = True"
-  | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> nonevasive V K = False"
-  (*This can be proven from the definition: | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> nonevasive V K = True"*)
-  | "2 \<le> card V \<Longrightarrow> nonevasive V K =
-    (\<exists>x\<in>V. nonevasive (V - {x}) (link_ext x V K) \<and> nonevasive (V - {x}) (cost x V K))"
-  | "\<not> finite V \<Longrightarrow> nonevasive V K = False"
+  "V = {} \<Longrightarrow> non_evasive V K = False"
+  | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> non_evasive V K = True"
+  | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> non_evasive V K = True"
+  | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> non_evasive V K = False"
+  (*This can be proven from the definition: | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> non_evasive V K = True"*)
+  | "2 \<le> card V \<Longrightarrow> non_evasive V K =
+    (\<exists>x\<in>V. non_evasive (V - {x}) (link_ext x V K) \<and> non_evasive (V - {x}) (cost x V K))"
+  | "\<not> finite V \<Longrightarrow> non_evasive V K = False"
 proof -
   fix P :: "bool" and x :: "(nat set \<times> nat set set)"
   assume ee: "(\<And>V K. V = {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
@@ -76,18 +78,18 @@ termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
     using c  x by simp
 qed
 
-lemma v_ge_2: assumes two: "2 \<le> card V" shows "nonevasive V {}"
+lemma v_ge_2: assumes two: "2 \<le> card V" shows "non_evasive V {}"
   using two proof (induct "card V" arbitrary: V)
   case 0
   fix V :: "nat set"
   assume "0 = card V" and "2 \<le> card V"
   hence False by linarith
-  thus "nonevasive V {}" by fast
+  thus "non_evasive V {}" by fast
 next
   case (Suc n)
   assume two: "2 \<le> card V"
   then obtain x where x: "x \<in> V" by fastforce
-  have n: "nonevasive (V - {x}) {}"
+  have n: "non_evasive (V - {x}) {}"
   proof (cases "2 \<le> card (V - {x})")
     case True
     show ?thesis
@@ -98,33 +100,35 @@ next
   next
     case False hence "card (V - {x}) = 1" using x two Suc.hyps (2) by simp
     then obtain y where V: "V - {x} = {y}" using card_1_singletonE by auto
-    show ?thesis unfolding V using nonevasive.simps (2) by simp
+    show ?thesis unfolding V using non_evasive.simps (2) by simp
   qed
-  show "nonevasive V {}"
-    unfolding nonevasive.simps (5) [OF two, of "{}"]
+  show "non_evasive V {}"
+    unfolding non_evasive.simps (5) [OF two, of "{}"]
     using two link_ext_empty [of _ V] cost_empty [of _ V] n x by auto
 qed
 
-lemma assumes "V \<noteq> {}"  and f: "finite V" shows "nonevasive V {}"
-  using v_ge_2 nonevasive.simps (2) f
+lemma assumes "V \<noteq> {}"  and f: "finite V" shows "non_evasive V {}"
+  using v_ge_2 non_evasive.simps (2) f
   by (metis Suc_leI assms(1) card_1_singleton_iff card_gt_0_iff nle_le not_less_eq_eq numerals(2))
 
-lemma nonevasiveI1:
+lemma non_evasiveI1:
   assumes v: "V = {x}" and k: "K = {{},{x}}"
-  shows "nonevasive V K"
-  using nonevasive.simps (3) [OF v k] by fast
+  shows "non_evasive V K"
+  using non_evasive.simps (3) [OF v k] by fast
 
-lemma nonevasiveI2:
+lemma non_evasiveI2:
   assumes v: "2 \<le> card V" and kne: "K \<noteq> {}"
-    and k: "(\<exists>x\<in>V. nonevasive (V - {x}) (link_ext x V K) \<and> nonevasive (V - {x}) (cost x V K))"
-  shows "nonevasive V K"
-  unfolding nonevasive.simps (5) [OF v] using k .
+    and k: "(\<exists>x\<in>V. non_evasive (V - {x}) (link_ext x V K) \<and> non_evasive (V - {x}) (cost x V K))"
+  shows "non_evasive V K"
+  unfolding non_evasive.simps (5) [OF v] using k .
 
 lemma assumes c: "cone {x} K" shows "K = {{x},{}} \<or> K = {}"
   using c unfolding cone_def powerset_def by (cases "K = {}", auto)
 
-lemma cone_nonevasive: 
-  assumes f: "finite V" and c: "cone V K" shows "nonevasive V K"
+section\<open>Cone implies \emph{non-evasive}.\<close>
+
+theorem cone_non_evasive:
+  assumes f: "finite V" and c: "cone V K" shows "non_evasive V K"
 using c f proof (induct "card V" arbitrary: V K)
    case 0
    from "0.hyps" and finite have "V = {}" by (simp add: "0.prems"(2))
@@ -144,13 +148,13 @@ using c f proof (induct "card V" arbitrary: V K)
      show ?thesis
      proof (cases "T = {}")
        case True
-       show ?thesis unfolding v K True using nonevasive.simps (2) by simp
+       show ?thesis unfolding v K True using non_evasive.simps (2) by simp
      next
        case False note tne = False
        show ?thesis
        proof (cases "T = {{}}")
         case True
-        show ?thesis unfolding v K True using nonevasive.simps (3)
+        show ?thesis unfolding v K True using non_evasive.simps (3)
           by (simp add: insert_commute)
        next
         case False with tne and t have False by simp
@@ -168,9 +172,9 @@ using c f proof (induct "card V" arbitrary: V K)
       using T unfolding link_ext_def powerset_def by auto
     have cp: "cost y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
       using T unfolding cost_def powerset_def by auto
-    show ?thesis unfolding nonevasive.simps (5) [OF two]
+    show ?thesis unfolding non_evasive.simps (5) [OF two]
     proof (rule bexI [OF _ y], rule conjI)
-      show "nonevasive (V - {y}) (link_ext y V K)"
+      show "non_evasive (V - {y}) (link_ext y V K)"
       proof (rule Suc.hyps(1))
         show "n = card (V - {y})" using y Suc.hyps (2) by simp
         show "cone (V - {y}) (link_ext y V K)"
@@ -180,7 +184,7 @@ using c f proof (induct "card V" arbitrary: V K)
             (intro lp, fast)
         show "finite (V - {y})" using `finite V` by fast
       qed
-      show "nonevasive (V - {y}) (cost y V K)"
+      show "non_evasive (V - {y}) (cost y V K)"
       proof (rule Suc.hyps(1))
         show "n = card (V - {y})" using y Suc.hyps (2) by simp
         show "cone (V - {y}) (cost y V K)"
@@ -194,9 +198,10 @@ using c f proof (induct "card V" arbitrary: V K)
   qed
 qed
 
-lemma
-  zerocollapsible__nonevasive:
-  assumes f: "finite V" and z: "zero_collapsible V K" shows "nonevasive V K"
+section\<open>\emph{Zero-collapsible} implies \emph{non-evasive}.\<close>
+
+theorem zerocollapsible__non_evasive:
+  assumes f: "finite V" and z: "zero_collapsible V K" shows "non_evasive V K"
 using z f proof (induct "card V" arbitrary: V K)
    case 0
    from "0.hyps" and finite have "V = {}" by (simp add: "0.prems"(2))
@@ -204,9 +209,6 @@ using z f proof (induct "card V" arbitrary: V K)
    thus ?case by (rule ccontr)
  next
    case (Suc n)
-   (*from `cone V K` obtain x T
-     where K: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" and T: "T \<subseteq> powerset (V - {x})" 
-       and x: "x \<in> V" unfolding cone_def by auto*)
    show ?case
    proof (cases "n = 0")
      case True
@@ -215,13 +217,13 @@ using z f proof (induct "card V" arbitrary: V K)
      show ?thesis
      proof (cases "K = {}")
        case True
-       show ?thesis unfolding v True using nonevasive.simps (2) by simp
+       show ?thesis unfolding v True using non_evasive.simps (2) by simp
      next
        case False note tne = False
        show ?thesis
        proof (cases "K = {{}, {x}}")
         case True
-        show ?thesis unfolding v True using nonevasive.simps (3)
+        show ?thesis unfolding v True using non_evasive.simps (3)
           by (simp add: insert_commute)
        next
          case False 
@@ -239,15 +241,15 @@ using z f proof (induct "card V" arbitrary: V K)
       using zero_collapsible.simps (5) [OF two, of K]
       by (metis Suc.prems(1) zero_collapsible.simps(1))
     show ?thesis
-    proof (unfold nonevasive.simps (5) [OF two, of K], rule bexI [OF _ x], rule conjI)
-      show "nonevasive (V - {x}) (cost x V K)" 
+    proof (unfold non_evasive.simps (5) [OF two, of K], rule bexI [OF _ x], rule conjI)
+      show "non_evasive (V - {x}) (cost x V K)" 
       proof (rule Suc.hyps)
         show "n = card (V - {x})" using x `Suc n = card V` by simp
         show "zero_collapsible (V - {x}) (cost x V K)" using ccc .
         show "finite (V - {x})" using `finite V` by simp
       qed
-      show "nonevasive (V - {x}) (link_ext x V K)"
-      proof (rule cone_nonevasive)
+      show "non_evasive (V - {x}) (link_ext x V K)"
+      proof (rule cone_non_evasive)
         show "finite (V - {x})" using `finite V` by simp
         show "cone (V - {x}) (link_ext x V K)" using cl .
       qed
@@ -255,8 +257,11 @@ using z f proof (induct "card V" arbitrary: V K)
   qed
 qed
 
-lemma
-  sorted_variables_remove:
+section\<open>\emph{No evaders} implies \emph{non-evasive}.\<close>
+
+subsection\<open>Previous results.\<close>
+
+lemma sorted_variables_remove:
   assumes vl: "(V, l) \<in> sorted_variables" and x: "x \<in> V" and f: "finite V"
   shows "(V - {x}, remove1 x l) \<in> sorted_variables"
   using vl x f proof (induct "card V" arbitrary: V l)
@@ -313,9 +318,8 @@ next
     unfolding Cons.hyps [of "cost a (set (a # l)) K"] by simp
 qed
 
-lemma evaluation_link_ext:
-  assumes v: "(V, l) \<in> sorted_variables"
-    and l: "1 \<le> length l"
+lemma evaluation_link_ext_depth_0:
+  assumes v: "(V, l) \<in> sorted_variables" and l: "1 \<le> length l"
   shows "take (2^(length l - 1)) (evaluation l K) = evaluation (tl l) (link_ext (hd l) V K)"
 proof (cases l)
   case Nil
@@ -341,7 +345,7 @@ next
   qed
 qed
 
-lemma evaluation_cost:
+lemma evaluation_cost_depth_0:
   assumes v: "(V, l) \<in> sorted_variables"
     and l: "1 \<le> length l"
   shows "drop (2^(length l - 1)) (evaluation l K) = evaluation (tl l) (cost (hd l) V K)"
@@ -369,26 +373,28 @@ next
   qed
 qed
 
-function take_rep :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list"
+subsection\<open>The @{term link_ext} of a variable \emph{wrt.} an evaluation list.}\<close>
+
+function take_link_ext :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list"
   where
-  "take_rep n [] = []"
-  | "take_rep 0 l = l"
-  | "l \<noteq> [] \<Longrightarrow> n \<noteq> 0 \<Longrightarrow> take_rep n l = (take n l) @ (take_rep n (drop n (drop n l)))"
+  "take_link_ext n [] = []"
+  | "take_link_ext 0 l = l"
+  | "l \<noteq> [] \<Longrightarrow> n \<noteq> 0 \<Longrightarrow> take_link_ext n l = (take n l) @ (take_link_ext n (drop n (drop n l)))"
 by (auto+)
 termination
   by (relation "measure(\<lambda>(n,l). n + length l)") (simp+)
 
-(*TODO: take_rep fails with 'value', but works with the simplifier;
+(*TODO: take_link_ext fails with 'value', but works with the simplifier;
   the last rule in the definition is not an equation*)
 
-lemma "take_rep 1 [0::int,1,2,3,4,5,6,7] = [0,2,4,6]" by simp
+lemma "take_link_ext 1 [0::int,1,2,3,4,5,6,7] = [0,2,4,6]" by simp
 
-lemma "take_rep 2 [0::int,1,2,3,4,5,6,7] = [0,1,4,5]" by simp
+lemma "take_link_ext 2 [0::int,1,2,3,4,5,6,7] = [0,1,4,5]" by simp
 
-lemma "take_rep 4 [0::int,1,2,3,4,5,6,7] = [0,1,2,3]" by simp
+lemma "take_link_ext 4 [0::int,1,2,3,4,5,6,7] = [0,1,2,3]" by simp
 
-lemma take_rep_take:
-  assumes l: "length l = 2 * n" shows "take_rep n l = take n l"
+lemma take_link_ext_take:
+  assumes l: "length l = 2 * n" shows "take_link_ext n l = take n l"
 proof (cases "n = 0")
   case True
   show ?thesis using True l by auto
@@ -401,25 +407,24 @@ next
   next
     case False
     then show ?thesis 
-      unfolding take_rep.simps (3) [OF False ng0]
+      unfolding take_link_ext.simps (3) [OF False ng0]
       using l by simp
   qed
 qed
 
-lemma length_take_rep_2:
+lemma length_take_link_ext_2:
   assumes l: "length l = 2 * n"
-  shows "length (take_rep n l) = n" 
-  unfolding take_rep_take [OF l] by (simp add: l)
+  shows "length (take_link_ext n l) = n" 
+  unfolding take_link_ext_take [OF l] by (simp add: l)
 
-lemma 
-  assumes l: "length l = k" and i: "i + j = k"
+lemma assumes l: "length l = k" and i: "i + j = k"
   shows "\<exists>m m'. l = m @ m' \<and> length m = i \<and> length m' = j"
   apply (rule exI [of _ "take i l"], rule exI [of _ "drop i l"], rule conjI, simp)
   using i l by force
 
-lemma take_rep_append:
+lemma take_link_ext_append:
   assumes ll: "length l = (2 * k) * n" and ll': "length l' = (2 * k') * n"
-  shows "take_rep n (l @ l') = take_rep n l @ take_rep n l'"
+  shows "take_link_ext n (l @ l') = take_link_ext n l @ take_link_ext n l'"
 using ll ll' proof (induct k arbitrary: l l')
   case 0
   then show ?case by simp
@@ -440,8 +445,8 @@ next
       using l2_def l_append Suc.prems (1) by fastforce
     have ll3: "length l3 = 2 * k * n"
       using l3_def l_append Suc.prems (1) by fastforce
-    have t: "take_rep n l = (take n l2) @ (take_rep n l3)"
-      unfolding take_rep.simps (3) [OF lne False]
+    have t: "take_link_ext n l = (take n l2) @ (take_link_ext n l3)"
+      unfolding take_link_ext.simps (3) [OF lne False]
       unfolding l_append
       by (metis append_same_eq append_take_drop_id drop_drop l3_def l_append mult.commute mult_2_right take_add take_drop)
     have tl2l3l': "take n ((l2 @ l3) @ l') = take n l2" using l2_def
@@ -450,28 +455,28 @@ next
       using ll2 by fastforce
     have ddl2l3l': "drop n (drop n ((l2 @ l3) @ l')) = l3 @ l'" using ll2 by simp
     have ddl2l3: "drop n (drop n (l2 @ l3)) = l3" using ll2 by simp
-    have hyp: "take_rep n (l3 @ l') = take_rep n l3 @ take_rep n l'"
+    have hyp: "take_link_ext n (l3 @ l') = take_link_ext n l3 @ take_link_ext n l'"
       by (rule Suc.hyps, intro ll3, intro Suc.prems (2))
     show ?thesis
       apply (subst l_append) 
-      apply (subst take_rep.simps (3) [OF l2l3l'ne False])
-      apply (subst take_rep.simps (3) [OF lne False])
+      apply (subst take_link_ext.simps (3) [OF l2l3l'ne False])
+      apply (subst take_link_ext.simps (3) [OF lne False])
       unfolding l_append unfolding tl2l3l' tl2l3 ddl2l3l' ddl2l3 
       apply (subst append_assoc)
       apply (subst hyp) ..
   qed
 qed
 
-lemma "take_rep 1 ([a\<^sub>1, a\<^sub>1, a\<^sub>1] @ [a\<^sub>1, a\<^sub>1, a\<^sub>1]) = ([a\<^sub>1, a\<^sub>1, a\<^sub>1])" by simp
+lemma "take_link_ext 1 ([a\<^sub>1, a\<^sub>1, a\<^sub>1] @ [a\<^sub>1, a\<^sub>1, a\<^sub>1]) = ([a\<^sub>1, a\<^sub>1, a\<^sub>1])" by simp
 
-lemma "take_rep 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] = ([a\<^sub>1, a\<^sub>1])" by simp
+lemma "take_link_ext 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] = ([a\<^sub>1, a\<^sub>1])" by simp
 
-lemma "take_rep 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] @ take_rep 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] = ([a\<^sub>1, a\<^sub>1, a\<^sub>1, a\<^sub>1])" by simp
+lemma "take_link_ext 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] @ take_link_ext 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] = ([a\<^sub>1, a\<^sub>1, a\<^sub>1, a\<^sub>1])" by simp
 
-lemma take_rep_power_append:
+lemma take_link_ext_power_append:
   assumes k: "k < m" and lm: "length l = 2^m" and lm': "length l' = 2^m"
-  shows "take_rep (2^k) (l @ l') = take_rep (2^k) l @ take_rep (2^k) l'"
-proof(rule take_rep_append [of _ "2^(m-k-1)" _ _ "2^(m-k-1)"])
+  shows "take_link_ext (2^k) (l @ l') = take_link_ext (2^k) l @ take_link_ext (2^k) l'"
+proof(rule take_link_ext_append [of _ "2^(m-k-1)" _ _ "2^(m-k-1)"])
   show "length l = 2 * 2 ^ (m - k - 1) * 2 ^ k"
     using lm k
     by (metis Groups.mult_ac(2) add_diff_inverse_nat less_or_eq_imp_le not_less power_add power_minus_mult zero_less_diff)
@@ -490,33 +495,28 @@ lemma remove1_reduce:
 lemma nth_not_zero: assumes "n \<noteq> 0" shows "(x # l) ! n = l ! (n - 1)"
   using assms(1) by auto
 
-(*The case where "n = 0" is later used in the proof of the general case for "n"*)
+text\<open>The case where @{term "n = 0"} is later used in the proof 
+  of the general case for @{term "n"}.\<close>
 
 lemma evaluation_nth_0_link_ext:
   assumes v: "(V, l) \<in> sorted_variables" and l: "0 < length l"
-  shows "take_rep (2^((length l - 1) - 0)) (evaluation l K) =
+  shows "take_link_ext (2^((length l - 1) - 0)) (evaluation l K) =
           evaluation (remove1 (nth l 0) l) (link_ext (nth l 0) V K)"
 proof -
-  have one: "1 \<le> length l" using l by linarith
-  then obtain x l' where l_cons: "l = x # l'" by (metis length_0_conv neq_Nil_conv not_one_le_zero)
-  have tt: "take_rep (2 ^ (length (x # l') - 1)) (evaluation (x # l') K) =
-    take (2 ^ (length (x # l') - 1)) (evaluation (x # l') K)"
-  proof (rule take_rep_take [of "(evaluation (x # l') K)" "2 ^ (length (x # l') - 1)"])
-    have t: "2 * 2 ^ (length (x # l') - 1) = 2 ^ (length (x # l'))" by simp
-    show "length (evaluation (x # l') K) = 2 * 2 ^ (length (x # l') - 1)"
-      by (unfold t, rule length_evaluation)
-  qed
-  show ?thesis
-    unfolding l_cons 
-    unfolding minus_nat.diff_0 
-    unfolding tt
-    unfolding nth_Cons_0 [of x "l'"]
-    using evaluation_link_ext l_cons v by fastforce
+  have one_l: "1 \<le> length l" using l by linarith
+  have tlt: "take_link_ext (2^((length l - 1) - 0)) (evaluation l K) =
+    take (2^((length l - 1) - 0)) (evaluation l K)"
+    by (metis bot_nat_0.not_eq_extremum diff_zero l length_evaluation power_eq_if take_link_ext_take)
+  have r: "remove1 (nth l 0) l = tl l" using l
+    by (metis length_greater_0_conv list.exhaust list.sel(3) nth_Cons_0 remove1_head)
+  have n: "nth l 0 = hd l" using l by (simp add: hd_conv_nth)
+  show ?thesis unfolding tlt r unfolding n
+    using evaluation_link_ext_depth_0 [OF v one_l] by simp
 qed
 
 lemma evaluation_nth_link_ext:
   assumes v: "(V, l) \<in> sorted_variables" and l: "n < length l"
-  shows "take_rep (2^((length l - 1) - n)) (evaluation l K) =
+  shows "take_link_ext (2^((length l - 1) - n)) (evaluation l K) =
           evaluation (remove1 (nth l n) l) (link_ext (nth l n) V K)"
 proof (cases "n = 0")
   case True
@@ -543,7 +543,7 @@ next
     show "l ! (n - 1) \<in> V" and "x \<in> V" using Cons.prems (1,2,3)
       using sorted_variables_coherent by force+
   qed
-  have take_rep_link: "take_rep (2 ^ (length l - 1 - (n - 1)))
+  have take_link_ext_link: "take_link_ext (2 ^ (length l - 1 - (n - 1)))
      (evaluation l (link_ext x (set (x # l)) K)) =
     evaluation (remove1 (l ! (n - 1)) l)
      (link_ext x (set (x # remove1 (l ! (n - 1)) l)) (link_ext (l ! (n - 1)) V K))"
@@ -552,7 +552,7 @@ next
     unfolding link_ext_x_l
   proof (cases "n = 1")
     case False
-    show "take_rep (2 ^ (length l - 1 - (n - 1))) (evaluation l (link_ext x V K)) =
+    show "take_link_ext (2 ^ (length l - 1 - (n - 1))) (evaluation l (link_ext x V K)) =
       evaluation (remove1 (l ! (n - 1)) l) (link_ext (l ! (n - 1)) (V - {x}) (link_ext x V K))"
     proof (rule Cons (1))
       show "(V - {x}, l) \<in> sorted_variables" 
@@ -564,7 +564,7 @@ next
   next
     case True
     have one: "1 - 1 = (0::nat)" by linarith
-    show "take_rep (2 ^ (length l - 1 - (n - 1))) (evaluation l (link_ext x V K)) =
+    show "take_link_ext (2 ^ (length l - 1 - (n - 1))) (evaluation l (link_ext x V K)) =
       evaluation (remove1 (l ! (n - 1)) l) (link_ext (l ! (n - 1)) (V - {x}) (link_ext x V K))"
       unfolding True one  
     proof (rule evaluation_nth_0_link_ext)
@@ -574,6 +574,8 @@ next
       show "0 < length l" using Cons.prems (2,3) True by auto
     qed
   qed
+  (*This is probably the key step in the proof, since the "link" commutes with "cost"
+  we can later rewrite the thesis to apply the induction hypothesis:*)
   have link_ext_cost_x_l: "cost x (V - {l ! (n - 1)}) (link_ext (l ! (n - 1)) V K)
     = link_ext (l ! (n - 1)) (V - {x}) (cost x V K)"
   proof (rule link_ext_cost_commute [symmetric])
@@ -582,7 +584,7 @@ next
     show "x \<noteq> l ! (n - 1)" using sorted_variables_distinct [OF Cons.prems (1)]
       using Cons.prems(2) Cons.prems(3) by auto
   qed
-  have take_rep_cost: "take_rep (2 ^ (length l - 1 - (n - 1)))
+  have take_link_ext_cost: "take_link_ext (2 ^ (length l - 1 - (n - 1)))
      (evaluation l (cost x (set (x # l)) K)) =
     evaluation (remove1 (l ! (n - 1)) l)
      (cost x (set (x # remove1 (l ! (n - 1)) l)) (link_ext (l ! (n - 1)) V K))"
@@ -591,7 +593,7 @@ next
     unfolding link_ext_cost_x_l
   proof (cases "n = 1")
   case False
-  show "take_rep (2 ^ (length l - 1 - (n - 1))) (evaluation l (cost x V K)) =
+  show "take_link_ext (2 ^ (length l - 1 - (n - 1))) (evaluation l (cost x V K)) =
       evaluation (remove1 (l ! (n - 1)) l) (link_ext (l ! (n - 1)) (V - {x}) (cost x V K))"
     proof (rule Cons (1))
       show "(V - {x}, l) \<in> sorted_variables" 
@@ -603,7 +605,7 @@ next
   next
     case True
     have one: "1 - 1 = (0::nat)" by linarith
-    show "take_rep (2 ^ (length l - 1 - (n - 1))) (evaluation l (cost x V K)) =
+    show "take_link_ext (2 ^ (length l - 1 - (n - 1))) (evaluation l (cost x V K)) =
       evaluation (remove1 (l ! (n - 1)) l) (link_ext (l ! (n - 1)) (V - {x}) (cost x V K))"
       unfolding True one  
     proof (rule evaluation_nth_0_link_ext)
@@ -617,9 +619,9 @@ next
     unfolding evaluation.simps 
     unfolding remove1_reduce [OF Cons.prems (3) Cons.prems (2) sorted_variables_distinct [OF Cons.prems (1)]]
     unfolding nth_not_zero [OF Cons.prems (3)]
-    unfolding evaluation.simps unfolding lrw 
-    unfolding take_rep_link [symmetric] take_rep_cost [symmetric]
-  proof (rule take_rep_power_append [of _ "length l"])
+    unfolding evaluation.simps unfolding lrw
+    unfolding take_link_ext_link [symmetric] take_link_ext_cost [symmetric]
+  proof (rule take_link_ext_power_append [of _ "length l"])
     show "length l - 1 - (n - 1) < length l"
       using Cons.prems(2) Cons.prems(3) by force
     show "length (evaluation l (link_ext x (set (x # l)) K)) = 2 ^ length l" 
@@ -628,6 +630,262 @@ next
   qed
  qed
 qed
+
+
+subsection\<open>The @{term cost} of a variable \emph{wrt.} an evaluation list.}\<close>
+
+(*TODO: define an intermediate list @{term "drop n l"}*)
+
+function take_cost :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list"
+  where
+  "take_cost n [] = []"
+  | "take_cost 0 l = l"
+  | "l \<noteq> [] \<Longrightarrow> n \<noteq> 0 \<Longrightarrow> take_cost n l = (take n (drop n l)) @ (take_cost n (drop n (drop n l)))"
+by (auto+)
+termination
+  by (relation "measure(\<lambda>(n,l). n + length l)") (simp+)
+
+(*TODO: take_cost fails with 'value', but works with the simplifier;
+  the last rule in the definition is not an equation*)
+
+lemma "take_cost 1 [0::int,1,2,3,4,5,6,7] = [1,3,5,7]" by simp
+
+lemma "take_cost 2 [0::int,1,2,3,4,5,6,7] = [2,3,6,7]" by simp
+
+lemma "take_cost 4 [0::int,1,2,3,4,5,6,7] = [4,5,6,7]" by simp
+
+lemma take_cost_take:
+  assumes l: "length l = 2 * n" shows "take_cost n l = take n (drop n l)"
+proof (cases "n = 0")
+  case True
+  show ?thesis using True l by auto
+next
+  case False note ng0 = False
+  show ?thesis
+  proof (cases "l = []")
+    case True
+    then show ?thesis unfolding True by simp
+  next
+    case False
+    then show ?thesis
+      unfolding take_cost.simps (3) [OF False ng0]
+      using l by simp
+  qed
+qed
+
+lemma length_take_cost_2:
+  assumes l: "length l = 2 * n"
+  shows "length (take_cost n l) = n" 
+  unfolding take_cost_take [OF l] by (simp add: l)
+
+lemma take_cost_append:
+  assumes ll: "length l = (2 * k) * n" and ll': "length l' = (2 * k') * n"
+  shows "take_cost n (l @ l') = take_cost n l @ take_cost n l'"
+using ll ll' proof (induct k arbitrary: l l')
+  case 0
+  then show ?case by simp
+next
+  case (Suc k)
+  show ?case
+  proof (cases "n = 0")
+    case True
+    show ?thesis unfolding True by simp
+  next
+    case False
+    have lne: "l \<noteq> []" using False Suc.prems(1) by fastforce
+    define l2 where "l2 = take (2 * n) l"
+    define l3 where "l3 = drop (2 * n) l"
+    have l_append: "l = l2 @ l3" using l2_def l3_def by simp
+    have l2l3l'ne: "(l2 @ l3) @ l' \<noteq> []" using lne l2_def l3_def by simp
+    have ll2: "length l2 = 2 * n"
+      using l2_def l_append Suc.prems (1) by fastforce
+    have ll3: "length l3 = 2 * k * n"
+      using l3_def l_append Suc.prems (1) by fastforce
+    have t: "take_cost n l = (take n (drop n l2)) @ (take_cost n l3)"
+      unfolding take_cost.simps (3) [OF lne False]
+      unfolding l_append by (simp add: ll2)
+    have tl2l3l': "take n (drop n ((l2 @ l3) @ l')) = take n (drop n l2)" 
+      using l2_def using ll2 by fastforce
+    have tl2l3: "take n (drop n (l2 @ l3)) = take n (drop n l2)" using l2_def
+      using ll2 by fastforce
+    have ddl2l3l': "drop n (drop n ((l2 @ l3) @ l')) = l3 @ l'" using ll2 by simp
+    have ddl2l3: "drop n (drop n (l2 @ l3)) = l3" using ll2 by simp
+    have hyp: "take_cost n (l3 @ l') = take_cost n l3 @ take_cost n l'"
+      by (rule Suc.hyps, intro ll3, intro Suc.prems (2))
+    show ?thesis
+      apply (subst l_append) 
+      apply (subst take_cost.simps (3) [OF l2l3l'ne False])
+      apply (subst take_cost.simps (3) [OF lne False])
+      unfolding l_append 
+      unfolding tl2l3l'
+      unfolding tl2l3
+      unfolding ddl2l3l' 
+      unfolding ddl2l3 
+      apply (subst append_assoc)
+      apply (subst hyp) ..
+  qed
+qed
+
+lemma "take_cost 1 ([a\<^sub>1, a\<^sub>1, a\<^sub>1] @ [a\<^sub>1, a\<^sub>1, a\<^sub>1]) = ([a\<^sub>1, a\<^sub>1, a\<^sub>1])" by simp
+
+lemma "take_cost 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] = ([a\<^sub>1])" by simp
+
+lemma "take_cost 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] @ take_cost 1 [a\<^sub>1, a\<^sub>1, a\<^sub>1] = ([a\<^sub>1, a\<^sub>1])" by simp
+
+lemma take_cost_power_append:
+  assumes k: "k < m" and lm: "length l = 2^m" and lm': "length l' = 2^m"
+  shows "take_cost (2^k) (l @ l') = take_cost (2^k) l @ take_cost (2^k) l'"
+proof(rule take_cost_append [of _ "2^(m-k-1)" _ _ "2^(m-k-1)"])
+  show "length l = 2 * 2 ^ (m - k - 1) * 2 ^ k"
+    using lm k
+    by (metis Groups.mult_ac(2) add_diff_inverse_nat less_or_eq_imp_le not_less power_add power_minus_mult zero_less_diff)
+  show "length l' = 2 * 2 ^ (m - k - 1) * 2 ^ k"
+    using lm' k
+    by (metis Groups.mult_ac(2) add_diff_inverse_nat less_or_eq_imp_le not_less power_add power_minus_mult zero_less_diff)
+qed
+
+text\<open>The case where @{term "n = 0"} is later used in the proof 
+  of the general case for @{term "n"}.\<close>
+
+lemma evaluation_nth_0_cost:
+  assumes v: "(V, l) \<in> sorted_variables" and l: "0 < length l"
+  shows "take_cost (2^((length l - 1) - 0)) (evaluation l K) =
+          evaluation (remove1 (nth l 0) l) (cost (nth l 0) V K)"
+proof -
+  have one_l: "1 \<le> length l" using l by linarith
+  have tlt: "take_cost (2^((length l - 1) - 0)) (evaluation l K) =
+    take (2^((length l - 1) - 0)) (drop (2^((length l - 1) - 0)) (evaluation l K))"
+    by (metis bot_nat_0.not_eq_extremum diff_zero l length_evaluation power_eq_if take_cost_take)
+  have r: "remove1 (nth l 0) l = tl l" using l
+    by (metis length_greater_0_conv list.exhaust list.sel(3) nth_Cons_0 remove1_head)
+  have n: "nth l 0 = hd l" using l by (simp add: hd_conv_nth)
+  show ?thesis unfolding tlt r unfolding n
+    using evaluation_cost_depth_0 [OF v one_l]
+    by (simp add: length_evaluation)
+qed
+
+lemma evaluation_nth_cost:
+  assumes v: "(V, l) \<in> sorted_variables" and l: "n < length l"
+  shows "take_cost (2^((length l - 1) - n)) (evaluation l K) =
+          evaluation (remove1 (nth l n) l) (cost (nth l n) V K)"
+proof (cases "n = 0")
+  case True
+  show ?thesis using evaluation_nth_0_cost [OF v] True l by simp
+next
+  case False
+  show ?thesis
+  using v l False proof (induction l arbitrary: n V K rule: list.induct)
+  case Nil
+  have False using Nil.prems (2) by simp
+  thus ?case by (rule ccontr)
+next
+  case (Cons x l)
+  have lrw: "length (x # l) - 1 - n = length l - 1 - (n - 1)"
+    using Cons.prems(3) by auto
+  have set_rw: "set (x # remove1 (l ! (n - 1)) l) = V - {l ! (n - 1)}"
+    using Cons.prems (1)
+    by (metis Cons.prems(2) Cons.prems(3) nth_not_zero remove1_reduce set_remove1_eq sorted_variables_coherent sorted_variables_distinct)
+  (*This is probably the key step in the proof, since the "cost" commutes we can 
+    later rewrite the thesis to apply the induction hypothesis:*)
+  have cost_x_l: "cost x (V - {l ! (n - 1)}) (cost (l ! (n - 1)) V K)
+    = cost (l ! (n - 1)) (V - {x}) (cost x V K)"
+  proof (rule cost_commute)
+    show "l ! (n - 1) \<in> V" and "x \<in> V" using Cons.prems (1,2,3)
+      using sorted_variables_coherent by force+
+  qed
+  have take_cost_cost: "take_cost (2 ^ (length l - 1 - (n - 1)))
+     (evaluation l (cost x (set (x # l)) K)) =
+    evaluation (remove1 (l ! (n - 1)) l)
+     (cost x (set (x # remove1 (l ! (n - 1)) l)) (cost (l ! (n - 1)) V K))"
+    unfolding sorted_variables_coherent [symmetric, OF Cons.prems(1)]
+    unfolding set_rw
+    unfolding cost_x_l
+  proof (cases "n = 1")
+    case False
+    show "take_cost (2 ^ (length l - 1 - (n - 1))) (evaluation l (cost x V K)) =
+      evaluation (remove1 (l ! (n - 1)) l) (cost (l ! (n - 1)) (V - {x}) (cost x V K))"
+    proof (rule Cons (1))
+      show "(V - {x}, l) \<in> sorted_variables" 
+        using Cons.prems (1)
+        using sorted_variables.cases by force
+      show "n - 1 < length l" using Cons.prems (2,3) by simp
+      show "n - 1 \<noteq> 0" using False Cons.prems (3) by simp
+    qed
+  next
+    case True
+    have one: "1 - 1 = (0::nat)" by linarith
+    show "take_cost (2 ^ (length l - 1 - (n - 1))) (evaluation l (cost x V K)) =
+      evaluation (remove1 (l ! (n - 1)) l) (cost (l ! (n - 1)) (V - {x}) (cost x V K))"
+      unfolding True one
+    proof (rule evaluation_nth_0_cost)
+      show "(V - {x}, l) \<in> sorted_variables" 
+        using Cons.prems (1)
+        using sorted_variables.cases by force
+      show "0 < length l" using Cons.prems (2,3) True by auto
+    qed
+  qed
+  (*This is probably the key step in the proof, since the "cost" commutes 
+  with "link_ext" we can later rewrite the thesis to apply the induction hypothesis:*)
+  have link_ext_cost_x_l: "link_ext x (V - {l ! (n - 1)}) (cost (l ! (n - 1)) V K)
+    = cost (l ! (n - 1)) (V - {x}) (link_ext x V K)"
+  proof (rule link_ext_cost_commute)
+    show "l ! (n - 1) \<in> V" and "x \<in> V" using Cons.prems (1,2,3)
+      using sorted_variables_coherent by force+
+    show "l ! (n - 1) \<noteq> x" using sorted_variables_distinct [OF Cons.prems (1)]
+      using Cons.prems(2) Cons.prems(3) by auto
+  qed
+  have take_cost_link_ext: "take_cost (2 ^ (length l - 1 - (n - 1)))
+     (evaluation l (link_ext x (set (x # l)) K)) =
+    evaluation (remove1 (l ! (n - 1)) l)
+     (link_ext x (set (x # remove1 (l ! (n - 1)) l))
+       (cost (l ! (n - 1)) V K))"
+    unfolding sorted_variables_coherent [symmetric, OF Cons.prems(1)]
+    unfolding set_rw
+    unfolding link_ext_cost_x_l
+  proof (cases "n = 1")
+  case False
+  show "take_cost (2 ^ (length l - 1 - (n - 1))) (evaluation l (link_ext x V K)) =
+    evaluation (remove1 (l ! (n - 1)) l)
+     (cost (l ! (n - 1)) (V - {x}) (link_ext x V K))"
+  proof (rule Cons (1))
+      show "(V - {x}, l) \<in> sorted_variables" 
+        using Cons.prems (1)
+        using sorted_variables.cases by force
+      show "n - 1 < length l" using Cons.prems (2,3) by simp
+      show "n - 1 \<noteq> 0" using False Cons.prems (3) by simp
+    qed
+  next
+    case True
+    have one: "1 - 1 = (0::nat)" by linarith
+    show " take_cost (2 ^ (length l - 1 - (n - 1))) (evaluation l (link_ext x V K)) =
+    evaluation (remove1 (l ! (n - 1)) l) (cost (l ! (n - 1)) (V - {x}) (link_ext x V K))"
+      unfolding True one
+    proof (rule evaluation_nth_0_cost)
+      show "(V - {x}, l) \<in> sorted_variables" 
+        using Cons.prems (1)
+        using sorted_variables.cases by force
+      show "0 < length l" using Cons.prems (2,3) True by auto
+    qed
+  qed
+  show ?case
+    unfolding evaluation.simps
+    unfolding remove1_reduce [OF Cons.prems (3) Cons.prems (2) sorted_variables_distinct [OF Cons.prems (1)]]
+    unfolding nth_not_zero [OF Cons.prems (3)]
+    unfolding evaluation.simps unfolding lrw 
+    unfolding take_cost_cost [symmetric] take_cost_link_ext [symmetric]
+  proof (rule take_cost_power_append [of _ "length l"])
+    show "length l - 1 - (n - 1) < length l"
+      using Cons.prems(2) Cons.prems(3) by force
+    show "length (evaluation l (link_ext x (set (x # l)) K)) = 2 ^ length l" 
+      and "length (evaluation l (cost x (set (x # l)) K)) = 2 ^ length l"
+      by (rule length_evaluation)+
+  qed
+ qed
+qed
+
+
+
+
 
 lemma
   assumes k: "K \<subseteq> powerset V" and vl: "(V, l) \<in> sorted_variables"
@@ -687,14 +945,14 @@ proof -
 
 lemma assumes k: "K \<subseteq> powerset V" and x: "V \<noteq> {}" and f: "finite V" 
   and l: "\<exists>l. (V, l) \<in> sorted_variables \<and> evaluation l K \<in> not_evaders"
-  shows "nonevasive V K"
+  shows "non_evasive V K"
   using x k f l proof (induct "card V" arbitrary: V K)
   case 0 have v: "V = {}" using "0.prems" (3) "0.hyps" by simp  
   hence False using "0.prems" (1) by fast
-  thus "nonevasive V K" by (rule ccontr)
+  thus "non_evasive V K" by (rule ccontr)
 next
   case (Suc n)
-  show "nonevasive V K"
+  show "non_evasive V K"
   proof (cases "n = 0")
     case True
     then obtain x where v: "V = {x}" using Suc.hyps (2)
@@ -702,7 +960,7 @@ next
     show ?thesis
     proof (cases "K = {} \<or> K = {{x}, {}}")
       case True
-      show ?thesis using True using nonevasive.simps (2,3) [OF v, of K] by blast
+      show ?thesis using True using non_evasive.simps (2,3) [OF v, of K] by blast
     next
       case False
       have k: "K = {{x}} \<or> K = {{}}"
@@ -744,7 +1002,7 @@ next
     case False
     hence two: "2 \<le> card V" using Suc.hyps (2) by simp
     obtain x where x: "x \<in> V" using two by fastforce
-    have ne_link: "nonevasive (V - {x}) (link_ext x V K)"
+    have ne_link: "non_evasive (V - {x}) (link_ext x V K)"
     proof (rule Suc.hyps (1))
       show "n = card (V - {x})" using x Suc.hyps (2) by simp
       show "V - {x} \<noteq> {}" using False \<open>n = card (V - {x})\<close> by force
@@ -755,9 +1013,9 @@ next
       show "\<exists>l. (V - {x}, l) \<in> sorted_variables \<and> evaluation l (link_ext x V K) \<in> not_evaders"
         using Suc
     from Suc
-    show "nonevasive V K" unfolding nonevasive.simps (5) [OF two, of K]
+    show "non_evasive V K" unfolding non_evasive.simps (5) [OF two, of K]
   hence k: "K = {} \<or> K = {{}}" using "0.prems" (1) unfolding powerset_def by auto
-  show "nonevasive V K" unfolding v using k using nonevasive.simps
+  show "non_evasive V K" unfolding v using k using non_evasive.simps
 
 
 
