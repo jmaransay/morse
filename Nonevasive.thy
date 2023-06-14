@@ -883,9 +883,79 @@ next
  qed
 qed
 
+section\<open>Beads.\<close>
 
+lemma evaluation_coherent:
+  assumes e: "evaluation l K = evaluation l K'"
+    and k: "K \<subseteq> powerset (set l)" and k': "K' \<subseteq> powerset (set l)"
+  shows "K = K'"
+  using e k k' proof (induct l arbitrary: K K')
+  case Nil
+  then show ?case 
+    unfolding powerset_def using evaluation.simps (1,2)
+    by (metis Pow_empty list.inject list.set(1) subset_singleton_iff)
+next
+  case (Cons a l)
+  from Cons.prems (1)
+  have "evaluation l (link_ext a (set (a # l)) K) @ evaluation l (cost a (set (a # l)) K)
+    = evaluation l (link_ext a (set (a # l)) K') @ evaluation l (cost a (set (a # l)) K')"
+    unfolding evaluation.simps .
+  hence el: "evaluation l (link_ext a (set (a # l)) K) = evaluation l (link_ext a (set (a # l)) K')"
+    and ec: "evaluation l (cost a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K')"
+    using length_evaluation_eq by auto
+  have leq: "(link_ext a (set (a # l)) K) = (link_ext a (set (a # l)) K')"
+  proof (rule Cons.hyps(1))
+    show "evaluation l (link_ext a (set (a # l)) K) = evaluation l (link_ext a (set (a # l)) K')"
+      by (rule el)
+    show "link_ext a (set (a # l)) K \<subseteq> powerset (set l)" 
+      using Cons.prems (2) unfolding link_ext_def powerset_def by auto
+    show "link_ext a (set (a # l)) K' \<subseteq> powerset (set l)"
+      using Cons.prems (3) unfolding link_ext_def powerset_def by auto
+  qed
+  have ceq: "(cost a (set (a # l)) K) = (cost a (set (a # l)) K')"
+  proof (rule Cons.hyps(1))
+    show "evaluation l (cost a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K')"
+      by (rule ec)
+    show "cost a (set (a # l)) K \<subseteq> powerset (set l)" 
+      using Cons.prems (2) unfolding cost_def powerset_def by auto
+    show "cost a (set (a # l)) K' \<subseteq> powerset (set l)"
+      using Cons.prems (3) unfolding cost_def powerset_def by auto
+  qed
+  show ?case
+  proof
+    show "K \<subseteq> K'"
+    proof
+      fix x assume x: "x \<in> K" show "x \<in> K'"
+      proof (cases "a \<in> x")
+        case False
+        show ?thesis
+          using Cons.prems (2,3) leq ceq x False
+          unfolding powerset_def cost_def link_ext_def try by force by fast
+    sorry
+qed
 
-
+lemma
+  assumes e: "evaluation l K \<in> not_evaders"
+  shows "\<exists>n<length l. link_ext (l!n) (set l) K = cost (l!n) (set l) K"
+  using e proof (induction l arbitrary: K)
+  case Nil
+  then show ?case using evaluation.simps
+    by (metis false_evader true_evader)
+next
+  case (Cons a l)
+  from Cons.prems
+  have "(evaluation l (link_ext a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K)) 
+    \<or> ((evaluation l (link_ext a (set (a # l)) K) \<in> not_evaders) \<and> 
+        (evaluation l (cost a (set (a # l)) K) \<in> not_evaders))"
+    using not_evaders.simps [of "evaluation (a # l) K"]
+    unfolding evaluation.simps 
+    using append_eq_same_length(1) append_eq_same_length(2)
+    using length_evaluation_eq by metis
+  show ?case
+  proof (cases "(evaluation l (link_ext a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K))")
+    case True
+    show ?thesis using True thm evaluation.simps
+qed
 
 lemma
   assumes k: "K \<subseteq> powerset V" and vl: "(V, l) \<in> sorted_variables"
