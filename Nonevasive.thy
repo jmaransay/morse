@@ -373,7 +373,7 @@ next
   qed
 qed
 
-subsection\<open>The @{term link_ext} of a variable \emph{wrt.} an evaluation list.}\<close>
+subsection\<open>The @{term link_ext} of a variable \emph{wrt.} an evaluation list.\<close>
 
 function take_link_ext :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list"
   where
@@ -632,7 +632,7 @@ next
 qed
 
 
-subsection\<open>The @{term cost} of a variable \emph{wrt.} an evaluation list.}\<close>
+subsection\<open>The @{term cost} of a variable \emph{wrt.} an evaluation list.\<close>
 
 (*TODO: define an intermediate list @{term "drop n l"}*)
 
@@ -885,19 +885,133 @@ qed
 
 section\<open>Beads.\<close>
 
+(*TODO: the two cases are symmetric, try to reduce the proof*)
+
+lemma link_ext_cost_determine_k:
+  assumes k: "K \<subseteq> powerset V" and k': "K' \<subseteq> powerset V"
+    and l: "link_ext x V K = link_ext x V K'"
+    and c: "cost x V K = cost x V K'"
+  shows "K = K'"
+proof
+  show "K \<subseteq> K'"
+  proof
+    fix k 
+    assume kin: "k \<in> K" 
+    show "k \<in> K'"
+    proof (cases "k \<in> powerset (V - {x})")
+      case True
+      show ?thesis using True using c kin unfolding cost_def by auto
+    next
+      case False
+      hence kv: "k \<in> powerset V" and xk: "x \<in> k" 
+        using kin k unfolding powerset_def by auto
+      then
+      have "k - {x} \<in> powerset V" and "x \<notin> k - {x}" 
+        and "insert x (k - {x}) \<in> K"
+        using kin unfolding powerset_def
+        by auto (simp add: insert_absorb)
+      hence "k - {x} \<in> link_ext x V K"
+        unfolding link_ext_def powerset_def by simp
+      hence "k - {x} \<in> link_ext x V K'" using l by simp
+      thus ?thesis
+        unfolding link_ext_def powerset_def 
+        using xk by (simp add: insert_absorb xk)
+    qed
+  qed
+  next
+    show "K' \<subseteq> K"
+    proof
+    fix k 
+    assume kin: "k \<in> K'" 
+    show "k \<in> K"
+    proof (cases "k \<in> powerset (V - {x})")
+      case True
+      show ?thesis using True using c kin unfolding cost_def by auto
+    next
+      case False
+      hence kv: "k \<in> powerset V" and xk: "x \<in> k" 
+        using kin k' unfolding powerset_def by auto
+      then
+      have "k - {x} \<in> powerset V" and "x \<notin> k - {x}" 
+        and "insert x (k - {x}) \<in> K'"
+        using kin unfolding powerset_def
+        by auto (simp add: insert_absorb)
+      hence "k - {x} \<in> link_ext x V K'"
+        unfolding link_ext_def powerset_def by simp
+      hence "k - {x} \<in> link_ext x V K" using l by simp
+      thus ?thesis
+        unfolding link_ext_def powerset_def 
+        using xk by (simp add: insert_absorb xk)
+    qed
+  qed
+qed
+
 lemma evaluation_coherent:
   assumes e: "evaluation l K = evaluation l K'"
     and k: "K \<subseteq> powerset (set l)" and k': "K' \<subseteq> powerset (set l)"
   shows "K = K'"
-  sorry
+  using e k k' proof (induct l arbitrary: K K')
+  case Nil
+  then show ?case 
+    unfolding powerset_def using evaluation.simps (1,2)
+    by (metis Pow_empty list.inject list.set(1) subset_singleton_iff)
+next
+  case (Cons a l)
+  from Cons.prems (1)
+  have "evaluation l (link_ext a (set (a # l)) K) @ evaluation l (cost a (set (a # l)) K)
+    = evaluation l (link_ext a (set (a # l)) K') @ evaluation l (cost a (set (a # l)) K')"
+    unfolding evaluation.simps .
+  hence el: "evaluation l (link_ext a (set (a # l)) K) = evaluation l (link_ext a (set (a # l)) K')"
+    and ec: "evaluation l (cost a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K')"
+    using length_evaluation_eq by auto
+  have leq: "(link_ext a (set (a # l)) K) = (link_ext a (set (a # l)) K')"
+  proof (rule Cons.hyps(1))
+    show "evaluation l (link_ext a (set (a # l)) K) = evaluation l (link_ext a (set (a # l)) K')"
+      by (rule el)
+    show "link_ext a (set (a # l)) K \<subseteq> powerset (set l)" 
+      using Cons.prems (2) unfolding link_ext_def powerset_def by auto
+    show "link_ext a (set (a # l)) K' \<subseteq> powerset (set l)"
+      using Cons.prems (3) unfolding link_ext_def powerset_def by auto
+  qed
+  have ceq: "(cost a (set (a # l)) K) = (cost a (set (a # l)) K')"
+  proof (rule Cons.hyps(1))
+    show "evaluation l (cost a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K')"
+      by (rule ec)
+    show "cost a (set (a # l)) K \<subseteq> powerset (set l)" 
+      using Cons.prems (2) unfolding cost_def powerset_def by auto
+    show "cost a (set (a # l)) K' \<subseteq> powerset (set l)"
+      using Cons.prems (3) unfolding cost_def powerset_def by auto
+  qed
+  show ?case
+  proof (rule link_ext_cost_determine_k [of _ "set (a # l)" _ a])
+    show "K \<subseteq> powerset (set (a # l))" using Cons.prems (2) .
+    show "K' \<subseteq> powerset (set (a # l))" using Cons.prems (3) .
+    show "link_ext a (set (a # l)) K = link_ext a (set (a # l)) K'" using leq .
+    show "cost a (set (a # l)) K = cost a (set (a # l)) K'" using ceq .
+ qed
+qed
 
-lemma assumes k: "K \<subseteq> powerset V" and x: "V \<noteq> {}" and f: "finite V" and kne: "K \<noteq> {}"
+lemma evaluation_not_empty:
+  assumes v: "(V, l) \<in> sorted_variables" and e: "evaluation l K \<in> not_evaders"
+  shows "V \<noteq> {}"
+proof (rule ccontr)
+  assume nv: "\<not> V \<noteq> {}"
+  hence "V = {}" and "l = []" using v
+    using nv sorted_variables_coherent v by auto 
+  thus False 
+    using v e
+    by (metis evaluation.simps(1) evaluation.simps(2) false_evader true_evader)
+qed
+
+lemma not_evaders_implies_non_evasive:
+  assumes k: "K \<subseteq> powerset V" and f: "finite V" and kne: "K \<noteq> {}"
     and l: "\<exists>l. (V, l) \<in> sorted_variables \<and> evaluation l K \<in> not_evaders"
   shows "non_evasive V K"
 proof -
   from l obtain l where vl: "(V, l) \<in> sorted_variables" 
     and e: "evaluation l K \<in> not_evaders" by auto
   have vsl: "V = set l" using sorted_variables_coherent [OF vl] .
+  have x: "V \<noteq> {}" using evaluation_not_empty [OF vl e] .
   show ?thesis
     using f k vl e x kne
     unfolding vsl
@@ -937,38 +1051,56 @@ proof -
    qed
    show ?thesis using cone_non_evasive [OF Cons.prems (1) cone] .
  next
-   case False
+   case False from Cons False
    have el: "(evaluation l (link_ext v (set (v # l)) K) \<in> not_evaders)" and
         ec: "(evaluation l (cost v (set (v # l)) K) \<in> not_evaders)"
      using ev_either False by simp_all
    have svl: "set (v # l) - {v} = set l"
      using Cons.prems (3) using sorted_variables_distinct by fastforce
-   have ne_l: "non_evasive (set l) (link_ext v (set (v # l)) K)"
-   proof (rule Cons)
-     show "finite (set l)" using Cons.prems (1) by simp
-     show "link_ext v (set (v # l)) K \<subseteq> powerset (set l)"
-       using link_ext_closed [OF Cons.prems (2), of v] unfolding svl .
-     show "(set l, l) \<in> sorted_variables"
-       using Cons.prems(3) sorted_variables_distinct sorted_variables_remove by fastforce
-     show "evaluation l (link_ext v (set (v # l)) K) \<in> not_evaders" using el .
-     show "set l \<noteq> {}"
-       by (metis False ec el evaluation.simps(2) set_empty true_evader)
-     show "link_ext v (set (v # l)) K \<noteq> {}" sorry
-   qed
-   have ne_c: "non_evasive (set l) (cost v (set (v # l)) K)"
-   proof (rule Cons)
-     show "finite (set l)" using Cons.prems (1) by simp
-     show "cost v (set (v # l)) K \<subseteq> powerset (set l)"
-       using cost_closed [OF Cons.prems (2), of v] 
-       unfolding svl .
-     show "(set l, l) \<in> sorted_variables"
-       using Cons.prems(3) sorted_variables_distinct sorted_variables_remove by fastforce
-     show "evaluation l (cost v (set (v # l)) K) \<in> not_evaders" using ec .
-     show "set l \<noteq> {}"
-       by (metis False ec el evaluation.simps(2) set_empty true_evader)
-     show "cost v (set (v # l)) K \<noteq> {}" sorry
-   qed
-   have c2: "2 \<le> card (set (v # l))" sorry
+   show ?thesis
+   proof (cases "l = []")
+     case False note lne = False 
+     hence c2: "2 \<le> card (set (v # l))" using sorted_variables_distinct [OF Cons (4)]
+       by (simp add: Suc_leI distinct_card)
+     have ne_l: "non_evasive (set l) (link_ext v (set (v # l)) K)"
+     proof (cases "link_ext v (set (v # l)) K = {}")
+       case True show ?thesis 
+         unfolding True
+         using False cone_empty cone_non_evasive by blast
+     next
+       case False
+       show ?thesis
+       proof (rule Cons)
+         show "finite (set l)" using Cons.prems (1) by simp
+         show "link_ext v (set (v # l)) K \<subseteq> powerset (set l)"
+           using link_ext_closed [OF Cons.prems (2), of v] unfolding svl .
+         show "(set l, l) \<in> sorted_variables"
+           using Cons.prems(3) sorted_variables_distinct sorted_variables_remove by fastforce
+         show "evaluation l (link_ext v (set (v # l)) K) \<in> not_evaders" using el .
+         show "set l \<noteq> {}" using lne by simp
+         show "link_ext v (set (v # l)) K \<noteq> {}" using False .
+       qed
+     qed
+     have ne_c: "non_evasive (set l) (cost v (set (v # l)) K)"
+     proof (cases "cost v (set (v # l)) K = {}")
+       case True show ?thesis 
+         unfolding True
+         using False cone_empty cone_non_evasive by blast
+      next
+       case False
+       show ?thesis
+       proof (rule Cons)
+         show "finite (set l)" using Cons.prems (1) by simp
+         show "cost v (set (v # l)) K \<subseteq> powerset (set l)"
+           using cost_closed [OF Cons.prems (2), of v] 
+           unfolding svl .
+         show "(set l, l) \<in> sorted_variables"
+           using Cons.prems(3) sorted_variables_distinct sorted_variables_remove by fastforce
+         show "evaluation l (cost v (set (v # l)) K) \<in> not_evaders" using ec .
+         show "set l \<noteq> {}" using lne by simp
+         show "cost v (set (v # l)) K \<noteq> {}" using False .
+       qed
+     qed   
    show ?thesis
    proof (unfold non_evasive.simps (5) [OF c2, of _], intro bexI [of _ v] conjI)
     show "non_evasive (set (v # l) - {v}) (link_ext v (set (v # l)) K)"
@@ -977,212 +1109,16 @@ proof -
        using ne_c unfolding svl .
     show "v \<in> set (v # l)" by simp
   qed
+ next
+   case True
+   note le = True
+   have False
+    using ec unfolding le
+    using evaluation_not_empty [OF sorted_variables.intros(1)] by auto
+   thus ?thesis by (rule ccontr)
+   qed
   qed
+ qed
 qed
-  
-
-lemma evaluation_coherent:
-  assumes e: "evaluation l K = evaluation l K'"
-    and k: "K \<subseteq> powerset (set l)" and k': "K' \<subseteq> powerset (set l)"
-  shows "K = K'"
-  using e k k' proof (induct l arbitrary: K K')
-  case Nil
-  then show ?case 
-    unfolding powerset_def using evaluation.simps (1,2)
-    by (metis Pow_empty list.inject list.set(1) subset_singleton_iff)
-next
-  case (Cons a l)
-  from Cons.prems (1)
-  have "evaluation l (link_ext a (set (a # l)) K) @ evaluation l (cost a (set (a # l)) K)
-    = evaluation l (link_ext a (set (a # l)) K') @ evaluation l (cost a (set (a # l)) K')"
-    unfolding evaluation.simps .
-  hence el: "evaluation l (link_ext a (set (a # l)) K) = evaluation l (link_ext a (set (a # l)) K')"
-    and ec: "evaluation l (cost a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K')"
-    using length_evaluation_eq by auto
-  have leq: "(link_ext a (set (a # l)) K) = (link_ext a (set (a # l)) K')"
-  proof (rule Cons.hyps(1))
-    show "evaluation l (link_ext a (set (a # l)) K) = evaluation l (link_ext a (set (a # l)) K')"
-      by (rule el)
-    show "link_ext a (set (a # l)) K \<subseteq> powerset (set l)" 
-      using Cons.prems (2) unfolding link_ext_def powerset_def by auto
-    show "link_ext a (set (a # l)) K' \<subseteq> powerset (set l)"
-      using Cons.prems (3) unfolding link_ext_def powerset_def by auto
-  qed
-  have ceq: "(cost a (set (a # l)) K) = (cost a (set (a # l)) K')"
-  proof (rule Cons.hyps(1))
-    show "evaluation l (cost a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K')"
-      by (rule ec)
-    show "cost a (set (a # l)) K \<subseteq> powerset (set l)" 
-      using Cons.prems (2) unfolding cost_def powerset_def by auto
-    show "cost a (set (a # l)) K' \<subseteq> powerset (set l)"
-      using Cons.prems (3) unfolding cost_def powerset_def by auto
-  qed
-  show ?case
-  proof
-    show "K \<subseteq> K'"
-    proof
-      fix x assume x: "x \<in> K" show "x \<in> K'"
-      proof (cases "a \<in> x")
-        case False
-        show ?thesis
-          using Cons.prems (2,3) leq ceq x False
-          unfolding powerset_def cost_def link_ext_def try by force by fast
-    sorry
-qed
-
-lemma
-  assumes e: "evaluation l K \<in> not_evaders"
-  shows "\<exists>n<length l. link_ext (l!n) (set l) K = cost (l!n) (set l) K"
-  using e proof (induction l arbitrary: K)
-  case Nil
-  then show ?case using evaluation.simps
-    by (metis false_evader true_evader)
-next
-  case (Cons a l)
-  from Cons.prems
-  have "(evaluation l (link_ext a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K)) 
-    \<or> ((evaluation l (link_ext a (set (a # l)) K) \<in> not_evaders) \<and> 
-        (evaluation l (cost a (set (a # l)) K) \<in> not_evaders))"
-    using not_evaders.simps [of "evaluation (a # l) K"]
-    unfolding evaluation.simps 
-    using append_eq_same_length(1) append_eq_same_length(2)
-    using length_evaluation_eq by metis
-  show ?case
-  proof (cases "(evaluation l (link_ext a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K))")
-    case True
-    show ?thesis using True thm evaluation.simps
-qed
-
-lemma
-  assumes k: "K \<subseteq> powerset V" and vl: "(V, l) \<in> sorted_variables"
-    and f: "finite V"
-    and ene: "evaluation l K \<in> not_evaders" and x: "x \<in> V"
-  shows "evaluation (remove1 x l) (link_ext x V K) \<in> not_evaders"
-  thm not_evaders.intros evaluation.simps thm link_ext_def
-  using k vl f ene x proof (induct l arbitrary: V l K rule: list.induct)
-  case Nil have "V = {}" using Nil.prems (2) using Nil using sorted_variables.simps [of "{}" "[]"] Nil
-  case 0 have v: "V = {}" using "0.hyps" "0.prems"(3) by force
-  hence False using `x \<in> V` by fast 
-  thus "evaluation (remove1 x l) (link_ext x V K) \<in> not_evaders" by (rule ccontr)
-next
-  case (Suc n)
-  
-  hence "l = []" using "Suc.prems"(5) by auto
-  have "K = {} \<or> K = {{}}" using v "0.prems" (1) try
-    using "0.prems"(5) by auto
-  from evaluation.simps
-
-lemma
-  assumes k: "K \<subseteq> powerset V" and vl: "(V, l) \<in> sorted_variables"
-    and ene: "evaluation l K \<in> not_evaders" and x: "x \<in> V"
-  shows "(V - {x}, remove1 x l) \<in> sorted_variables"
-    and "evaluation (remove1 x l) (link_ext x V K) \<in> not_evaders"
-proof -
-  from vl obtain A l' y where v: "V = insert y A" and l: "l = y # l'" 
-      and al: "(A, l') \<in> sorted_variables" and y: "y \<notin> A"
-    using sorted_variables.simps [of V l] using x by auto
-  have "(V - {x}, remove1 x l) \<in> sorted_variables"
-  proof (cases "V - {x} = {}")
-    case True hence v: "V = {x}" using x by auto hence l: "l = [x]" 
-      using vl using \<open>V = insert y A\<close> \<open>l = y # l'\<close> sorted_variables_length_coherent 
-      by fastforce
-    show ?thesis unfolding v l
-      by (simp add: sorted_variables.intros(1))
-  next
-    case False note vxne = False
-    show ?thesis
-    proof (cases "x = y")
-      case True
-      show ?thesis unfolding True unfolding v l using al y by simp
-    next
-      case False
-      have vx: "V - {x} = insert y (A - {x})" using \<open>V = insert y A\<close> y False by auto
-      have rxl: "remove1 x l = y # (remove1 x l')" using \<open>l = y # l'\<close> False by simp
-      have "(A - {x}, remove1 x l') \<in> sorted_variables"
-      show ?thesis unfolding vx rxl
-      proof (intro sorted_variables.intros (2))
-        show "(A - {x}, remove1 x l') \<in> sorted_variables" 
-          using al using sorted_variables.intros
-
-    have "(V - {x}, remove1 x l) \<in> sorted_variables"
-    using vl x using sorted_variables.simps
-    using False remove1_idem sorted_variables_coherent vl by fastforce
-  have "K = link_ext x V K" using False k unfolding link_ext_def powerset_def apply auto try
-
-lemma assumes k: "K \<subseteq> powerset V" and x: "V \<noteq> {}" and f: "finite V" 
-  and l: "\<exists>l. (V, l) \<in> sorted_variables \<and> evaluation l K \<in> not_evaders"
-  shows "non_evasive V K"
-  using x k f l proof (induct "card V" arbitrary: V K)
-  case 0 have v: "V = {}" using "0.prems" (3) "0.hyps" by simp  
-  hence False using "0.prems" (1) by fast
-  thus "non_evasive V K" by (rule ccontr)
-next
-  case (Suc n)
-  show "non_evasive V K"
-  proof (cases "n = 0")
-    case True
-    then obtain x where v: "V = {x}" using Suc.hyps (2)
-      by (metis One_nat_def card_1_singletonE)
-    show ?thesis
-    proof (cases "K = {} \<or> K = {{x}, {}}")
-      case True
-      show ?thesis using True using non_evasive.simps (2,3) [OF v, of K] by blast
-    next
-      case False
-      have k: "K = {{x}} \<or> K = {{}}"
-        unfolding powerset_def using v using False
-        by (metis Suc.prems(2) doubleton_eq_iff powerset_singleton_cases)
-      from Suc.prems (4)
-      obtain l where vl: "(V, l) \<in> sorted_variables" and el: "evaluation l K \<in> not_evaders"
-        by auto
-      have l: "l = [x]"
-        using sorted_variables_coherent [OF vl]
-        using sorted_variables_length_coherent [OF vl]
-        unfolding v
-        by (metis card_1_singleton_iff empty_iff length_0_conv length_Suc_conv list.set(1) list.set_intros(1) list.simps(15) set_ConsD)
-      show ?thesis
-      proof (cases "K = {{x}}")
-        case True
-        have "evaluation l K = [True, False]"
-          unfolding l True
-          unfolding evaluation.simps link_ext_def cost_def powerset_def
-          using evaluation.simps (1,2) using v apply auto
-          by (smt (verit, ccfv_threshold) Suc.prems(1) append.left_neutral append_Cons bot.extremum emptyE empty_Collect_eq evaluation.simps(1) evaluation.simps(2))
-        hence "evaluation l K \<notin> not_evaders"
-          using tf_not_not_evader by simp
-        hence False using el by simp
-        thus ?thesis by (rule ccontr)
-      next
-        case False hence k: "K = {{}}" using k by fast
-        have "evaluation l K = [False, True]"
-          unfolding l k
-          unfolding evaluation.simps link_ext_def cost_def powerset_def
-          using evaluation.simps (1,2) using v by auto
-        hence "evaluation l K \<notin> not_evaders"
-          using ft_not_not_evader by simp
-        hence False using el by simp
-        thus ?thesis by (rule ccontr)
-      qed
-    qed
-  next
-    case False
-    hence two: "2 \<le> card V" using Suc.hyps (2) by simp
-    obtain x where x: "x \<in> V" using two by fastforce
-    have ne_link: "non_evasive (V - {x}) (link_ext x V K)"
-    proof (rule Suc.hyps (1))
-      show "n = card (V - {x})" using x Suc.hyps (2) by simp
-      show "V - {x} \<noteq> {}" using False \<open>n = card (V - {x})\<close> by force
-      show "link_ext x V K \<subseteq> powerset (V - {x})"
-        using Suc.prems (2)
-        using link_ext_def powerset_def by force
-      show "finite (V - {x})" using Suc.prems(3) by blast
-      show "\<exists>l. (V - {x}, l) \<in> sorted_variables \<and> evaluation l (link_ext x V K) \<in> not_evaders"
-        using Suc
-    from Suc
-    show "non_evasive V K" unfolding non_evasive.simps (5) [OF two, of K]
-  hence k: "K = {} \<or> K = {{}}" using "0.prems" (1) unfolding powerset_def by auto
-  show "non_evasive V K" unfolding v using k using non_evasive.simps
-
-
 
 end

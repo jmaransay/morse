@@ -15,7 +15,7 @@ session "Simplicial_complexes_and_boolean_functions_Alexander" (AFP) = Sepref_Pr
     MkIfex
     Simplicial_complex*)
     BDT
-    (*Nonevasive*)
+    Nonevasive
   document_files
     "root.tex"
     "root.bib"
