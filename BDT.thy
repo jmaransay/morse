@@ -229,6 +229,11 @@ definition link_ext :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Ri
 lemma link_ext_empty [simp]: "link_ext x V {} = {}"
   by (simp add: link_ext_def)
 
+lemma link_ext_closed:
+  assumes k: "K \<subseteq> powerset V" 
+  shows "link_ext v V K \<subseteq> powerset (V - {v})"
+  using k unfolding powerset_def link_ext_def by auto
+
 lemma link_ext_mono:
   assumes "K \<subseteq> L"
   shows "link_ext x V K \<subseteq> link_ext x V L"
@@ -493,6 +498,11 @@ section\<open>Costar of a vertex in a set of sets\<close>
 
 definition cost :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "cost x V K = {s. s \<in> powerset (V - {x}) \<and> s \<in> K}"
+
+lemma cost_closed:
+  assumes k: "K \<subseteq> powerset V" 
+  shows "cost v V K \<subseteq> powerset (V - {v})"
+  using k unfolding powerset_def cost_def by auto
 
 lemma cost_empty [simp]: "cost x V {} = {}" 
   unfolding cost_def powerset_def by simp
