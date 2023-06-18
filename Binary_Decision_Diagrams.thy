@@ -114,25 +114,49 @@ next
 qed
 
 definition admissible_bdt :: "('a \<Rightarrow> bool) \<Rightarrow> ('a ifex) set"
-  where "admissible_bdt f = {s. \<exists>env. agree f env = val_ifex s f}"
+  where "admissible_bdt f = {s. \<exists>env. agree f env = taut_test_rec s env}"
+
+term "agree f env"
+
+term "agree (\<lambda>x::nat. x mod 3 = 0)"
+
+term "Mapping.update (7::nat) True Mapping.empty"
+
+lemma "agree (\<lambda>x::nat. x mod 3 = 0) (Mapping.update (6::nat) True Mapping.empty)"
+  unfolding agree_def
+  by (metis lookup_empty lookup_update_unfold mod_add_self1 mod_self numeral_Bit0 option.inject option.simps(3))
+
+lemma "agree (\<lambda>x::nat. x mod 3 = 0) (Mapping.update 9 True (Mapping.update (6::nat) True Mapping.empty))"
+  unfolding agree_def
+  by (metis One_nat_def add_Suc_right lookup_empty lookup_update_unfold mod_add_self1 mod_self numeral_1_eq_Suc_0 numeral_Bit0 numeral_Bit1 one_plus_numeral_commute option.inject option.simps(3) plus_1_eq_Suc)
+
+lemma "agree (\<lambda>x::nat. x mod 3 = 0) (Mapping.update (7::nat) False Mapping.empty)"
+  unfolding agree_def
+  by (metis (no_types, opaque_lifting) Suc_inject Suc_less_SucD Zero_not_Suc add_Suc_shift eval_nat_numeral(3) lookup_empty lookup_update lookup_update_neq mod_add_self2 mod_less nat_neq_iff numeral_1_eq_Suc_0 numeral_Bit0 option.inject option.simps(3) plus_nat.add_0)
+
+
+(*definition admissible_bdt :: "('a \<Rightarrow> bool) \<Rightarrow> ('a ifex) set"
+  where "admissible_bdt f = {s. \<exists>env. agree f env = val_ifex s f}"*)
 
 lemma "Trueif \<in> admissible_bdt (\<lambda>x. True)"
-proof -
+  using admissible_bdt_def agree_Nil by fastforce
+(*proof -
   have "agree (\<lambda>x. True) Mapping.empty = val_ifex Trueif (\<lambda>x. True)"
     using agree_Nil by auto
   thus ?thesis unfolding admissible_bdt_def by auto
-qed
+qed*)
 
 lemma "Trueif \<in> admissible_bdt (\<lambda>x. \<not> x)"
-proof -
+  using admissible_bdt_def agree_Nil by fastforce
+(*proof -
   have "agree (\<lambda>x. \<not> x) Mapping.empty = val_ifex Trueif (\<lambda>x. \<not> x)"
     using agree_Nil by auto
   thus ?thesis unfolding admissible_bdt_def by auto
-qed
+qed*)
 
-term "val_bool_expr (Atom_bool_expr x) s"
+term "val_bool_expr (Atom_bool_expr x)"
 
-lemma "(IF x Falseif Trueif) \<in> admissible_bdt (\<lambda>x. if x then False else True)"
+lemma "(IF x Falseif Trueif) \<in> admissible_bdt (\<lambda>x. \<not> x)" try
 proof -
   have "agree (\<lambda>x. if x then False else True) (Mapping.update (x True Mapping.empty))
    = val_ifex (IF x Falseif Trueif) (\<lambda>x. if x then False else True)"
