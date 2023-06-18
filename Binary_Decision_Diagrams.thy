@@ -62,7 +62,7 @@ value "depth (reduce_alist [(finite_4.a\<^sub>1, True)] (IF finite_4.a\<^sub>1
                   Trueif)
                 Trueif))"
 
-value "depth (reduce_alist  [] (IF finite_4.a\<^sub>1
+value "depth (reduce_alist [] (IF finite_4.a\<^sub>1
                 (IF finite_4.a\<^sub>1
                   (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) 
                                   (IF finite_4.a\<^sub>4 Falseif Trueif)) 
@@ -70,7 +70,7 @@ value "depth (reduce_alist  [] (IF finite_4.a\<^sub>1
                 Trueif))"
 
 
-value "depth (reduce_alist  [(finite_4.a\<^sub>1, False)] 
+value "depth (reduce_alist [(finite_4.a\<^sub>1, False)] 
     (IF finite_4.a\<^sub>1 (IF finite_4.a\<^sub>2 (IF finite_4.a\<^sub>3 Trueif Falseif) (IF finite_4.a\<^sub>4 Falseif Trueif)) 
                       Trueif))"
 
@@ -112,6 +112,52 @@ next
       by auto (metis (mono_tags, lifting) subset_eq)
   qed
 qed
+
+definition admissible_bdt :: "('a \<Rightarrow> bool) \<Rightarrow> ('a ifex) set"
+  where "admissible_bdt f = {s. \<exists>env. agree f env = val_ifex s f}"
+
+lemma "Trueif \<in> admissible_bdt (\<lambda>x. True)"
+proof -
+  have "agree (\<lambda>x. True) Mapping.empty = val_ifex Trueif (\<lambda>x. True)"
+    using agree_Nil by auto
+  thus ?thesis unfolding admissible_bdt_def by auto
+qed
+
+lemma "Trueif \<in> admissible_bdt (\<lambda>x. \<not> x)"
+proof -
+  have "agree (\<lambda>x. \<not> x) Mapping.empty = val_ifex Trueif (\<lambda>x. \<not> x)"
+    using agree_Nil by auto
+  thus ?thesis unfolding admissible_bdt_def by auto
+qed
+
+term "val_bool_expr (Atom_bool_expr x) s"
+
+lemma "(IF x Falseif Trueif) \<in> admissible_bdt (\<lambda>x. if x then False else True)"
+proof -
+  have "agree (\<lambda>x. if x then False else True) (Mapping.update (x True Mapping.empty))
+   = val_ifex (IF x Falseif Trueif) (\<lambda>x. if x then False else True)"
+    using agree_Nil by auto
+  thus ?thesis unfolding admissible_bdt_def by auto
+qed
+
+
+lemma "Falseif \<in> admissible_bdt (\<lambda>x. x)"
+proof -
+  fix x b
+  have "agree (\<lambda>x. False) (Mapping.update x b Mapping.empty) = 
+    val_ifex Falseif (\<lambda>x. False)"
+     try by auto
+  thus ?thesis unfolding admissible_bdt_def by auto
+qed
+
+value "ifex_of (And_bool_expr b1 b2)"
+
+function admissible_bdt :: "nat list \<Rightarrow> nat set set \<Rightarrow> nat ifex \<Rightarrow> bool"
+  where "admissible_bdt [] {} Trueif = False"
+  | "admissible_bdt [] {} Falseif = False"
+  | "admissible_bdt [] {} (IF _ _ _) = False"
+  | "admissible_bdt [x] {} (IF x Falseif Falseif) = True"
+  | "admissible_bdt [x # l] K T = (x \<in> vars T)"
 
 fun ifex_no_twice where 
   "ifex_no_twice (IF v t e) = (
