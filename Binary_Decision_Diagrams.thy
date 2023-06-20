@@ -115,6 +115,14 @@ qed
 
 section\<open>The set of admissible BDTs for a given boolean function.\<close>
 
+definition admissible_bdt :: "('a bool_expr) \<Rightarrow> ('a ifex) set"
+  where "admissible_bdt f = {b. \<forall>s::'a \<Rightarrow> bool. val_ifex b s = val_bool_expr f s}"
+
+lemma "ifex_of f \<in> admissible_bdt f"
+  unfolding admissible_bdt_def using val_ifex by auto
+
+term "vars (ifex_of f)"
+
 definition admissible_bdt :: "('a \<Rightarrow> bool) \<Rightarrow> ('a ifex) set"
   where "admissible_bdt f = {s. \<exists>env. vars s \<subseteq> Mapping.keys env \<and> agree f env = val_ifex s f}"
 
