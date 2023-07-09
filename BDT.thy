@@ -540,6 +540,84 @@ lemma link_cost_commute:
         cost x (V - {y}) (link y V K)"
   using x y xy unfolding link_def cost_def powerset_def by auto
 
+section\<open>Open star of a vertex in a set of sets\<close>
+
+definition star :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "star v V K = {s. s \<in> powerset V \<and> v \<in> s \<and> s \<in> K}"
+
+lemma star_closed:
+  assumes k: "K \<subseteq> powerset V" 
+  shows "star v V K \<subseteq> powerset V"
+  using k unfolding powerset_def star_def by auto
+
+lemma vertex_in_star:
+  assumes k: "K \<subseteq> powerset V" and x: "x \<in> star v V K"
+  shows "v \<in> x"
+  using k x unfolding powerset_def star_def by auto
+
+lemma star_empty [simp]: "star x V {} = {}" 
+  unfolding star_def powerset_def by simp
+
+lemma star_empty_v_set [simp]: "star x {} K = {}" 
+  unfolding star_def powerset_def by simp
+
+lemma star_nempty [simp]: 
+    assumes v: "V \<noteq> {}" 
+  shows "star x V {{}} = {}"
+  using v unfolding star_def powerset_def by simp
+
+lemma star_mono:
+  assumes "K \<subseteq> L"
+  shows "star x V K \<subseteq> star x V L"
+  using assms unfolding star_def powerset_def by auto
+
+lemma star_commute:
+  assumes x: "x \<in> V" and y: "y \<in> V" 
+  shows "star y (V - {x}) (star x V K) = 
+        star x (V - {y}) (star y V K)"
+  using x y unfolding star_def powerset_def by auto
+
+section\<open>Closed star of a vertex in a set of sets\<close>
+
+definition closed_star :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "closed_star v V K = star v V K \<union> link v V K"
+
+lemma closed_star_closed:
+  assumes k: "K \<subseteq> powerset V" 
+  shows "closed_star v V K \<subseteq> powerset V"
+  using k unfolding powerset_def closed_star_def star_def link_def by auto
+
+lemma closed_star_empty [simp]: "closed_star x V {} = {}" 
+  unfolding closed_star_def star_def link_def powerset_def by simp
+
+lemma closed_star_nempty [simp]: 
+    assumes v: "V \<noteq> {}" 
+  shows "closed_star x V {{}} = {}"
+  using v unfolding closed_star_def star_def link_def powerset_def by simp
+
+lemma
+  cost_union_closed_star:
+  assumes k: "K \<subseteq> powerset V" (*and v: "v \<in> V"*)
+  shows "K = cost v V K \<union> closed_star v V K"
+proof
+  show "cost v V K \<union> closed_star v V K \<subseteq> K"
+    unfolding cost_def closed_star_def star_def link_def powerset_def by auto  
+  show "K \<subseteq> cost v V K \<union> closed_star v V K"
+    using k unfolding cost_def closed_star_def star_def link_def powerset_def by auto
+qed
+
+text\<open>The premises can be omitted from the following statement:\<close>
+
+lemma cost_inter_closed_star:
+  (*assumes k: "K \<subseteq> powerset V" and v: "v \<in> V"*)
+  shows "link v V K = cost v V K \<inter> closed_star v V K"
+proof
+  show "link v V K \<subseteq> cost v V K \<inter> closed_star v V K"
+    unfolding link_def cost_def closed_star_def powerset_def by auto
+  show "cost v V K \<inter> closed_star v V K \<subseteq> link v V K"
+    unfolding link_def cost_def closed_star_def star_def powerset_def by auto
+qed
+
 section\<open>Evaluation of a list over a set of sets\<close>
 
 function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool list"
@@ -740,6 +818,43 @@ proof (rule ccontr, safe)
   show False
     using not_evaders.cases [of "[False, True]"] true_evader false_evader
     by (smt (verit, ccfv_threshold) \<open>[False, True] \<in> not_evaders\<close> append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
+qed
+
+section\<open>Join of a vertex with a set\<close>
+
+definition join :: "nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "join v V = {{v}} \<union> V \<union> {w. \<exists>s\<in>V. w = insert v s}"
+
+lemma [simp]:
+  shows "{v} \<in> join v V"
+   unfolding join_def by auto
+
+lemma [simp]:
+  assumes w: "w \<in> V"
+  shows "w \<in> join v V"
+  using w unfolding join_def by auto
+
+lemma [simp]:
+  assumes w: "w \<in> V"
+  shows "{v} \<union> w \<in> join v V"
+  using w unfolding join_def by auto
+
+proposition
+  assumes k: "K \<subseteq> powerset V" and p: "pow_closed K" and v: "{v} \<in> K"
+  shows "closed_star v V K = join v (link v V K)"
+proof
+ show "join v (link v V K) \<subseteq> closed_star v V K"
+    using k v
+    unfolding join_def link_def closed_star_def star_def powerset_def pow_closed_def
+    by auto
+ show "closed_star v V K \<subseteq> join v (link v V K)"
+    using k v p
+    unfolding join_def link_def closed_star_def star_def powerset_def pow_closed_def
+    apply simp 
+    apply safe 
+      apply auto [1] 
+      apply auto [2]
+      by (smt (verit, del_insts) Diff_empty Diff_subset insert_subset mk_disjoint_insert subset_Diff_insert)
 qed
 
 section\<open>A set of sets being a cone over a given vertex\<close>
