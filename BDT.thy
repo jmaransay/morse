@@ -863,17 +863,20 @@ definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where "cone X K = ((\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x})  
                       \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}))"
 
-lemma assumes c: "cone X K" and kne: "K \<noteq> {}"
-  shows "((\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x}) 
-                      \<and> K = join x T))"
+text\<open>A @{term cone} is a @{term join}, for simplicial complexes.\<close>
+
+lemma assumes c: "cone X K" and kne: "K \<noteq> {}" and p: "pow_closed K"
+  shows "((\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x}) \<and> K = join x T))"
 proof -
   from c obtain x T where x: "x \<in> X" and t: "T \<subseteq> powerset (X - {x})"
     and k: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
     unfolding cone_def by auto
-  show ?thesis 
-    apply (rule bexI [of _ x], rule exI [of _ T], rule conjI, intro t) 
-     prefer 2 apply (intro x)
-    unfolding join_def using k kne apply auto try
+  show ?thesis
+  proof (rule bexI [of _ x], rule exI [of _ T], rule conjI, intro t)
+    show "K = join x T"
+      unfolding join_def using k kne p unfolding pow_closed_def by auto
+  qed (intro x)
+qed
 
 
 text\<open>There cannot be cones over an empty set of vertexes\<close>
