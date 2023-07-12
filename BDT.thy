@@ -1281,6 +1281,48 @@ next
         intro sorted_variables.intros(2), intro x'a', intro xx')
 qed
 
+section\<open>Facets of a simplicial complex\<close>
+
+definition facet :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+  where "facet a K = (\<forall>b\<in>K. a \<subseteq> b \<longrightarrow> a = b)"
+
+lemma "facet {1,2,3} {{1,2,3},{1,2},{1,3},{2,3},{1},{2},{3}}"
+  unfolding facet_def by simp
+
+lemma "\<not> facet {2,3} {{1,2,3},{1,2},{1,3},{2,3},{1},{2},{3}}"
+  unfolding facet_def by fastforce
+
+section\<open>Faces, co-faces and free faces of a simplicial complex\<close>
+
+definition face :: "nat set \<Rightarrow> nat set \<Rightarrow> bool"
+  where "face a b = (a \<subset> b)"
+
+definition coface :: "nat set \<Rightarrow> nat set \<Rightarrow> bool"
+  where "coface a b = (b \<subset> a)"
+
+lemma "face {1} {1,2}" unfolding face_def by auto
+
+lemma "coface {1,2} {2}" unfolding coface_def by fastforce
+
+definition free_face :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+  where "free_face a K = (\<exists>!b\<in>K. face a b \<and> (\<forall>a1\<in>K. face a a1 \<longrightarrow> a1 = b))"
+
+lemma "free_face {1} {{1,2},{1},{2}}"
+  by (unfold free_face_def face_def, rule ex1I [of _ "{1,2}"], rule conjI, simp, rule conjI, auto)
+
+lemma "free_face {2} {{1,2},{1},{2}}"
+  apply (unfold free_face_def face_def, rule ex1I [of _ "{1,2}"], rule conjI, simp, rule conjI)
+    apply (simp add: psubset_insert_iff) apply blast by auto
+
+definition free_pair :: "nat set \<Rightarrow> nat set set \<Rightarrow> nat set"
+  where "free_pair a K = (THE b. b \<in> K \<and> face a b \<and> (\<forall>a1\<in>K. face a a1 \<longrightarrow> a1 = b))"
+
+lemma assumes f: "free_face a K"
+  shows "free_pair a K \<in> K"
+proof (unfold free_pair_def, rule theI' [of "free_face a K"])
+  using f unfolding free_face_def free_pair_def 
+  using theI' find_theorems "(THE _. _)"
+
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
 
 function zero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
