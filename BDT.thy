@@ -1314,14 +1314,62 @@ lemma "free_face {2} {{1,2},{1},{2}}"
   apply (unfold free_face_def face_def, rule ex1I [of _ "{1,2}"], rule conjI, simp, rule conjI)
     apply (simp add: psubset_insert_iff) apply blast by auto
 
-definition free_pair :: "nat set \<Rightarrow> nat set set \<Rightarrow> nat set"
-  where "free_pair a K = (THE b. b \<in> K \<and> face a b \<and> (\<forall>a1\<in>K. face a a1 \<longrightarrow> a1 = b))"
+lemma "free_face {3} {{1,2},{2,3},{1},{2},{3}}"
+  apply (unfold free_face_def face_def, rule ex1I [of _ "{2,3}"])
+    apply (rule conjI, simp, rule conjI, fastforce) apply auto[1]
+  by (simp add: psubset_insert_iff)
 
-lemma assumes f: "free_face a K"
-  shows "free_pair a K \<in> K"
-proof (unfold free_pair_def, rule theI' [of "free_face a K"])
-  using f unfolding free_face_def free_pair_def 
-  using theI' find_theorems "(THE _. _)"
+(*lemma "\<not> free_face {2} {{1,2},{1,3},{2,3},{1},{2},{3}}"
+  apply (unfold free_face_def face_def) apply simp try
+    apply (simp add: psubset_insert_iff) apply blast by auto*)
+
+definition free_coface :: "nat set \<Rightarrow> nat set set \<Rightarrow> nat set"
+  where "free_coface a K = (THE b. b \<in> K \<and> face a b \<and> (\<forall>a1\<in>K. face a a1 \<longrightarrow> a1 = b))"
+
+lemma f1: "free_coface {1} {{1},{2},{1,2}} = {1,2}"
+  by (unfold free_coface_def face_def, rule theI2 [of _ "{1,2}"]) auto
+
+lemma f2: "free_coface {2} {{1},{2},{1,2}} = {1,2}"
+  by (unfold free_coface_def face_def, rule theI2 [of _ "{1,2}"], fastforce) auto
+
+lemma f3: "free_coface {3} {{1,2},{2,3},{1},{2},{3}} = {2,3}"
+  by (unfold free_coface_def face_def, rule theI2 [of _ "{2,3}"], fastforce)
+   (simp add: psubset_insert_iff)+
+
+lemma free_coface_free_face:
+  assumes f: "free_face a K"
+  shows "free_coface a K \<in> K" and "face a (free_coface a K)" 
+    and "(\<forall>a1\<in>K. face a a1 \<longrightarrow> a1 = (free_coface a K))"
+proof -
+  from f have e1: "\<exists>!x. x \<in> K \<and> face a x \<and> (\<forall>a1\<in>K. face a a1 \<longrightarrow> a1 = x)"
+    unfolding free_face_def .
+  show "free_coface a K \<in> K" and "face a (free_coface a K)" 
+    and "\<forall>a1\<in>K. face a a1 \<longrightarrow> a1 = (free_coface a K)"
+    unfolding free_coface_def
+    using theI' [OF e1] by simp_all
+qed
+
+corollary free_coface_facet:
+  assumes f: "free_face a K"
+  shows "facet (free_coface a K) K"
+  unfolding facet_def
+  using free_coface_free_face (2,3) [OF f]
+  unfolding face_def by simp
+
+definition collapse :: "nat set set \<Rightarrow> nat set \<Rightarrow> nat set set"
+  where "collapse K x = K - {x, free_coface x K}"
+
+lemma "collapse {{1},{2},{1,2}} {1} = {{2}}"
+  unfolding collapse_def
+  unfolding f1 by fastforce
+
+lemma "collapse {{1},{2},{1,2}} {2} = {{1}}"
+  unfolding collapse_def
+  unfolding f2 by fastforce
+
+lemma "collapse {{1,2},{2,3},{1},{2},{3}} {3} = {{1,2},{1},{2}}"
+  unfolding collapse_def
+  unfolding f3 by fastforce
 
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
 
