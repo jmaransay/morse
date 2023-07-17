@@ -1286,6 +1286,9 @@ section\<open>Facets of a simplicial complex\<close>
 definition facet :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where "facet a K = (\<forall>b\<in>K. a \<subseteq> b \<longrightarrow> a = b)"
 
+lemma facet_no_coface: assumes f: "facet a K" shows "\<nexists>b. a \<subset> b \<and> b \<in> K"
+  using f unfolding facet_def by auto
+
 lemma "facet {1,2,3} {{1,2,3},{1,2},{1,3},{2,3},{1},{2},{3}}"
   unfolding facet_def by simp
 
@@ -1370,6 +1373,43 @@ lemma "collapse {{1},{2},{1,2}} {2} = {{1}}"
 lemma "collapse {{1,2},{2,3},{1},{2},{3}} {3} = {{1,2},{1},{2}}"
   unfolding collapse_def
   unfolding f3 by fastforce
+
+proposition facet_join:
+  assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
+  shows "facet ({v} \<union> a) (join v K)"
+  using a f k v unfolding facet_def join_def powerset_def by auto
+
+lemma conjI3: assumes "A" and "B" and "C" shows "A \<and> B \<and> C"
+  using assms by simp
+  
+proposition facet_free_face_join: 
+  assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
+  shows "free_face a (join v K)"
+proof (unfold free_face_def, rule ex1I [of _ "{v} \<union> a"], rule conjI3)
+  show "{v} \<union> a \<in> join v K" using a unfolding join_def by auto
+  show "face a ({v} \<union> a)" using a v k unfolding face_def powerset_def by auto
+  show "(\<forall>a1\<in>join v K. face a a1 \<longrightarrow> a1 = {v} \<union> a)"
+    using a f k v unfolding face_def join_def powerset_def facet_def by auto
+  fix b
+  assume b: "b \<in> join v K \<and> face a b \<and> (\<forall>a1\<in>join v K. face a a1 \<longrightarrow> a1 = b)"
+  show "b = {v} \<union> a" 
+    using b a f k v
+    unfolding join_def powerset_def facet_def face_def by auto
+qed
+
+corollary facet_free_coface_join:
+  assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
+  shows "free_coface a (join v K) = {v} \<union> a"
+proof (unfold free_coface_def, rule the1_equality)
+  show "\<exists>!b. b \<in> join v K \<and> face a b \<and> (\<forall>a1\<in>join v K. face a a1 \<longrightarrow> a1 = b)"
+    using facet_free_face_join [OF a f k v] unfolding free_face_def .
+  show "{v} \<union> a \<in> join v K \<and> face a ({v} \<union> a) \<and> (\<forall>a1\<in>join v K. face a a1 \<longrightarrow> a1 = {v} \<union> a)"
+  proof (rule conjI3)
+    show "{v} \<union> a \<in> join v K" using a unfolding join_def by auto
+    show "face a ({v} \<union> a)" using a v k unfolding face_def powerset_def by auto
+    show "(\<forall>a1\<in>join v K. face a a1 \<longrightarrow> a1 = {v} \<union> a)"
+      using a f k v unfolding face_def join_def powerset_def facet_def by auto
+qed
 
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
 
