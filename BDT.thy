@@ -820,36 +820,41 @@ proof (rule ccontr, safe)
     by (smt (verit, ccfv_threshold) \<open>[False, True] \<in> not_evaders\<close> append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
 qed
 
-section\<open>Join of a vertex with a set\<close>
+section\<open>Join of two sets\<close>
 
-definition join :: "nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
-  where "join v V = {{v}} \<union> V \<union> {w. \<exists>s\<in>V. w = insert v s}"
+definition join :: "nat set set \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "join V W = V \<union> W \<union> {w. \<exists>s\<in>V. \<exists>s'\<in>W. w = s \<union> s'}"
+
+definition join_vertex :: "nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
+  where "join_vertex v V = join {{v}} V"
 
 lemma [simp]:
-  shows "{v} \<in> join v V"
-   unfolding join_def by auto
-
-lemma [simp]:
-  assumes w: "w \<in> V"
-  shows "w \<in> join v V"
-  using w unfolding join_def by auto
+  shows "{v} \<in> join_vertex v V"
+   unfolding join_vertex_def join_def by auto
 
 lemma [simp]:
   assumes w: "w \<in> V"
-  shows "{v} \<union> w \<in> join v V"
-  using w unfolding join_def by auto
+  shows "w \<in> join_vertex v V"
+  using w unfolding join_vertex_def join_def by auto
+
+lemma [simp]:
+  assumes w: "w \<in> V"
+  shows "{v} \<union> w \<in> join_vertex v V"
+  using w unfolding join_vertex_def join_def by auto
 
 proposition
   assumes k: "K \<subseteq> powerset V" and p: "pow_closed K" and v: "{v} \<in> K"
-  shows "closed_star v V K = join v (link v V K)"
+  shows "closed_star v V K = join_vertex v (link v V K)"
 proof
- show "join v (link v V K) \<subseteq> closed_star v V K"
+ show "join_vertex v (link v V K) \<subseteq> closed_star v V K"
     using k v
-    unfolding join_def link_def closed_star_def star_def powerset_def pow_closed_def
+    unfolding join_vertex_def join_def link_def closed_star_def star_def 
+      powerset_def pow_closed_def
     by auto
- show "closed_star v V K \<subseteq> join v (link v V K)"
+ show "closed_star v V K \<subseteq> join_vertex v (link v V K)"
     using k v p
-    unfolding join_def link_def closed_star_def star_def powerset_def pow_closed_def
+    unfolding join_def join_vertex_def link_def closed_star_def star_def 
+      powerset_def pow_closed_def
     apply simp 
     apply safe 
       apply auto [1] 
@@ -866,18 +871,17 @@ definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
 text\<open>A @{term cone} is a @{term join}, for simplicial complexes.\<close>
 
 lemma assumes c: "cone X K" and kne: "K \<noteq> {}" and p: "pow_closed K"
-  shows "((\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x}) \<and> K = join x T))"
+  shows "((\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x}) \<and> K = join_vertex x T))"
 proof -
   from c obtain x T where x: "x \<in> X" and t: "T \<subseteq> powerset (X - {x})"
     and k: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
     unfolding cone_def by auto
   show ?thesis
   proof (rule bexI [of _ x], rule exI [of _ T], rule conjI, intro t)
-    show "K = join x T"
-      unfolding join_def using k kne p unfolding pow_closed_def by auto
+    show "K = join_vertex x T"
+      unfolding join_vertex_def join_def using k kne p unfolding pow_closed_def by auto
   qed (intro x)
 qed
-
 
 text\<open>There cannot be cones over an empty set of vertexes\<close>
 
@@ -1376,40 +1380,148 @@ lemma "collapse {{1,2},{2,3},{1},{2},{3}} {3} = {{1,2},{1},{2}}"
 
 proposition facet_join:
   assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
-  shows "facet ({v} \<union> a) (join v K)"
-  using a f k v unfolding facet_def join_def powerset_def by auto
+  shows "facet ({v} \<union> a) (join_vertex v K)"
+  using a f k v unfolding facet_def join_def join_vertex_def powerset_def by auto
 
 lemma conjI3: assumes "A" and "B" and "C" shows "A \<and> B \<and> C"
   using assms by simp
   
 proposition facet_free_face_join: 
   assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
-  shows "free_face a (join v K)"
+  shows "free_face a (join_vertex v K)"
 proof (unfold free_face_def, rule ex1I [of _ "{v} \<union> a"], rule conjI3)
-  show "{v} \<union> a \<in> join v K" using a unfolding join_def by auto
+  show "{v} \<union> a \<in> join_vertex v K" using a unfolding join_vertex_def join_def by auto
   show "face a ({v} \<union> a)" using a v k unfolding face_def powerset_def by auto
-  show "(\<forall>a1\<in>join v K. face a a1 \<longrightarrow> a1 = {v} \<union> a)"
-    using a f k v unfolding face_def join_def powerset_def facet_def by auto
+  show "(\<forall>a1\<in>join_vertex v K. face a a1 \<longrightarrow> a1 = {v} \<union> a)"
+    using a f k v unfolding face_def join_vertex_def join_def powerset_def facet_def by auto
   fix b
-  assume b: "b \<in> join v K \<and> face a b \<and> (\<forall>a1\<in>join v K. face a a1 \<longrightarrow> a1 = b)"
+  assume b: "b \<in> join_vertex v K \<and> face a b \<and> (\<forall>a1\<in>join_vertex v K. face a a1 \<longrightarrow> a1 = b)"
   show "b = {v} \<union> a" 
     using b a f k v
-    unfolding join_def powerset_def facet_def face_def by auto
+    unfolding join_def join_vertex_def powerset_def facet_def face_def by auto
 qed
 
 corollary facet_free_coface_join:
   assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
-  shows "free_coface a (join v K) = {v} \<union> a"
+  shows "free_coface a (join_vertex v K) = {v} \<union> a"
 proof (unfold free_coface_def, rule the1_equality)
-  show "\<exists>!b. b \<in> join v K \<and> face a b \<and> (\<forall>a1\<in>join v K. face a a1 \<longrightarrow> a1 = b)"
+  show "\<exists>!b. b \<in> join_vertex v K \<and> face a b \<and> (\<forall>a1\<in>join_vertex v K. face a a1 \<longrightarrow> a1 = b)"
     using facet_free_face_join [OF a f k v] unfolding free_face_def .
-  show "{v} \<union> a \<in> join v K \<and> face a ({v} \<union> a) \<and> (\<forall>a1\<in>join v K. face a a1 \<longrightarrow> a1 = {v} \<union> a)"
+  show "{v} \<union> a \<in> join_vertex v K \<and> face a ({v} \<union> a) \<and> (\<forall>a1\<in>join_vertex v K. face a a1 \<longrightarrow> a1 = {v} \<union> a)"
   proof (rule conjI3)
-    show "{v} \<union> a \<in> join v K" using a unfolding join_def by auto
+    show "{v} \<union> a \<in> join_vertex v K" using a unfolding join_vertex_def join_def by auto
     show "face a ({v} \<union> a)" using a v k unfolding face_def powerset_def by auto
-    show "(\<forall>a1\<in>join v K. face a a1 \<longrightarrow> a1 = {v} \<union> a)"
-      using a f k v unfolding face_def join_def powerset_def facet_def by auto
+    show "(\<forall>a1\<in>join_vertex v K. face a a1 \<longrightarrow> a1 = {v} \<union> a)"
+      using a f k v unfolding face_def join_def join_vertex_def powerset_def facet_def by auto
+  qed
 qed
+
+function collapse_to :: "nat set set \<Rightarrow> nat set set \<Rightarrow> bool"
+  where
+    "finite K \<Longrightarrow> K = K' \<Longrightarrow> collapse_to K K' = True"
+  | "finite K \<Longrightarrow> K \<noteq> K' \<Longrightarrow> collapse_to K K' = 
+      (\<exists>x\<in>K. free_face x K \<and> (K' = K - {x, free_coface x K} 
+                              \<or> collapse_to (K - {x, free_coface x K}) K'))"
+  | "\<not> finite K \<Longrightarrow> collapse_to K K' = False"
+  by (auto)+
+termination proof (relation "Wellfounded.measure (\<lambda>(K,K'). card K)", simp_all)
+  fix K :: "nat set set" and K' and x::"nat set"
+  assume f: "finite K" and "K \<noteq> K'" and x: "x \<in> K"
+  show "card (K - {x, free_coface x K}) < card K" using f x
+    by (metis Diff_iff Diff_subset card_seteq insertI1 linorder_not_le)
+qed
+
+proposition collapse_to_compose:
+  assumes f: "finite K" and c: "collapse_to K K'"
+    and f': "finite K'" and c': "collapse_to K' K''"
+  shows "collapse_to K K''"
+proof (cases "K' = K''")
+  case True
+  show ?thesis using c c' unfolding True by simp
+next
+  case False
+
+definition collapsable :: "nat set set \<Rightarrow> bool"
+  where "collapsable K = (\<exists>x::nat. collapse_to K {{x}})"
+
+lemma "collapsable {{2,3},{2},{3}}"
+proof -
+have f2: "finite {{2,3},{2},{3}}" by simp
+  have neq2: "{{2,3},{2},{3}} \<noteq> {{3::nat}}" by simp
+  have second_step: "collapse_to {{2, 3},{2},{3}} {{3}}"
+  proof (unfold collapse_to.simps (2) [OF f2 neq2], intro bexI [of _ "{2}"], rule conjI)
+    have fc: "free_coface {2} {{2, 3},{2},{3}} = {2,3}"
+      by (unfold free_coface_def face_def, rule theI2 [of _ "{2,3}"], fastforce)
+   (simp add: psubset_insert_iff)+
+    show "free_face {2} {{2,3},{2},{3}}"
+      apply (unfold free_face_def face_def, rule ex1I [of _ "{2,3}"])
+       apply (rule conjI, simp, rule conjI, fastforce) apply auto[1]
+      by (simp add: psubset_insert_iff)
+    show "{{3}} =
+    {{2,3},{2},{3}} - {{2},free_coface {2} {{2, 3},{2},{3}}} \<or>
+    collapse_to
+     ({{2, 3},{2},{3}} - {{2},free_coface {2} {{2, 3},{2},{3}}})
+     {{3}}" unfolding fc by fastforce
+    show "{2} \<in> {{2, 3},{2},{3}}" by simp
+  qed
+  thus ?thesis unfolding collapsable_def by (intro exI [of _ "3"])
+qed
+
+
+lemma "collapsable {{1,2},{2,3},{1},{2},{3}}"
+proof -
+  have f1: "finite {{1,2},{2,3},{1},{2},{3}}" by simp
+  have neq1: "{{1,2},{2,3},{1},{2},{3}} \<noteq> {{2,3},{2},{3::nat}}"
+    by (smt (verit) Diff_insert_absorb Suc_eq_numeral insert_absorb insert_commute numeral_2_eq_2 numeral_eq_one_iff one_neq_zero pred_numeral_simps(1) semiring_norm(86) singleton_insert_inj_eq')
+  have first_step: "collapse_to {{1,2},{2,3},{1},{2},{3}} {{2,3},{2},{3}}"
+  proof (unfold collapse_to.simps (2) [OF f1 neq1], intro bexI [of _ "{1}"], rule conjI)
+    have fc: "free_coface {1} {{1, 2}, {2, 3}, {1}, {2}, {3}} = {1,2}"
+      by (unfold free_coface_def face_def, rule theI2 [of _ "{1,2}"], fastforce)
+   (simp add: psubset_insert_iff)+
+    show "free_face {1} {{1, 2}, {2, 3}, {1}, {2}, {3}}"
+      apply (unfold free_face_def face_def, rule ex1I [of _ "{1,2}"])
+       apply (rule conjI, simp, rule conjI, fastforce) apply auto[1]
+      by (simp add: psubset_insert_iff)
+    show "{{2, 3}, {2}, {3}} =
+    {{1, 2}, {2, 3}, {1}, {2}, {3}} - {{1}, free_coface {1} {{1, 2}, {2, 3}, {1}, {2}, {3}}} \<or>
+    collapse_to
+     ({{1, 2}, {2, 3}, {1}, {2}, {3}} - {{1}, free_coface {1} {{1, 2}, {2, 3}, {1}, {2}, {3}}})
+     {{2, 3}, {2}, {3}}" unfolding fc by fastforce
+    show "{1} \<in> {{1, 2}, {2, 3}, {1}, {2}, {3}}" by simp
+  qed
+  have f2: "finite {{2,3},{2},{3}}" by simp
+  have neq2: "{{2,3},{2},{3}} \<noteq> {{3::nat}}" by simp
+  have second_step: "collapse_to {{2, 3},{2},{3}} {{3}}"
+  proof (unfold collapse_to.simps (2) [OF f2 neq2], intro bexI [of _ "{2}"], rule conjI)
+    have fc: "free_coface {2} {{2, 3},{2},{3}} = {2,3}"
+      by (unfold free_coface_def face_def, rule theI2 [of _ "{2,3}"], fastforce)
+   (simp add: psubset_insert_iff)+
+    show "free_face {2} {{2,3},{2},{3}}"
+      apply (unfold free_face_def face_def, rule ex1I [of _ "{2,3}"])
+       apply (rule conjI, simp, rule conjI, fastforce) apply auto[1]
+      by (simp add: psubset_insert_iff)
+    show "{{3}} =
+    {{2,3},{2},{3}} - {{2},free_coface {2} {{2, 3},{2},{3}}} \<or>
+    collapse_to
+     ({{2, 3},{2},{3}} - {{2},free_coface {2} {{2, 3},{2},{3}}})
+     {{3}}" unfolding fc by fastforce
+    show "{2} \<in> {{2, 3},{2},{3}}" by simp
+  qed
+  show ?thesis
+    unfolding collapsable_def
+    apply (rule exI [of _ "3"])
+    using collapse_to.simps (2) [OF f1 neq1]
+    using collapse_to.simps (2) [OF f2 neq2]
+    using first_step second_step try
+    unfolding collapsable_def
+  apply (rule exI [of _ 3])
+  using collapse_to.simps (2) [of "{{1,2},{2,3},{1},{2},{3}}" "{{3}}"]
+  unfolding f3 by fastforce
+
+lemma "collapse {{1,2},{2,3},{1},{2},{3}} {3} = {{1,2},{1},{2}}"
+  unfolding collapse_def
+  unfolding f3 by fastforce
+
 
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
 
