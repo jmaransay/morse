@@ -1416,6 +1416,130 @@ proof (unfold free_coface_def, rule the1_equality)
   qed
 qed
 
+lemma card_collapse_l:
+  assumes f: "finite K" and x: "x \<in> K" 
+  shows "card (K - {x, free_coface x K}) < card K"
+  using f x
+  by (metis Diff_subset card_seteq linorder_not_less subset_Diff_insert)
+
+function collapse_to :: "nat set set \<Rightarrow> nat set set \<Rightarrow> bool"
+  where
+  "finite K \<Longrightarrow> card K < card K' \<Longrightarrow> collapse_to K K' = False"
+  | "finite K \<Longrightarrow> card K = card K' \<Longrightarrow> collapse_to K K' = (K = K')"
+  | "finite K \<Longrightarrow> card K = card K' + 1 \<Longrightarrow> collapse_to K K' = False"
+  | "finite K \<Longrightarrow> card K = card K' + 2 \<Longrightarrow> collapse_to K K' =
+      (\<exists>x\<in>K. free_face x K \<and> (K' = K - {x, free_coface x K}))"
+  | "finite K \<Longrightarrow> card K > card K' + 2 \<Longrightarrow> collapse_to K K' = 
+      (\<exists>x\<in>K. free_face x K \<and> collapse_to (K - {x, free_coface x K}) K')"
+  | "\<not> finite K \<Longrightarrow> collapse_to K K' = False"
+  by (auto) (metis Suc_lessI linorder_neqE_nat)
+termination proof (relation "Wellfounded.measure (\<lambda>(K,K'). card K)", simp_all add: card_collapse_l)
+qed
+
+lemma collapse_to_card:
+  assumes c: "collapse_to K K'"
+  shows "card K = card K' \<or> card K = card K' + 2 \<or> card K > card K' + 2"
+proof (cases "finite K")
+  case True note f = True
+  show ?thesis
+  proof (cases "card K < card K'")
+    case True
+    show ?thesis using collapse_to.simps (1) [OF f True] c by simp
+  next
+    case False note nl = False
+    show ?thesis
+    proof (cases "card K = card K'")
+      case True
+      thus ?thesis by simp
+    next
+      case False
+      show ?thesis
+      proof (cases "card K = card K' + 1")
+        case True show ?thesis using collapse_to.simps (3) [OF f True] c by simp  
+      next
+        case False note np1 = False
+        show ?thesis using nl np1 by auto
+      qed
+    qed
+  qed
+  next
+  case False
+  show ?thesis using collapse_to.simps (6) [OF False, of K'] c by auto
+qed
+
+lemma assumes c: "collapse_to K K'" shows "K' \<subseteq> K"
+proof (cases "finite K")
+  case False
+  have False using c using collapse_to.simps (6) [OF False] by simp
+  thus ?thesis by (rule ccontr)
+next
+  case True
+  note f = True
+  show ?thesis
+  proof (cases "card K < card K'")
+    case True have False using collapse_to.simps (1) [OF f True] c by fast
+    thus ?thesis by (rule ccontr)
+  next
+    case False note nl = False
+    show ?thesis
+    proof (cases "card K = card K'")
+      case True from collapse_to.simps (2) [OF f True] c show ?thesis by simp
+    next
+      case False note ne = False
+      show ?thesis
+      proof (cases "card K = card K' + 1")
+        case True
+        have False using collapse_to.simps (3) [OF f True] c by fast
+        thus ?thesis by (rule ccontr)
+      next
+        case False note np1 = False
+        show ?thesis
+        proof (cases "card K = card K' + 2")
+          case True
+          show ?thesis using collapse_to.simps (4) [OF f True] c by auto
+        next
+          case False note np2 = False
+          have ck :"card K' + 2 < card K" using np2 np1 nl ne by simp
+          show ?thesis
+            using c f unfolding collapse_to.simps (5) [OF f ck]
+          proof (induct "card K" arbitrary: K rule: less_induct)
+            case less
+            from less.prems obtain x where x: "x \<in> K"
+              and ff: "free_face x K" and ct: "collapse_to (K - {x, free_coface x K}) K'" 
+              by auto
+            note collapse_to_cases = collapse_to_card [OF ct]
+            have "K' \<subseteq> K - {x, free_coface x K}"
+            proof (cases "card (K - {x, free_coface x K}) = card K'")
+              case True
+              show ?thesis using ct collapse_to.simps (2) [OF _ True] by force
+            next
+              case False note cne = False
+              show ?thesis
+              proof (cases "card (K - {x, free_coface x K}) = card K' + 2")
+                case True
+                show ?thesis using collapse_to.simps (4) [OF _ True] ct by force
+              next
+                case False hence ck': "card K' + 2 < card (K - {x, free_coface x K})" 
+                  using cne collapse_to_cases by simp
+                show ?thesis
+                proof (rule less.hyps [of "K - {x, free_coface x K}"])
+                  show "card (K - {x, free_coface x K}) < card K"
+                    using x card_collapse_l less.prems(2) by blast
+                  show "finite (K - {x, free_coface x K})" using less.prems(2) by simp
+                  show "\<exists>xa\<in>K - {x, free_coface x K}. free_face xa (K - {x, free_coface x K})
+                  \<and> collapse_to (K - {x, free_coface x K} 
+                    - {xa, free_coface xa (K - {x, free_coface x K})}) K'"
+                    using collapse_to.simps (5) [OF _ ck'] ct by force
+              qed
+            qed
+          qed
+          thus "K' \<subseteq> K" by auto
+        qed
+      qed
+    qed
+  qed
+qed
+
 function collapse_to :: "nat set set \<Rightarrow> nat set set \<Rightarrow> bool"
   where
     "finite K \<Longrightarrow> K = K' \<Longrightarrow> collapse_to K K' = True"
@@ -1431,6 +1555,62 @@ termination proof (relation "Wellfounded.measure (\<lambda>(K,K'). card K)", sim
     by (metis Diff_iff Diff_subset card_seteq insertI1 linorder_not_le)
 qed
 
+thm collapse_to.induct
+
+lemma assumes c: "collapse_to K K'" 
+  shows "K' \<subseteq> K"
+proof (cases "finite K")
+  case False
+  have False using c using collapse_to.simps (3) [OF False] by simp
+  thus ?thesis by (rule ccontr)
+next
+  case True
+  note f = True
+  show ?thesis
+  proof (cases "K = K'")
+    case True
+    show ?thesis using True by fast
+  next
+    case False
+    obtain x where x: "x \<in> K" and free: "free_face x K"
+        and cases: "(K' = K - {x, free_coface x K} \<or> collapse_to (K - {x, free_coface x K}) K')"
+      using c unfolding collapse_to.simps (2) [OF f False] by auto
+    show ?thesis
+    proof (cases "K' = K - {x, free_coface x K}")
+      case True
+      show ?thesis using True by simp
+    next
+      case False
+      with cases have c: "collapse_to (K - {x, free_coface x K}) K'" by simp
+      show ?thesis
+        using free f x c proof (induct "card K" arbitrary: K K' x rule: less_induct)
+        case less
+        have "K' \<subseteq> (K - {x, free_coface x K})"
+        proof (rule less.hyps)
+          show "card (K - {x, free_coface x K}) < card K" using less.prems (1,2,3)
+            by (metis DiffE Diff_subset card_seteq insertI1 linorder_not_less)
+          show "finite (K - {x, free_coface x K})" using less.prems (1) by simp
+          fix y
+          show "y \<in> K - {x, free_coface x K}"
+          proof (cases "K = {x, free_coface x K}")
+            case False
+            hence "K - {x, free_coface x K} \<noteq> {}" 
+              using less.prems apply auto sorry
+            thus ?thesis
+              by (meson \<open>card (K - {x, free_coface x K}) < card K\<close> \<open>finite (K - {x, free_coface x K})\<close> equals0I insert_subset less.hyps)
+
+          using "1.hyps" (1)
+
+          using "1.hyps" (1)
+        then show ?case sorry
+      qed
+        case 0 hence "K = {}" by simp
+        with "0.prems" (3) have False unfolding free_face_def by auto
+        thus ?case by (rule ccontr)
+      next
+        case (Suc n)
+    
+
 proposition collapse_to_compose:
   assumes f: "finite K" and c: "collapse_to K K'"
     and f': "finite K'" and c': "collapse_to K' K''"
@@ -1440,6 +1620,7 @@ proof (cases "K' = K''")
   show ?thesis using c c' unfolding True by simp
 next
   case False
+  show ?thesis
 
 definition collapsable :: "nat set set \<Rightarrow> bool"
   where "collapsable K = (\<exists>x::nat. collapse_to K {{x}})"
