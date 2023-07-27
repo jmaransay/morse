@@ -1376,7 +1376,7 @@ lemma example_collapses: "({{1,2},{1},{2}}, {{1}}) \<in> collapses"
   apply safe apply (rule bexI [of _ "{2}"], rule conjI, rule ff2)
   unfolding f2 by (auto+)
 
-lemma "({{1,2},{2,3},{1},{2},{3}},{{1,2},{1},{2}}) \<in> collapses"
+lemma example_collapses_02: "({{1,2},{2,3},{1},{2},{3}},{{1,2},{1},{2}}) \<in> collapses"
   unfolding collapses_def
   apply safe apply (rule bexI [of _ "{3}"], rule conjI, rule ff3)
   unfolding f3 by (auto+)
@@ -1438,6 +1438,11 @@ lemma "{{n}} \<in> collapsable" unfolding collapsable_def collapses_rtrancl_def 
 lemma "{{1,2},{1},{2}} \<in> collapsable"
   unfolding collapsable_def collapses_rtrancl_def 
   using example_collapses by auto
+
+lemma "{{1,2},{2,3},{1},{2},{3}} \<in> collapsable"
+  unfolding collapsable_def collapses_rtrancl_def
+  using example_collapses_02 example_collapses
+  using r_into_rtrancl rtrancl.rtrancl_into_rtrancl by fastforce
 
 (*TODO: Remove, leave only the definition of collapse as reflexive transitive closure,
 see above.*)
