@@ -1314,14 +1314,17 @@ lemma "coface {1,2} {2}" unfolding coface_def by fastforce
 definition free_face :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where "free_face a K = (\<exists>!b\<in>K. face a b \<and> (\<forall>a1\<in>K. face a a1 \<longrightarrow> a1 = b))"
 
-lemma ff1: "free_face {1} {{1,2},{1},{2}}"
+(*definition free_faces :: "nat set set \<Rightarrow> nat set set"
+  where "free_faces K = {x. free_face x K}"*)
+
+lemma ff1: "free_face {1} {{1,2},{1},{2},{}}"
   by (unfold free_face_def face_def, rule ex1I [of _ "{1,2}"], rule conjI, simp, rule conjI, auto)
 
-lemma ff2: "free_face {2} {{1,2},{1},{2}}"
+lemma ff2: "free_face {2} {{1,2},{1},{2},{}}"
   apply (unfold free_face_def face_def, rule ex1I [of _ "{1,2}"], rule conjI, simp, rule conjI)
     apply (simp add: psubset_insert_iff) apply blast by auto
 
-lemma ff3: "free_face {3} {{1,2},{2,3},{1},{2},{3}}"
+lemma ff3: "free_face {3} {{1,2},{2,3},{1},{2},{3},{}}"
   apply (unfold free_face_def face_def, rule ex1I [of _ "{2,3}"])
     apply (rule conjI, simp, rule conjI, fastforce) apply auto[1]
   by (simp add: psubset_insert_iff)
@@ -1333,13 +1336,13 @@ lemma ff3: "free_face {3} {{1,2},{2,3},{1},{2},{3}}"
 definition free_coface :: "nat set \<Rightarrow> nat set set \<Rightarrow> nat set"
   where "free_coface a K = (THE b. b \<in> K \<and> face a b \<and> (\<forall>a1\<in>K. face a a1 \<longrightarrow> a1 = b))"
 
-lemma f1: "free_coface {1} {{1,2},{1},{2}} = {1,2}"
+lemma f1: "free_coface {1} {{1,2},{1},{2},{}} = {1,2}"
   by (unfold free_coface_def face_def, rule theI2 [of _ "{1,2}"]) auto
 
-lemma f2: "free_coface {2} {{1,2},{1},{2}} = {1,2}"
+lemma f2: "free_coface {2} {{1,2},{1},{2},{}} = {1,2}"
   by (unfold free_coface_def face_def, rule theI2 [of _ "{1,2}"], fastforce) auto
 
-lemma f3: "free_coface {3} {{1,2},{2,3},{1},{2},{3}} = {2,3}"
+lemma f3: "free_coface {3} {{1,2},{2,3},{1},{2},{3},{}} = {2,3}"
   by (unfold free_coface_def face_def, rule theI2 [of _ "{2,3}"], fastforce)
    (simp add: psubset_insert_iff)+
 
@@ -1366,17 +1369,17 @@ corollary free_coface_facet:
 definition collapses :: "(nat set set \<times> nat set set) set"
   where "collapses = {(K, K'). (\<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K})}"
 
-lemma "({{1,2},{1},{2}}, {{2}}) \<in> collapses"
-  unfolding collapses_def 
+lemma "({{1,2},{1},{2},{}}, {{2},{}}) \<in> collapses"
+  unfolding collapses_def
   apply safe apply (rule bexI [of _ "{1}"], rule conjI, rule ff1)
   unfolding f1 by simp_all
 
-lemma example_collapses: "({{1,2},{1},{2}}, {{1}}) \<in> collapses"
+lemma example_collapses: "({{1,2},{1},{2},{}}, {{1},{}}) \<in> collapses"
   unfolding collapses_def
   apply safe apply (rule bexI [of _ "{2}"], rule conjI, rule ff2)
   unfolding f2 by (auto+)
 
-lemma example_collapses_02: "({{1,2},{2,3},{1},{2},{3}},{{1,2},{1},{2}}) \<in> collapses"
+lemma example_collapses_02: "({{1,2},{2,3},{1},{2},{3},{}},{{1,2},{1},{2},{}}) \<in> collapses"
   unfolding collapses_def
   apply safe apply (rule bexI [of _ "{3}"], rule conjI, rule ff3)
   unfolding f3 by (auto+)
@@ -1431,18 +1434,59 @@ lemma assumes cr: "(K, K') \<in> collapses_rtrancl" and f: "finite K"
   using collapses_rtrancl_subseteq f by (metis psubset_card_mono)
 
 definition collapsable :: "(nat set set) set"
-  where "collapsable = {K. \<exists>x K'. (K' = {{x}} \<and> (K, K') \<in> collapses_rtrancl)}"
+  where "collapsable = {K. \<exists>x K'. (K' = {{x},{}} \<and> (K, K') \<in> collapses_rtrancl)}"
 
-lemma "{{n}} \<in> collapsable" unfolding collapsable_def collapses_rtrancl_def by auto
+lemma singleton_collapsable: "{{n},{}} \<in> collapsable" unfolding collapsable_def collapses_rtrancl_def by auto
 
-lemma "{{1,2},{1},{2}} \<in> collapsable"
+lemma "{{1,2},{1},{2},{}} \<in> collapsable"
   unfolding collapsable_def collapses_rtrancl_def 
   using example_collapses by auto
 
-lemma "{{1,2},{2,3},{1},{2},{3}} \<in> collapsable"
+lemma "{{1,2},{2,3},{1},{2},{3},{}} \<in> collapsable"
   unfolding collapsable_def collapses_rtrancl_def
   using example_collapses_02 example_collapses
   using r_into_rtrancl rtrancl.rtrancl_into_rtrancl by fastforce
+
+lemma assumes f: "finite K" and x: "x \<in> V"
+    and cs: "T \<subseteq> powerset (V - {x})"
+    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" and kne: "K \<noteq> {}" shows "K \<in> collapsable"
+  using f x cs kt kne proof (induct "card {y. free_face y K}" arbitrary: K rule: less_induct)
+  case less
+  show ?case
+  proof (cases "V - {x} = {}")
+    case True
+    from less.prems (3,4) and True have t: "T = {} \<or> T = {{}}"
+      by (simp add: powerset_def subset_singletonD)
+    show ?thesis 
+    proof (cases "T = {}")
+      case True
+      have False using less (5,6) unfolding True by simp
+      thus ?thesis by fast
+    next
+      case False hence "T = {{}}" using t by simp 
+      hence k: "K = {{x},{}}" using less (5,6) by simp
+      show ?thesis unfolding k using singleton_collapsable by fast
+    qed
+  next
+    case False
+    from False obtain y where y: "y \<in> V - {x}" by auto
+    show ?thesis proof (rule less.hyps)
+    from less
+
+
+      using less.prems (4) using assms sorry
+  next
+    case False
+    then show ?thesis sorry
+  qed
+
+
+  from less.prems (2) obtain y where True using cone_def
+  show ?case thm less.hyps
+  proof (rule less.hyps)
+    
+    sorry
+qed
 
 (*TODO: Remove, leave only the definition of collapse as reflexive transitive closure,
 see above.*)
