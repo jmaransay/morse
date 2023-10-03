@@ -1288,10 +1288,12 @@ qed
 section\<open>Facets of a simplicial complex\<close>
 
 definition facet :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where "facet a K = (\<forall>b\<in>K. a \<subseteq> b \<longrightarrow> a = b)"
+  where "facet a K = ((a \<in> K) \<and> (\<forall>b\<in>K. a \<subseteq> b \<longrightarrow> a = b))"
 
 lemma facet_no_coface: assumes f: "facet a K" shows "\<nexists>b. a \<subset> b \<and> b \<in> K"
   using f unfolding facet_def by auto
+
+lemma facet_in_K: assumes f: "facet a K" shows "a \<in> K" using f facet_def by blast
 
 lemma "facet {1,2,3} {{1,2,3},{1,2},{1,3},{2,3},{1},{2},{3}}"
   unfolding facet_def by simp
@@ -1363,8 +1365,8 @@ corollary free_coface_facet:
   assumes f: "free_face a K"
   shows "facet (free_coface a K) K"
   unfolding facet_def
-  using free_coface_free_face (2,3) [OF f]
-  unfolding face_def by simp
+  using free_coface_free_face (1,2,3) [OF f]
+  unfolding face_def by (metis psubsetI psubset_trans)
 
 definition collapses :: "(nat set set \<times> nat set set) set"
   where "collapses = {(K, K'). (\<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K})}"
@@ -1391,15 +1393,14 @@ lemma collapses_contained:
 lemma collapses_card:
   assumes c: "(K, K') \<in> collapses" and f: "finite K" shows "card (K') < card (K)"
   using c collapses_contained f unfolding collapses_def free_face_def free_coface_def
-  by (meson psubset_card_mono)
+  by (-meson psubset_card_mono)
 
 definition "collapses_rtrancl = rtrancl collapses"
 
 lemma "(K, K) \<in> collapses_rtrancl"
   by (simp add: collapses_rtrancl_def)
 
-lemma
-  assumes f: "(\<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K})"
+lemma assumes f: "(\<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K})"
   shows "(K, K') \<in> collapses_rtrancl"
   using f unfolding collapses_rtrancl_def collapses_def by auto
 
@@ -1447,25 +1448,56 @@ lemma "{{1,2},{2,3},{1},{2},{3},{}} \<in> collapsable"
   using example_collapses_02 example_collapses
   using r_into_rtrancl rtrancl.rtrancl_into_rtrancl by fastforce
 
-lemma assumes f: "finite K" and x: "x \<in> V"
-    and cs: "T \<subseteq> powerset (V - {x})"
-    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" and kne: "K \<noteq> {}" shows "K \<in> collapsable"
-  using f x cs kt kne proof (induct "card {y. free_face y K}" arbitrary: K rule: less_induct)
+lemma assumes f: "finite K" and v: "v \<in> V"
+    and cs: "T \<subseteq> powerset (V - {v})"
+    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}" and kne: "K \<noteq> {}" shows "K \<in> collapsable"
+  using f v cs kt kne proof (induct "card {y. facet y T}" arbitrary: T K rule: less_induct)
   case less
   show ?case
-  proof (cases "V - {x} = {}")
-    case True
-    from less.prems (3,4) and True have t: "T = {} \<or> T = {{}}"
-      by (simp add: powerset_def subset_singletonD)
-    show ?thesis 
-    proof (cases "T = {}")
+  proof (cases "T = {}")
       case True
       have False using less (5,6) unfolding True by simp
       thus ?thesis by fast
     next
-      case False hence "T = {{}}" using t by simp 
-      hence k: "K = {{x},{}}" using less (5,6) by simp
-      show ?thesis unfolding k using singleton_collapsable by fast
+      case False hence tne: "T \<noteq> {}" by simp
+      show ?thesis
+      proof (cases "T = {{}}")
+        case True
+        hence k: "K = {{v},{}}" using less (5,6) by simp
+        show ?thesis unfolding k using singleton_collapsable by fast
+      next
+        case False
+        then obtain t where t: "facet t T"
+          using tne less.prems(1,4) unfolding facet_def
+          by (meson finite_Un finite_has_maximal)          
+        have "(K, K - {t, insert v t}) \<in> collapses"
+        proof (unfold collapses_def, rule, rule, rule bexI [of _ t], rule conjI)
+          show "t \<in> K" using t using less.prems (4) unfolding facet_def by simp
+          show "free_face t K" sorry
+          show "K - {t, insert v t} = K - {t, free_coface t K}" sorry
+        qed
+        moreover have "(K - {t, insert v t}) \<in> collapsable"
+          thm less.hyps [of "T - {t}"]
+        proof (rule less.hyps [of "T - {t}"])
+          show "card {y. facet y (T - {t})} < card {y. facet y T}" 
+            using t unfolding facet_def sorry
+          show "finite (K - {t, insert v t})" using less.prems (1) by simp
+          show "v \<in> V" using less.prems (2) .
+          show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (3) by auto
+          show "K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
+          proof (rule)
+            show "K - {t, insert v t} \<subseteq> T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}" 
+              using less.prems (4) by auto
+            show "T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t} \<subseteq> K - {t, insert v t}"
+              unfolding less.prems (4) apply auto
+              using facet_def t apply auto[1] prefer 2
+                apply (metis facet_def insert_absorb insert_iff subset_insertI t)
+               prefer 2 using facet_def t
+               apply (metis (no_types, lifting) Pow_iff insertE insertI2 insert_Diff insert_subset less.prems(3) powerset_def subset_Diff_insert)
+              using less.prems (4) using facet_def t try
+          show "K - {t, insert v t} \<noteq> {}"
+        have "free_face t T" unfolding free_face_def
+
     qed
   next
     case False
