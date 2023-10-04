@@ -864,36 +864,46 @@ qed
 
 section\<open>A set of sets being a cone over a given vertex\<close>
 
+lemma conjI3: assumes "A" and "B" and "C" shows "A \<and> B \<and> C"
+  using assms by simp
+
 definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where "cone X K = ((\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x})  
+  where "cone X K = ((\<exists>x\<in>X. \<exists>T. T \<noteq> {} \<and> T \<subseteq> powerset (X - {x})  
                       \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}))"
 
 text\<open>A @{term cone} is a @{term join}, for simplicial complexes.\<close>
 
-lemma assumes c: "cone X K" and kne: "K \<noteq> {}" and p: "pow_closed K"
-  shows "((\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x}) \<and> K = join_vertex x T))"
+lemma cone_is_join:
+  assumes c: "cone X K" and p: "pow_closed K"
+  shows "((\<exists>x\<in>X. \<exists>T. T \<noteq> {} \<and> T \<subseteq> powerset (X - {x}) \<and> K = join_vertex x T))"
 proof -
-  from c obtain x T where x: "x \<in> X" and t: "T \<subseteq> powerset (X - {x})"
+  from c obtain x T where x: "x \<in> X" and tne: "T \<noteq> {}" and t: "T \<subseteq> powerset (X - {x})"
     and k: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
     unfolding cone_def by auto
   show ?thesis
-  proof (rule bexI [of _ x], rule exI [of _ T], rule conjI, intro t)
+  proof (rule bexI [of _ x], rule exI [of _ T], intro conjI3, intro tne, intro t)
     show "K = join_vertex x T"
-      unfolding join_vertex_def join_def using k kne p unfolding pow_closed_def by auto
+      unfolding join_vertex_def join_def using k p unfolding pow_closed_def
+      using tne by auto
   qed (intro x)
 qed
 
-text\<open>There cannot be cones over an empty set of vertexes\<close>
+text\<open>There cannot be cones over an empty set of vertexes.\<close>
 
 lemma "\<not> cone {} K" unfolding cone_def by simp
 
+text\<open>Any cone has at least one distinguished element.\<close>
+
+lemma cone_not_empty: "\<not> cone V {}" unfolding cone_def by simp
+
+lemma singleton_cone: assumes v: "v \<in> V" shows "cone V {{v}, {}}"
+  unfolding cone_def
+  by (rule bexI [OF _ v], rule exI [of _ "{{}}"]) (unfold powerset_def, auto simp add: v)
+
 text\<open>The trivial simplicial complex is a cone over a non-empty vertex set.\<close>
 
-lemma cone_empty: assumes v: "V \<noteq> {}" shows "cone V {}"
-  unfolding cone_def using v by auto
-
-lemma cone_not_empty:
-  assumes a: "(\<exists>x\<in>X. \<exists>T. T \<subseteq> powerset (X - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t})"
+lemma cone_intro [intro]:
+  assumes a: "(\<exists>x\<in>X. \<exists>T. T \<noteq> {} \<and> T \<subseteq> powerset (X - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t})"
   shows "cone X K"
   unfolding cone_def
   using assms by blast
@@ -937,11 +947,12 @@ qed
 
 lemma cost_eq_link_ext_impl_cone:
   assumes c: "cost x V K = link_ext x V K"
-    and x: "x \<in> V" and p: "K \<subseteq> powerset V" and p1: "K \<noteq> {}"
+    and x: "x \<in> V" and p: "K \<subseteq> powerset V" and p1: "cost x V K \<noteq> {}"
   shows "cone V K"
 proof (unfold cone_def)
-  show "\<exists>x\<in>V. \<exists>T\<subseteq>powerset (V - {x}). K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
-  proof (rule bexI [OF _ x], rule exI [of _ "cost x V K"], rule conjI)
+  show "\<exists>x\<in>V. \<exists>T. T \<noteq> {} \<and> T \<subseteq> powerset (V - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  proof (rule bexI [OF _ x], rule exI [of _ "cost x V K"], rule conjI3)
+    show "cost x V K \<noteq> {}" using p1 .
     show "cost x V K \<subseteq> powerset (V - {x})"
       using p unfolding cost_def powerset_def by auto
     show "K = cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
@@ -1156,7 +1167,8 @@ lemma evaluation_cone_not_evaders:
   shows "evaluation l K \<in> not_evaders"
   proof -
   from c and X obtain x :: nat and T :: "nat set set"
-    where x: "x \<in> X" and cs: "T \<subseteq> powerset (X - {x})" and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
+    where x: "x \<in> X" and tne: "T \<noteq> {}" and cs: "T \<subseteq> powerset (X - {x})" 
+      and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
     unfolding cone_def by auto
   show ?thesis
   using X f xl c proof (induct "card X" arbitrary: X l K)
@@ -1166,23 +1178,22 @@ lemma evaluation_cone_not_evaders:
   next
     case (Suc n)
     obtain x :: nat and T :: "nat set set"
-      where x: "x \<in> X" and cs: "T \<subseteq> powerset (X - {x})"
+      where x: "x \<in> X" and tne: "T \<noteq> {}" and cs: "T \<subseteq> powerset (X - {x})"
         and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
       using Suc.prems (1,4) unfolding cone_def by auto
     obtain y l' where l: "l = y # l'" and y: "y \<in> X"
       using Suc.prems Suc.hyps (2) sorted_variables_length_coherent [OF Suc.prems (3)]
       by (metis insert_iff sorted_variables.cases)
     show ?case
-      unfolding l 
-      unfolding evaluation.simps (3) 
+      unfolding l
+      unfolding evaluation.simps (3)
       unfolding l [symmetric] 
       unfolding sorted_variables_coherent [OF Suc.prems (3), symmetric]
     proof (cases "x = y")
       case True
       have cl_eq: "cost x X K = link_ext x X K"
         by (rule cone_impl_cost_eq_link_ext [of x X T], rule x, rule cs, rule kt)
-      show "evaluation l' (link_ext y X K) @ evaluation l' (cost y X K)
-            \<in> not_evaders"
+      show "evaluation l' (link_ext y X K) @ evaluation l' (cost y X K) \<in> not_evaders"
         using True using cl_eq unfolding l [symmetric]
         using not_evaders.intros(1) by presburger
     next
@@ -1213,12 +1224,13 @@ lemma evaluation_cone_not_evaders:
             using Suc.prems (3) using l y Suc.prems (1)
             by (metis Diff_insert_absorb list.inject sorted_variables.cases)
           show "cone (X - {y}) (link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t})"
-          proof (rule cone_not_empty, intro bexI [of _ x] exI [of _ "link_ext y (X - {x}) T"], rule conjI)
+          proof (rule cone_intro, intro bexI [of _ x] exI [of _ "link_ext y (X - {x}) T"], rule conjI3)
             show "link_ext y (X - {x}) T \<subseteq> powerset (X - {y} - {x})"
               unfolding link_ext_def powerset_def by auto
             show "link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t} =
                   link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t}" ..
             show "x \<in> X - {y}" using x False by simp
+            show "link_ext y (X - {x}) T \<noteq> {}" unfolding link_ext_def powerset_def using tne try
           qed
         qed
         show "evaluation l' (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t}) \<in> not_evaders"
@@ -1230,7 +1242,7 @@ lemma evaluation_cone_not_evaders:
             using Suc.prems (3) using l y Suc.prems (1)
             by (metis Diff_insert_absorb list.inject sorted_variables.cases)
           show "cone (X - {y}) (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t})"
-          proof (rule cone_not_empty, intro bexI [of _ x] exI [of _ "cost y (X - {x}) T"], rule conjI)
+          proof (rule cone_intro, intro bexI [of _ x] exI [of _ "cost y (X - {x}) T"], rule conjI)
             show "cost y (X - {x}) T \<subseteq> powerset (X - {y} - {x})"
               unfolding cost_def powerset_def by auto
             show "cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t} =
@@ -1438,9 +1450,6 @@ lemma assumes cr: "(K, K') \<in> collapses_rtrancl" and f: "finite K"
 
 definition collapsable :: "(nat set set) set"
   where "collapsable = {K. \<exists>x K'. (K' = {{x},{}} \<and> (K, K') \<in> collapses_rtrancl)}"
-
-lemma conjI3: assumes "A" and "B" and "C" shows "A \<and> B \<and> C"
-  using assms by simp
 
 lemma singleton_collapsable: "{{n},{}} \<in> collapsable" unfolding collapsable_def collapses_rtrancl_def by auto
 
