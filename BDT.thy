@@ -820,6 +820,27 @@ proof (rule ccontr, safe)
     by (smt (verit, ccfv_threshold) \<open>[False, True] \<in> not_evaders\<close> append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
 qed
 
+lemma empty_set_not_evader: assumes lne: "l \<noteq> []" shows "evaluation l {} \<in> not_evaders"
+using lne proof (induct l)
+  case Nil
+  then show ?case unfolding evaluation.simps by simp
+next
+  case (Cons a l)
+  show ?case
+  proof (cases "l = []")
+    case True show ?thesis 
+      unfolding True unfolding evaluation.simps (3)
+      unfolding cost_empty link_ext_empty
+      using not_evaders.intros(1) by blast
+  next
+    case False
+    show ?thesis
+      unfolding evaluation.simps
+      unfolding cost_empty link_ext_empty using Cons.hyps [OF False]
+      using not_evaders.intros(1) by auto
+  qed
+qed
+
 section\<open>Join of two sets\<close>
 
 definition join :: "nat set set \<Rightarrow> nat set set \<Rightarrow> nat set set"
@@ -1162,26 +1183,26 @@ proof
 qed
 
 lemma evaluation_cone_not_evaders:
-  assumes k: "K \<subseteq> powerset X"
-    and c: "cone X K" and X: "X \<noteq> {}" and f: "finite X" and xl: "(X, l) \<in> sorted_variables"
+  assumes k: "K \<subseteq> powerset V"
+    and c: "cone V K" and X: "V \<noteq> {}" and f: "finite V" and xl: "(V, l) \<in> sorted_variables"
   shows "evaluation l K \<in> not_evaders"
   proof -
   from c and X obtain x :: nat and T :: "nat set set"
-    where x: "x \<in> X" and tne: "T \<noteq> {}" and cs: "T \<subseteq> powerset (X - {x})" 
+    where x: "x \<in> V" and tne: "T \<noteq> {}" and cs: "T \<subseteq> powerset (V - {x})" 
       and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
     unfolding cone_def by auto
   show ?thesis
-  using X f xl c proof (induct "card X" arbitrary: X l K)
-    case 0 with f have x: "X = {}" by simp
+  using X f xl c proof (induct "card V" arbitrary: V l K)
+    case 0 with f have x: "V = {}" by simp
     hence False using "0.prems" (1) by blast
     thus ?case by (rule ccontr)
   next
     case (Suc n)
     obtain x :: nat and T :: "nat set set"
-      where x: "x \<in> X" and tne: "T \<noteq> {}" and cs: "T \<subseteq> powerset (X - {x})"
+      where x: "x \<in> V" and tne: "T \<noteq> {}" and cs: "T \<subseteq> powerset (V - {x})"
         and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
       using Suc.prems (1,4) unfolding cone_def by auto
-    obtain y l' where l: "l = y # l'" and y: "y \<in> X"
+    obtain y l' where l: "l = y # l'" and y: "y \<in> V"
       using Suc.prems Suc.hyps (2) sorted_variables_length_coherent [OF Suc.prems (3)]
       by (metis insert_iff sorted_variables.cases)
     show ?case
@@ -1191,67 +1212,87 @@ lemma evaluation_cone_not_evaders:
       unfolding sorted_variables_coherent [OF Suc.prems (3), symmetric]
     proof (cases "x = y")
       case True
-      have cl_eq: "cost x X K = link_ext x X K"
-        by (rule cone_impl_cost_eq_link_ext [of x X T], rule x, rule cs, rule kt)
-      show "evaluation l' (link_ext y X K) @ evaluation l' (cost y X K) \<in> not_evaders"
+      have cl_eq: "cost x V K = link_ext x V K"
+        by (rule cone_impl_cost_eq_link_ext [of x V T], rule x, rule cs, rule kt)
+      show "evaluation l' (link_ext y V K) @ evaluation l' (cost y V K) \<in> not_evaders"
         using True using cl_eq unfolding l [symmetric]
         using not_evaders.intros(1) by presburger
     next
-      case False
-      have crw: "cost y X K = cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t}"
+      case False note xney = False
+      have crw: "cost y V K = cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}"
       proof (rule cost_cone_eq)
-        show "x \<in> X" using x .
+        show "x \<in> V" using x .
         show "x \<noteq> y" using False .
-        show "T \<subseteq> powerset (X - {x})" using cs .
+        show "T \<subseteq> powerset (V - {x})" using cs .
         show "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" using kt .
       qed
-      have lrw: "link_ext y X K = link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t}"
+      have lrw: "link_ext y V K = link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}"
       proof (rule link_ext_cone_eq)
-        show "x \<in> X" using x .
+        show "x \<in> V" using x .
         show "x \<noteq> y" using False .
-        show "T \<subseteq> powerset (X - {x})" using cs .
+        show "T \<subseteq> powerset (V - {x})" using cs .
         show "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" using kt .
       qed
-      show "evaluation l' (link_ext y X K) @ evaluation l' (cost y X K) \<in> not_evaders"
+      have xy_ne: "V - {y} \<noteq> {}" using x False by auto
+      have f_xy: "finite (V - {y})" using Suc.prems (2) by simp
+      have xyl'_sv:  "(V - {y}, l') \<in> sorted_variables"
+        using Suc.prems (3,1) using l y
+        by (metis Diff_insert_absorb list.inject sorted_variables.cases)
+      have l'_ne: "l' \<noteq> []"
+        using sorted_variables_coherent xy_ne xyl'_sv by fastforce
+      show "evaluation l' (link_ext y V K) @ evaluation l' (cost y V K) \<in> not_evaders"
         unfolding crw lrw
       proof (rule not_evaders.intros(2))
-        show "evaluation l' (link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t}) \<in> not_evaders"
-        proof (rule Suc.hyps (1) [of "X - {y}"])
-          show "n = card (X - {y})" using Suc.hyps (2) y x False by simp
-          show "X - {y} \<noteq> {}" using x False by auto
-          show "finite (X - {y})" using Suc.prems (2) by simp
-          show "(X - {y}, l') \<in> sorted_variables"
-            using Suc.prems (3) using l y Suc.prems (1)
-            by (metis Diff_insert_absorb list.inject sorted_variables.cases)
-          show "cone (X - {y}) (link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t})"
-          proof (rule cone_intro, intro bexI [of _ x] exI [of _ "link_ext y (X - {x}) T"], rule conjI3)
-            show "link_ext y (X - {x}) T \<subseteq> powerset (X - {y} - {x})"
-              unfolding link_ext_def powerset_def by auto
-            show "link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t} =
-                  link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t}" ..
-            show "x \<in> X - {y}" using x False by simp
-            show "link_ext y (X - {x}) T \<noteq> {}" unfolding link_ext_def powerset_def using tne try
+        show "evaluation l' (link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}) \<in> not_evaders"
+        proof (cases "link_ext y (V - {x}) T = {}")
+          case True
+          show ?thesis unfolding True using evaluation.simps l'_ne
+            by (simp add: empty_set_not_evader)
+        next
+          case False
+          show ?thesis
+          proof (rule Suc.hyps (1) [of "V - {y}"])
+            show "n = card (V - {y})" using Suc.hyps (2) y x False by simp
+            show "V - {y} \<noteq> {}" using xy_ne .
+            show "finite (V - {y})" using f_xy .
+            show "(V - {y}, l') \<in> sorted_variables" using xyl'_sv .
+            show "cone (V - {y}) (link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t})"
+            proof (rule cone_intro, intro bexI [of _ x] exI [of _ "link_ext y (V - {x}) T"], rule conjI3)
+              show "link_ext y (V - {x}) T \<noteq> {}" using False .
+              show "link_ext y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
+                unfolding link_ext_def powerset_def by auto
+              show "link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t} =
+                    link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}" ..
+              show "x \<in> V - {y}" using x xney by simp
+            qed
           qed
         qed
-        show "evaluation l' (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t}) \<in> not_evaders"
-        proof (rule Suc.hyps (1) [of "X - {y}"])
-          show "n = card (X - {y})" using Suc.hyps (2) y x False by simp
-          show "X - {y} \<noteq> {}" using x False by auto
-          show "finite (X - {y})" using Suc.prems (2) by simp
-          show "(X - {y}, l') \<in> sorted_variables"
-            using Suc.prems (3) using l y Suc.prems (1)
-            by (metis Diff_insert_absorb list.inject sorted_variables.cases)
-          show "cone (X - {y}) (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t})"
-          proof (rule cone_intro, intro bexI [of _ x] exI [of _ "cost y (X - {x}) T"], rule conjI)
-            show "cost y (X - {x}) T \<subseteq> powerset (X - {y} - {x})"
-              unfolding cost_def powerset_def by auto
-            show "cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t} =
-                  cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t}" ..
-            show "x \<in> X - {y}" using x False by simp
+        show "evaluation l' (cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}) \<in> not_evaders"
+        proof (cases "cost y (V - {x}) T = {}")
+          case True
+          show ?thesis unfolding True using evaluation.simps l'_ne
+            by (simp add: empty_set_not_evader)
+        next
+          case False
+          show ?thesis
+          proof (rule Suc.hyps (1) [of "V - {y}"])
+            show "n = card (V - {y})" using Suc.hyps (2) y x False by simp
+            show "V - {y} \<noteq> {}" using xy_ne .
+            show "finite (V - {y})" using f_xy .
+            show "(V - {y}, l') \<in> sorted_variables" using xyl'_sv .
+            show "cone (V - {y}) (cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t})"
+            proof (rule cone_intro, intro bexI [of _ x] exI [of _ "cost y (V - {x}) T"], rule conjI3)
+              show "cost y (V - {x}) T \<noteq> {}" using False .
+              show "cost y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
+                unfolding cost_def powerset_def by auto
+              show "cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t} =
+                    cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}" ..
+              show "x \<in> V - {y}" using x xney by simp
+            qed
           qed
         qed
-        show "length (evaluation l' (link_ext y (X - {x}) T \<union> {s. \<exists>t\<in>link_ext y (X - {x}) T. s = insert x t})) =
-              length (evaluation l' (cost y (X - {x}) T \<union> {s. \<exists>t\<in>cost y (X - {x}) T. s = insert x t}))"
+        show "length (evaluation l' (link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t})) =
+              length (evaluation l' (cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}))"
           using length_evaluation_eq .
       qed
     qed
@@ -1383,6 +1424,8 @@ corollary free_coface_facet:
 definition collapses :: "(nat set set \<times> nat set set) set"
   where "collapses = {(K, K'). (\<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K})}"
 
+text\<open>Some examples of collapses:\<close>
+
 lemma "({{1,2},{1},{2},{}}, {{2},{}}) \<in> collapses"
   unfolding collapses_def
   apply safe apply (rule bexI [of _ "{1}"], rule conjI, rule ff1)
@@ -1406,6 +1449,22 @@ lemma collapses_card:
   assumes c: "(K, K') \<in> collapses" and f: "finite K" shows "card (K') < card (K)"
   using c collapses_contained f unfolding collapses_def free_face_def free_coface_def
   by (meson psubset_card_mono)
+
+lemma singleton_collapses: 
+  assumes t: "t \<noteq> {}" shows "({t, {}}, {}) \<in> collapses"
+  unfolding collapses_def
+proof (rule, rule, rule bexI [of _ "{}"], rule conjI)
+  show "free_face {} {t, {}}" unfolding free_face_def face_def using t by auto
+  show "{} = {t, {}} - {{}, free_coface {} {t, {}}}"
+  proof -
+    have "free_coface {} {t, {}} = t"
+      unfolding free_coface_def face_def by (rule theI2 [of _ t], auto simp add: t)
+    thus ?thesis by simp
+  qed
+  show "{} \<in> {t, {}}" by fast
+qed
+
+text\<open>The reflexive and transitive closure of collapses:\<close>
 
 definition "collapses_rtrancl = rtrancl collapses"
 
@@ -1448,102 +1507,147 @@ lemma assumes cr: "(K, K') \<in> collapses_rtrancl" and f: "finite K"
   using cr collapses_contained
   using collapses_rtrancl_subseteq f by (metis psubset_card_mono)
 
-definition collapsable :: "(nat set set) set"
-  where "collapsable = {K. \<exists>x K'. (K' = {{x},{}} \<and> (K, K') \<in> collapses_rtrancl)}"
+(*definition collapsable :: "(nat set set) set"
+  where "collapsable = {K. \<exists>x K'. (K' = {{x},{}} \<and> (K, K') \<in> collapses_rtrancl)}"*)
 
-lemma singleton_collapsable: "{{n},{}} \<in> collapsable" unfolding collapsable_def collapses_rtrancl_def by auto
+definition collapsable :: "(nat set set) set"
+  where "collapsable = {K. (K, {}) \<in> collapses_rtrancl}"
+
+lemma assumes k: "K \<in> collapsable" shows "(K, {}) \<in> collapses_rtrancl" 
+  using k unfolding collapsable_def by fast
+
+(*lemma assumes k: "K \<in> collapsable" shows "(K, {}) \<in> collapses_rtrancl"
+proof -
+  from k obtain x K' where k': "K' = {{x},{}}" and kk': "(K, K') \<in> collapses_rtrancl"
+    unfolding collapsable_def by auto
+  have "(K', {}) \<in> collapses" using singleton_collapses k' by simp
+  thus ?thesis using kk' collapses_comp' by simp
+qed*)
+
+(*lemma
+  assumes k: "(K, {}) \<in> collapses_rtrancl" and kne: "K \<noteq> {}"
+  shows "K \<in> collapsable"
+proof -
+  (*from kne obtain t where "t \<in> K" by auto*)
+  obtain "K'" and "x" where k'c: "(K', {}) \<in> collapses" and k': "K' = {x, {}}"
+    using k singleton_collapses by auto
+  have k'cr: "(K', {}) \<in> collapses_rtrancl"
+    using collapses_rtrancl_def k'c by blast
+  have "(K, K') \<in> collapses_rtrancl" using k k'cr try*)
+
+lemma singleton_collapsable: "{{n},{}} \<in> collapsable" 
+  using singleton_collapses
+  unfolding collapsable_def collapses_rtrancl_def by auto
 
 lemma "{{1,2},{1},{2},{}} \<in> collapsable"
-  unfolding collapsable_def collapses_rtrancl_def 
-  using example_collapses by auto
+  unfolding collapsable_def collapses_rtrancl_def
+  using example_collapses using singleton_collapses [of "{1}"] by simp
 
 lemma "{{1,2},{2,3},{1},{2},{3},{}} \<in> collapsable"
   unfolding collapsable_def collapses_rtrancl_def
   using example_collapses_02 example_collapses
-  using r_into_rtrancl rtrancl.rtrancl_into_rtrancl by fastforce
+  using r_into_rtrancl rtrancl.rtrancl_into_rtrancl 
+  using singleton_collapses [of "{1}"]
+  by fastforce
 
-lemma 
-  assumes f: "finite K" and v: "v \<in> V"
-    and cs: "T \<subseteq> powerset (V - {v})"
-    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}" and kne: "K \<noteq> {}" shows "K \<in> collapsable"
-  using f v cs kt kne proof (induct "card {y. facet y T}" arbitrary: T K rule: less_induct)
+lemma facet_subset:
+  assumes f: "facet y (T - {t})" and ny: "\<not> y \<subset> t" shows "facet y T"
+  using f ny unfolding facet_def by auto
+
+lemma assumes f: "finite V" and X: "V \<noteq> {}" and cs: "K \<subseteq> powerset V" and c: "cone V K" 
+  shows "K \<in> collapsable"
+proof -
+  from c and cone_def obtain v T where v: "v \<in> V" and tne: "T \<noteq> {}"
+    and tp: "T \<subseteq> powerset (V - {v})" and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}" by auto
+  have fK: "finite K" using f cs unfolding powerset_def
+    by (simp add: finite_subset)
+  hence fT: "finite T" using kt by simp
+  show ?thesis
+  using f fT v cs kt tne tp proof (induct "card {y. facet y T}" arbitrary: T K rule: less_induct)
   case less
-  show ?case
-  proof (cases "T = {}")
-      case True
-      have False using less (5,6) unfolding True by simp
-      thus ?thesis by fast
-    next
-      case False hence tne: "T \<noteq> {}" by simp
-      show ?thesis
-      proof (cases "T = {{}}")
-        case True
-        hence k: "K = {{v},{}}" using less (5,6) by simp
-        show ?thesis unfolding k using singleton_collapsable by fast
-      next
-        case False
-        then obtain t where t: "facet t T"
-          using tne less.prems(1,4) unfolding facet_def
-          by (meson finite_Un finite_has_maximal)          
-        have "(K, K - {t, insert v t}) \<in> collapses"
-        proof (unfold collapses_def, rule, rule, rule bexI [of _ t], rule conjI)
-          show "t \<in> K" using t using less.prems (4) unfolding facet_def by simp
-          show "free_face t K" unfolding free_face_def unfolding facet_def face_def 
-          proof (intro ex1I [of _ "insert v t"], rule conjI3)
-            show "insert v t \<in> K"
-              using facet_in_K less.prems(4) t by auto
-            show "t \<subset> insert v t"
-              using facet_in_K less.prems(3) powerset_def t by fastforce
-            show "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
-              using t less.prems (3,4) unfolding facet_def powerset_def by auto
-            show "\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
-              using t less.prems (3,4) unfolding facet_def powerset_def
-              by (metis \<open>insert v t \<in> K\<close> \<open>t \<subset> insert v t\<close>)
-          qed
-          show "K - {t, insert v t} = K - {t, free_coface t K}" 
-          proof -
-            have "insert v t = free_coface t K" unfolding free_coface_def face_def
-            proof (rule the_equality [symmetric], intro conjI3)
-              show "insert v t \<in> K" using facet_in_K less.prems(4) t by auto
-              show "t \<subset> insert v t" 
-                unfolding face_def using facet_in_K less.prems(3) powerset_def t by fastforce
-              show "\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t"
-                using t less.prems (3,4) unfolding face_def facet_def powerset_def by auto
-              show "\<And>b. b \<in> K \<and>  t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
-                using t less.prems (3,4) unfolding facet_def powerset_def
-                by (metis \<open>insert v t \<in> K\<close> \<open>t \<subset> insert v t\<close>)
-            qed
-            thus ?thesis by simp
-        qed
-        moreover have "(K - {t, insert v t}) \<in> collapsable"
-        proof (rule less.hyps [of "T - {t}"])
-          show "card {y. facet y (T - {t})} < card {y. facet y T}"
-          proof -
-            have "{y. facet y (T - {t})} \<subseteq> {y. facet y T}"
-              using t unfolding facet_def apply simp try
-            using t unfolding facet_def sorry
-          show "finite (K - {t, insert v t})" using less.prems (1) by simp
-          show "v \<in> V" using less.prems (2) .
-          show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (3) by auto
-          show "K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
-          proof (rule)
-            show "K - {t, insert v t} \<subseteq> T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}" 
-              using less.prems (4) by auto
-            show "T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t} \<subseteq> K - {t, insert v t}"
-              unfolding less.prems (4) apply auto
-              using facet_def t apply auto[1] prefer 2
-                apply (metis facet_def insert_absorb insert_iff subset_insertI t)
-               prefer 2 using facet_def t
-               apply (metis (no_types, lifting) Pow_iff insertE insertI2 insert_Diff insert_subset less.prems(3) powerset_def subset_Diff_insert)
-              using less.prems (4) using facet_def t sorry
-          qed
-          show "K - {t, insert v t} \<noteq> {}" sorry
-        qed
-        ultimately show "K \<in> collapsable"
-          unfolding collapsable_def using collapses_comp by auto
+  obtain t where t: "facet t T" and tinT: "t \<in> T"
+    using less.prems (2,6) unfolding facet_def by (meson finite_has_maximal)
+  have vninT: "v \<notin> t" using tinT less.prems (7) unfolding powerset_def by auto
+  have "insert v t \<in> K" using facet_in_K less.prems (5) t by auto
+  have "t \<subset> insert v t"
+    using facet_in_K [OF t] using less.prems (7) unfolding powerset_def by auto
+  have "\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+    using t unfolding facet_def powerset_def by (metis \<open>insert v t \<in> K\<close> \<open>t \<subset> insert v t\<close>)
+  have "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
+    using t tinT less.prems (5) \<open>t \<subset> insert v t\<close> 
+    unfolding facet_def powerset_def by auto
+  have "free_face t K" unfolding free_face_def unfolding facet_def face_def 
+  proof (intro ex1I [of _ "insert v t"], rule conjI3)
+    show "insert v t \<in> K" using \<open>insert v t \<in> K\<close> .
+    show "t \<subset> insert v t" using \<open>t \<subset> insert v t\<close> .
+    show "\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+       using \<open>\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t\<close> .
+    show "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
+       using \<open>(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)\<close> .
+  qed
+  have "free_coface t K = insert v t" unfolding free_coface_def face_def
+  proof (rule the_equality, intro conjI3)
+    show "insert v t \<in> K" using \<open>insert v t \<in> K\<close> .
+    show "t \<subset> insert v t" using \<open>t \<subset> insert v t\<close> .
+    show "\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+      using \<open>\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t\<close> .
+    show "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
+      using \<open>(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)\<close> .
+  qed
+  show "K \<in> collapsable"
+  proof (cases "T = {t}")
+    case False note Tnet = False
+    have "(K, K - {t, insert v t}) \<in> collapses" 
+      unfolding \<open>free_coface t K = insert v t\<close> [symmetric]
+      unfolding collapses_def
+      using \<open>free_face t K\<close> less.prems(5) tinT by blast
+    moreover have "(K - {t, insert v t}) \<in> collapsable"
+    proof (rule less.hyps [of "T - {t}"])
+      show "finite V" using f .
+      show "finite (T - {t})" using less.prems(2) by blast
+      show "v \<in> V" using less.prems (3) .
+      show "K - {t, insert v t} \<subseteq> powerset V" using less.prems (4) unfolding powerset_def by auto
+      show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (7) unfolding powerset_def by auto
+      show "T - {t} \<noteq> {}" using Tnet using facet_in_K t by auto
+      show "K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
+      proof
+        show "K - {t, insert v t} \<subseteq> T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
+          using less.prems (5) by auto
+        show "T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t} \<subseteq> K - {t, insert v t}"
+          using less.prems (5,7) tinT vninT unfolding powerset_def by auto
       qed
+      show "card {y. facet y (T - {t})} < card {y. facet y T}" sorry
+      (*proof -
+        have "{y. facet y (T - {t})} = {y. facet y T} - {t}"
+        proof
+          show "{y. facet y (T - {t})} \<subseteq> {y. facet y T} - {t}"
+          proof (rule+, auto, unfold facet_def) try
+          fix x 
+          assume x: "x \<in> {y. facet y (T - {t})}" 
+          hence f: "facet x (T - {t})" by simp
+          show "x \<in> {y. facet y T}" apply (rule) using f unfolding facet_def
+          proof(rule) try
+            apply auto
+            apply auto[1] 
+            apply auto[1]
+            apply auto[1] try
+        sorry*)
+    qed
+    ultimately show "K \<in> collapsable"
+      unfolding collapsable_def using collapses_comp by auto
+    next
+      case True note Tt = True
+      have K: "K = {t, insert v t}" using less.prems (5) tinT vninT Tt by auto
+      have "K - {t, free_coface t K} = {}" 
+        using K using \<open>free_coface t K = insert v t\<close> by simp
+      show "K \<in> collapsable" 
+        unfolding K collapsable_def 
+        unfolding collapses_rtrancl_def collapses_def
+        using collapses_def \<open>free_face t K\<close> \<open>K - {t, free_coface t K} = {}\<close> tinT 
+        using K by auto
     qed
   qed
+qed
 
 (*TODO: Remove, leave only the definition of collapse as reflexive transitive closure,
 see above.*)
