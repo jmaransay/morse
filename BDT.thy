@@ -889,21 +889,21 @@ lemma conjI3: assumes "A" and "B" and "C" shows "A \<and> B \<and> C"
   using assms by simp
 
 definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where "cone X K = ((\<exists>x\<in>X. \<exists>T. T \<noteq> {} \<and> T \<subseteq> powerset (X - {x})  
-                      \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}))"
+  where "cone V K = ((\<exists>v\<in>V. \<exists>B. B \<noteq> {} \<and> B \<subseteq> powerset (V - {v})  
+                      \<and> K = B \<union> {s. \<exists>b\<in>B. s = insert v b}))"
 
 text\<open>A @{term cone} is a @{term join}, for simplicial complexes.\<close>
 
 lemma cone_is_join:
-  assumes c: "cone X K" and p: "pow_closed K"
-  shows "((\<exists>x\<in>X. \<exists>T. T \<noteq> {} \<and> T \<subseteq> powerset (X - {x}) \<and> K = join_vertex x T))"
+  assumes c: "cone V K" and p: "pow_closed K"
+  shows "((\<exists>v\<in>V. \<exists>B. B \<noteq> {} \<and> B \<subseteq> powerset (V - {v}) \<and> K = join_vertex v B))"
 proof -
-  from c obtain x T where x: "x \<in> X" and tne: "T \<noteq> {}" and t: "T \<subseteq> powerset (X - {x})"
-    and k: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  from c obtain v B where x: "v \<in> V" and tne: "B \<noteq> {}" and t: "B \<subseteq> powerset (V - {v})"
+    and k: "K = B \<union> {s. \<exists>b\<in>B. s = insert v b}"
     unfolding cone_def by auto
   show ?thesis
-  proof (rule bexI [of _ x], rule exI [of _ T], intro conjI3, intro tne, intro t)
-    show "K = join_vertex x T"
+  proof (rule bexI [of _ v], rule exI [of _ B], intro conjI3, intro tne, intro t)
+    show "K = join_vertex v B"
       unfolding join_vertex_def join_def using k p unfolding pow_closed_def
       using tne by auto
   qed (intro x)
@@ -953,15 +953,15 @@ text\<open>The following result does hold for @{term link_ext},
   @{term "link_ext x V K \<subseteq> cost x V K"}\<close>
 
 lemma cone_impl_cost_eq_link_ext:
-  assumes x: "x \<in> V"
-    and cs: "T \<subseteq> powerset (V - {x})" 
-    and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
-  shows "cost x V K = link_ext x V K"
+  assumes x: "v \<in> V"
+    and cs: "B \<subseteq> powerset (V - {v})" 
+    and kt: "K = B \<union> {s. \<exists>b\<in>B. s = insert v b}"
+  shows "cost v V K = link_ext v V K"
 proof
-  show "link_ext x V K \<subseteq> cost x V K"
+  show "link_ext v V K \<subseteq> cost v V K"
     using assms unfolding link_ext_def cost_def powerset_def
     by auto (metis Diff_insert_absorb PowD in_mono mk_disjoint_insert)
-  show "cost x V K \<subseteq> link_ext x V K"
+  show "cost v V K \<subseteq> link_ext v V K"
     unfolding kt
     unfolding cost_def link_ext_def powerset_def by auto
 qed
@@ -1305,8 +1305,7 @@ lemma "link x {x} {{}, {x}} = {{}}"
 lemma cost_singleton2: "cost x {x} {{}, {x}} = {{}}" 
   unfolding cost_def powerset_def by auto
 
-lemma
-  evaluation_empty_set_not_evaders:
+(*lemma evaluation_empty_set_not_evaders:
   assumes a: "l \<noteq> []"
   shows "evaluation l {} \<in> not_evaders"
 proof -
@@ -1316,7 +1315,7 @@ proof -
     unfolding xl unfolding evaluation.simps (3) 
     unfolding link_ext_empty cost_empty
     by (rule not_evaders.intros(1), rule refl)
-qed
+qed*)
 
 lemma finite_set_sorted_variables:
   assumes f: "finite X"
@@ -1635,11 +1634,89 @@ proof -
   qed
 qed
 
-lemma
-  assumes f: "finite V" and v: "v \<in> V" and KV: "K \<subseteq> powerset V" and Tne: "T \<noteq> {}"
+lemma assumes f: "finite V" and v: "v \<in> V" and KV: "K \<subseteq> powerset V" and Tne: "T \<noteq> {}"
     and T: "T \<subseteq> powerset (V - {v})" and cs: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}" 
-  shows "(K, {{v}, {}}) \<in> collapses"
-  sorry
+  shows "(K, {{v}, {}}) \<in> collapses_rtrancl"
+proof -
+  have fK: "finite K" using f KV unfolding powerset_def
+    using finite_subset by auto
+  hence fT: "finite T" using cs by simp
+  show ?thesis
+  using f fT v cs Tne T proof (induct "card T" arbitrary: T K rule: less_induct)
+  case less
+  obtain t where t: "facet t T" and tinT: "t \<in> T"
+    unfolding facet_def
+    using less.prems (2,5)  by (meson finite_has_maximal)
+  have vninT: "v \<notin> t" using tinT less.prems (6) unfolding powerset_def by auto
+  have "insert v t \<in> K" using facet_in_K less.prems (4) t by auto
+  have "t \<subset> insert v t"
+    using facet_in_K [OF t] unfolding powerset_def
+    using vninT by blast
+  have "\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+    using t unfolding facet_def powerset_def by (metis \<open>insert v t \<in> K\<close> \<open>t \<subset> insert v t\<close>)
+  have "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
+    using t tinT less.prems (4) \<open>t \<subset> insert v t\<close> 
+    unfolding facet_def powerset_def by auto
+  have "free_face t K" unfolding free_face_def unfolding facet_def face_def 
+  proof (intro ex1I [of _ "insert v t"], rule conjI3)
+    show "insert v t \<in> K" using \<open>insert v t \<in> K\<close> .
+    show "t \<subset> insert v t" using \<open>t \<subset> insert v t\<close> .
+    show "\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+       using \<open>\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t\<close> .
+    show "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
+       using \<open>(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)\<close> .
+  qed
+  have "free_coface t K = insert v t" unfolding free_coface_def face_def
+  proof (rule the_equality, intro conjI3)
+    show "insert v t \<in> K" using \<open>insert v t \<in> K\<close> .
+    show "t \<subset> insert v t" using \<open>t \<subset> insert v t\<close> .
+    show "\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+      using \<open>\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t\<close> .
+    show "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
+      using \<open>(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)\<close> .
+  qed
+  show "(K, {{v}, {}}) \<in> collapses_rtrancl"
+  proof (cases "T = {t}")
+    case False note Tnet = False
+    have "(K, K - {t, insert v t}) \<in> collapses" 
+      unfolding \<open>free_coface t K = insert v t\<close> [symmetric]
+      unfolding collapses_def
+      using \<open>free_face t K\<close> less.prems(4) tinT by blast
+    moreover have "(K - {t, insert v t}, {{v}, {}}) \<in> collapses_rtrancl"
+    proof (rule less.hyps [of "T - {t}"])
+      show "finite V" using f .
+      show "finite (T - {t})" using less.prems(2) by blast
+      show "v \<in> V" using less.prems (3) .
+      (*show "K - {t, insert v t} \<subseteq> powerset V" using less.prems (4) unfolding powerset_def by auto*)
+      show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (6) unfolding powerset_def by auto
+      show "T - {t} \<noteq> {}" using Tnet using facet_in_K t by auto
+      show "K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
+      proof
+        show "K - {t, insert v t} \<subseteq> T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
+          using less.prems (4) by auto
+        show "T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t} \<subseteq> K - {t, insert v t}"
+          using less.prems (4,6) tinT vninT unfolding powerset_def by auto
+      qed
+      show "card (T - {t}) < card T"
+        by (meson card_Diff1_less less.prems(2) tinT)
+    qed
+    ultimately show "(K, {{v}, {}}) \<in> collapses_rtrancl"
+      unfolding collapsable_def using collapses_comp by simp
+  next
+    case True
+    have K: "K = {t, insert v t}" using less.prems (4) tinT vninT True by auto
+    have "({t, free_coface t K}, {}) \<in> collapses"
+      using K using \<open>free_coface t K = insert v t\<close> unfolding collapses_def 
+      using \<open>free_face t K\<close> by force
+    show "(K, {{v}, {}}) \<in> collapses_rtrancl"
+        unfolding K
+        unfolding collapses_rtrancl_def collapses_def
+        unfolding \<open>free_coface t K = insert v t\<close> [symmetric]
+        using \<open>free_face t K\<close> \<open>({t, free_coface t K}, {}) \<in> collapses\<close> tinT
+        using singleton_collapses [of "{v}"] try
+        using K by auto
+  qed
+qed
 
 proposition facet_join:
   assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
@@ -1816,7 +1893,7 @@ next
       show "evaluation l K \<in> not_evaders"
       unfolding True
       using evaluation.simps (3)
-      by (metis Suc.prems(2) empty_set evaluation_empty_set_not_evaders sorted_variables_coherent xa)
+      by (metis Suc.prems(2) empty_set empty_set_not_evader sorted_variables_coherent xa)
   qed
   next
     case False note kne = False
@@ -1899,7 +1976,7 @@ next
             show ?thesis
               using Suc.prems (4)
               unfolding True X
-              unfolding evaluation.simps link_ext_def cost_def powerset_def 
+              unfolding evaluation.simps link_ext_def cost_def powerset_def
               using not_evaders.intros [of "[True]"] 
               by auto (metis (no_types, lifting) \<open>\<And>l2. [True] = l2 \<Longrightarrow> [True] @ l2 \<in> not_evaders\<close> bot.extremum empty_iff evaluation.simps(2) mem_Collect_eq)
           next
