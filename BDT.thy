@@ -1563,7 +1563,7 @@ proof -
     by (simp add: finite_subset)
   hence fT: "finite T" using kt by simp
   show ?thesis
-  using f fT v cs kt tne tp proof (induct "card {y. facet y T}" arbitrary: T K rule: less_induct)
+  using f fT v cs kt tne tp proof (induct "card T" arbitrary: T K rule: less_induct)
   case less
   obtain t where t: "facet t T" and tinT: "t \<in> T"
     using less.prems (2,6) unfolding facet_def by (meson finite_has_maximal)
@@ -1616,22 +1616,8 @@ proof -
         show "T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t} \<subseteq> K - {t, insert v t}"
           using less.prems (5,7) tinT vninT unfolding powerset_def by auto
       qed
-      show "card {y. facet y (T - {t})} < card {y. facet y T}" sorry
-      (*proof -
-        have "{y. facet y (T - {t})} = {y. facet y T} - {t}"
-        proof
-          show "{y. facet y (T - {t})} \<subseteq> {y. facet y T} - {t}"
-          proof (rule+, auto, unfold facet_def) try
-          fix x 
-          assume x: "x \<in> {y. facet y (T - {t})}" 
-          hence f: "facet x (T - {t})" by simp
-          show "x \<in> {y. facet y T}" apply (rule) using f unfolding facet_def
-          proof(rule) try
-            apply auto
-            apply auto[1] 
-            apply auto[1]
-            apply auto[1] try
-        sorry*)
+      show "card (T - {t}) < card T"
+        by (meson card_Diff1_less less.prems(2) tinT)
     qed
     ultimately show "K \<in> collapsable"
       unfolding collapsable_def using collapses_comp by auto
@@ -1649,23 +1635,11 @@ proof -
   qed
 qed
 
-(*TODO: Remove, leave only the definition of collapse as reflexive transitive closure,
-see above.*)
-
-(*definition collapse :: "nat set set \<Rightarrow> nat set \<Rightarrow> nat set set"
-  where "collapse K x = K - {x, free_coface x K}"
-
-lemma "collapse {{1},{2},{1,2}} {1} = {{2}}"
-  unfolding collapse_def
-  unfolding f1 by fastforce
-
-lemma "collapse {{1},{2},{1,2}} {2} = {{1}}"
-  unfolding collapse_def
-  unfolding f2 by fastforce
-
-lemma "collapse {{1,2},{2,3},{1},{2},{3}} {3} = {{1,2},{1},{2}}"
-  unfolding collapse_def
-  unfolding f3 by fastforce*)
+lemma
+  assumes f: "finite V" and v: "v \<in> V" and KV: "K \<subseteq> powerset V" and Tne: "T \<noteq> {}"
+    and T: "T \<subseteq> powerset (V - {v})" and cs: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}" 
+  shows "(K, {{v}, {}}) \<in> collapses"
+  sorry
 
 proposition facet_join:
   assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
@@ -1708,288 +1682,6 @@ lemma card_collapse_l:
   using f x
   by (metis Diff_subset card_seteq linorder_not_less subset_Diff_insert)
 
-function collapse_to :: "nat set set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where
-  "finite K \<Longrightarrow> card K < card K' \<Longrightarrow> collapse_to K K' = False"
-  | "finite K \<Longrightarrow> card K = card K' \<Longrightarrow> collapse_to K K' = (K = K')"
-  | "finite K \<Longrightarrow> card K = card K' + 1 \<Longrightarrow> collapse_to K K' = False"
-  | "finite K \<Longrightarrow> card K = card K' + 2 \<Longrightarrow> collapse_to K K' =
-      (\<exists>x\<in>K. free_face x K \<and> (K' = K - {x, free_coface x K}))"
-  | "finite K \<Longrightarrow> card K > card K' + 2 \<Longrightarrow> collapse_to K K' = 
-      (\<exists>x\<in>K. free_face x K \<and> collapse_to (K - {x, free_coface x K}) K')"
-  | "\<not> finite K \<Longrightarrow> collapse_to K K' = False"
-  by (auto) (metis Suc_lessI linorder_neqE_nat)
-termination proof (relation "Wellfounded.measure (\<lambda>(K,K'). card K)", simp_all add: card_collapse_l)
-qed
-
-lemma collapse_to_card:
-  assumes c: "collapse_to K K'"
-  shows "card K = card K' \<or> card K = card K' + 2 \<or> card K > card K' + 2"
-proof (cases "finite K")
-  case True note f = True
-  show ?thesis
-  proof (cases "card K < card K'")
-    case True
-    show ?thesis using collapse_to.simps (1) [OF f True] c by simp
-  next
-    case False note nl = False
-    show ?thesis
-    proof (cases "card K = card K'")
-      case True
-      thus ?thesis by simp
-    next
-      case False
-      show ?thesis
-      proof (cases "card K = card K' + 1")
-        case True show ?thesis using collapse_to.simps (3) [OF f True] c by simp  
-      next
-        case False note np1 = False
-        show ?thesis using nl np1 by auto
-      qed
-    qed
-  qed
-  next
-  case False
-  show ?thesis using collapse_to.simps (6) [OF False, of K'] c by auto
-qed
-
-lemma assumes c: "collapse_to K K'" shows "K' \<subseteq> K"
-proof (cases "finite K")
-  case False
-  have False using c using collapse_to.simps (6) [OF False] by simp
-  thus ?thesis by (rule ccontr)
-next
-  case True
-  note f = True
-  show ?thesis
-  proof (cases "card K < card K'")
-    case True have False using collapse_to.simps (1) [OF f True] c by fast
-    thus ?thesis by (rule ccontr)
-  next
-    case False note nl = False
-    show ?thesis
-    proof (cases "card K = card K'")
-      case True from collapse_to.simps (2) [OF f True] c show ?thesis by simp
-    next
-      case False note ne = False
-      show ?thesis
-      proof (cases "card K = card K' + 1")
-        case True
-        have False using collapse_to.simps (3) [OF f True] c by fast
-        thus ?thesis by (rule ccontr)
-      next
-        case False note np1 = False
-        show ?thesis
-        proof (cases "card K = card K' + 2")
-          case True
-          show ?thesis using collapse_to.simps (4) [OF f True] c by auto
-        next
-          case False note np2 = False
-          have ck :"card K' + 2 < card K" using np2 np1 nl ne by simp
-          show ?thesis
-            using c f unfolding collapse_to.simps (5) [OF f ck]
-          proof (induct "card K" arbitrary: K rule: less_induct)
-            case less
-            from less.prems obtain x where x: "x \<in> K"
-              and ff: "free_face x K" and ct: "collapse_to (K - {x, free_coface x K}) K'" 
-              by auto
-            note collapse_to_cases = collapse_to_card [OF ct]
-            have "K' \<subseteq> K - {x, free_coface x K}"
-            proof (cases "card (K - {x, free_coface x K}) = card K'")
-              case True
-              show ?thesis using ct collapse_to.simps (2) [OF _ True] by force
-            next
-              case False note cne = False
-              show ?thesis
-              proof (cases "card (K - {x, free_coface x K}) = card K' + 2")
-                case True
-                show ?thesis using collapse_to.simps (4) [OF _ True] ct by force
-              next
-                case False hence ck': "card K' + 2 < card (K - {x, free_coface x K})" 
-                  using cne collapse_to_cases by simp
-                show ?thesis
-                proof (rule less.hyps [of "K - {x, free_coface x K}"])
-                  show "card (K - {x, free_coface x K}) < card K"
-                    using x card_collapse_l less.prems(2) by blast
-                  show "finite (K - {x, free_coface x K})" using less.prems(2) by simp
-                  show "\<exists>xa\<in>K - {x, free_coface x K}. free_face xa (K - {x, free_coface x K})
-                  \<and> collapse_to (K - {x, free_coface x K} 
-                    - {xa, free_coface xa (K - {x, free_coface x K})}) K'"
-                    using collapse_to.simps (5) [OF _ ck'] ct by force
-              qed
-            qed
-          qed
-          thus "K' \<subseteq> K" by auto
-        qed
-      qed
-    qed
-  qed
-qed
-
-function collapse_to :: "nat set set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where
-    "finite K \<Longrightarrow> K = K' \<Longrightarrow> collapse_to K K' = True"
-  | "finite K \<Longrightarrow> K \<noteq> K' \<Longrightarrow> collapse_to K K' = 
-      (\<exists>x\<in>K. free_face x K \<and> (K' = K - {x, free_coface x K} 
-                              \<or> collapse_to (K - {x, free_coface x K}) K'))"
-  | "\<not> finite K \<Longrightarrow> collapse_to K K' = False"
-  by (auto)+
-termination proof (relation "Wellfounded.measure (\<lambda>(K,K'). card K)", simp_all)
-  fix K :: "nat set set" and K' and x::"nat set"
-  assume f: "finite K" and "K \<noteq> K'" and x: "x \<in> K"
-  show "card (K - {x, free_coface x K}) < card K" using f x
-    by (metis Diff_iff Diff_subset card_seteq insertI1 linorder_not_le)
-qed
-
-thm collapse_to.induct
-
-lemma assumes c: "collapse_to K K'" 
-  shows "K' \<subseteq> K"
-proof (cases "finite K")
-  case False
-  have False using c using collapse_to.simps (3) [OF False] by simp
-  thus ?thesis by (rule ccontr)
-next
-  case True
-  note f = True
-  show ?thesis
-  proof (cases "K = K'")
-    case True
-    show ?thesis using True by fast
-  next
-    case False
-    obtain x where x: "x \<in> K" and free: "free_face x K"
-        and cases: "(K' = K - {x, free_coface x K} \<or> collapse_to (K - {x, free_coface x K}) K')"
-      using c unfolding collapse_to.simps (2) [OF f False] by auto
-    show ?thesis
-    proof (cases "K' = K - {x, free_coface x K}")
-      case True
-      show ?thesis using True by simp
-    next
-      case False
-      with cases have c: "collapse_to (K - {x, free_coface x K}) K'" by simp
-      show ?thesis
-        using free f x c proof (induct "card K" arbitrary: K K' x rule: less_induct)
-        case less
-        have "K' \<subseteq> (K - {x, free_coface x K})"
-        proof (rule less.hyps)
-          show "card (K - {x, free_coface x K}) < card K" using less.prems (1,2,3)
-            by (metis DiffE Diff_subset card_seteq insertI1 linorder_not_less)
-          show "finite (K - {x, free_coface x K})" using less.prems (1) by simp
-          fix y
-          show "y \<in> K - {x, free_coface x K}"
-          proof (cases "K = {x, free_coface x K}")
-            case False
-            hence "K - {x, free_coface x K} \<noteq> {}" 
-              using less.prems apply auto sorry
-            thus ?thesis
-              by (meson \<open>card (K - {x, free_coface x K}) < card K\<close> \<open>finite (K - {x, free_coface x K})\<close> equals0I insert_subset less.hyps)
-
-          using "1.hyps" (1)
-
-          using "1.hyps" (1)
-        then show ?case sorry
-      qed
-        case 0 hence "K = {}" by simp
-        with "0.prems" (3) have False unfolding free_face_def by auto
-        thus ?case by (rule ccontr)
-      next
-        case (Suc n)
-    
-
-proposition collapse_to_compose:
-  assumes f: "finite K" and c: "collapse_to K K'"
-    and f': "finite K'" and c': "collapse_to K' K''"
-  shows "collapse_to K K''"
-proof (cases "K' = K''")
-  case True
-  show ?thesis using c c' unfolding True by simp
-next
-  case False
-  show ?thesis
-
-definition collapsable :: "nat set set \<Rightarrow> bool"
-  where "collapsable K = (\<exists>x::nat. collapse_to K {{x}})"
-
-lemma "collapsable {{2,3},{2},{3}}"
-proof -
-have f2: "finite {{2,3},{2},{3}}" by simp
-  have neq2: "{{2,3},{2},{3}} \<noteq> {{3::nat}}" by simp
-  have second_step: "collapse_to {{2, 3},{2},{3}} {{3}}"
-  proof (unfold collapse_to.simps (2) [OF f2 neq2], intro bexI [of _ "{2}"], rule conjI)
-    have fc: "free_coface {2} {{2, 3},{2},{3}} = {2,3}"
-      by (unfold free_coface_def face_def, rule theI2 [of _ "{2,3}"], fastforce)
-   (simp add: psubset_insert_iff)+
-    show "free_face {2} {{2,3},{2},{3}}"
-      apply (unfold free_face_def face_def, rule ex1I [of _ "{2,3}"])
-       apply (rule conjI, simp, rule conjI, fastforce) apply auto[1]
-      by (simp add: psubset_insert_iff)
-    show "{{3}} =
-    {{2,3},{2},{3}} - {{2},free_coface {2} {{2, 3},{2},{3}}} \<or>
-    collapse_to
-     ({{2, 3},{2},{3}} - {{2},free_coface {2} {{2, 3},{2},{3}}})
-     {{3}}" unfolding fc by fastforce
-    show "{2} \<in> {{2, 3},{2},{3}}" by simp
-  qed
-  thus ?thesis unfolding collapsable_def by (intro exI [of _ "3"])
-qed
-
-
-lemma "collapsable {{1,2},{2,3},{1},{2},{3}}"
-proof -
-  have f1: "finite {{1,2},{2,3},{1},{2},{3}}" by simp
-  have neq1: "{{1,2},{2,3},{1},{2},{3}} \<noteq> {{2,3},{2},{3::nat}}"
-    by (smt (verit) Diff_insert_absorb Suc_eq_numeral insert_absorb insert_commute numeral_2_eq_2 numeral_eq_one_iff one_neq_zero pred_numeral_simps(1) semiring_norm(86) singleton_insert_inj_eq')
-  have first_step: "collapse_to {{1,2},{2,3},{1},{2},{3}} {{2,3},{2},{3}}"
-  proof (unfold collapse_to.simps (2) [OF f1 neq1], intro bexI [of _ "{1}"], rule conjI)
-    have fc: "free_coface {1} {{1, 2}, {2, 3}, {1}, {2}, {3}} = {1,2}"
-      by (unfold free_coface_def face_def, rule theI2 [of _ "{1,2}"], fastforce)
-   (simp add: psubset_insert_iff)+
-    show "free_face {1} {{1, 2}, {2, 3}, {1}, {2}, {3}}"
-      apply (unfold free_face_def face_def, rule ex1I [of _ "{1,2}"])
-       apply (rule conjI, simp, rule conjI, fastforce) apply auto[1]
-      by (simp add: psubset_insert_iff)
-    show "{{2, 3}, {2}, {3}} =
-    {{1, 2}, {2, 3}, {1}, {2}, {3}} - {{1}, free_coface {1} {{1, 2}, {2, 3}, {1}, {2}, {3}}} \<or>
-    collapse_to
-     ({{1, 2}, {2, 3}, {1}, {2}, {3}} - {{1}, free_coface {1} {{1, 2}, {2, 3}, {1}, {2}, {3}}})
-     {{2, 3}, {2}, {3}}" unfolding fc by fastforce
-    show "{1} \<in> {{1, 2}, {2, 3}, {1}, {2}, {3}}" by simp
-  qed
-  have f2: "finite {{2,3},{2},{3}}" by simp
-  have neq2: "{{2,3},{2},{3}} \<noteq> {{3::nat}}" by simp
-  have second_step: "collapse_to {{2, 3},{2},{3}} {{3}}"
-  proof (unfold collapse_to.simps (2) [OF f2 neq2], intro bexI [of _ "{2}"], rule conjI)
-    have fc: "free_coface {2} {{2, 3},{2},{3}} = {2,3}"
-      by (unfold free_coface_def face_def, rule theI2 [of _ "{2,3}"], fastforce)
-   (simp add: psubset_insert_iff)+
-    show "free_face {2} {{2,3},{2},{3}}"
-      apply (unfold free_face_def face_def, rule ex1I [of _ "{2,3}"])
-       apply (rule conjI, simp, rule conjI, fastforce) apply auto[1]
-      by (simp add: psubset_insert_iff)
-    show "{{3}} =
-    {{2,3},{2},{3}} - {{2},free_coface {2} {{2, 3},{2},{3}}} \<or>
-    collapse_to
-     ({{2, 3},{2},{3}} - {{2},free_coface {2} {{2, 3},{2},{3}}})
-     {{3}}" unfolding fc by fastforce
-    show "{2} \<in> {{2, 3},{2},{3}}" by simp
-  qed
-  show ?thesis
-    unfolding collapsable_def
-    apply (rule exI [of _ "3"])
-    using collapse_to.simps (2) [OF f1 neq1]
-    using collapse_to.simps (2) [OF f2 neq2]
-    using first_step second_step try
-    unfolding collapsable_def
-  apply (rule exI [of _ 3])
-  using collapse_to.simps (2) [of "{{1,2},{2,3},{1},{2},{3}}" "{{3}}"]
-  unfolding f3 by fastforce
-
-lemma "collapse {{1,2},{2,3},{1},{2},{3}} {3} = {{1,2},{1},{2}}"
-  unfolding collapse_def
-  unfolding f3 by fastforce
-
-
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
 
 function zero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
@@ -1998,7 +1690,6 @@ function zero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bo
   | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> zero_collapsible V K = True"
   | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> zero_collapsible V K = True"
   | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> zero_collapsible V K = False"
-  (*This can be proven from the definition: | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> nonevasive V K = True"*)
   | "2 \<le> card V \<Longrightarrow> zero_collapsible V K =
     (\<exists>x\<in>V. cone (V - {x}) (link_ext x V K) \<and> zero_collapsible (V - {x}) (cost x V K))"
   | "\<not> finite V \<Longrightarrow> zero_collapsible V K = False"
@@ -2062,98 +1753,6 @@ termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
     using c  x by simp
 qed
 
-(*function zero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where
-  "V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> zero_collapsible V K = True"
-  | "V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> zero_collapsible V K = False"
-  | "V = {x} \<Longrightarrow> K = {} \<Longrightarrow> zero_collapsible V K = True"
-  | "V = {x} \<Longrightarrow> K = {{},{x}} \<Longrightarrow> zero_collapsible V K = True"
-  | "V = {x} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{},{x}} \<Longrightarrow> zero_collapsible V K = False"
-  | "2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> zero_collapsible V K = True"
-  | "2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> zero_collapsible V K =
-    (\<exists>x\<in>V. cone (V - {x}) (link_ext x V K) \<and> zero_collapsible (V - {x}) (cost x V K))"
-  | "\<not> finite V \<Longrightarrow> zero_collapsible V K = False"
-  unfolding link_ext_def cost_def
-proof -
-  fix P :: "bool" and x :: "(nat set \<times> nat set set)"
-  assume ee: "(\<And>V K. V = {} \<Longrightarrow> K = {{}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and ene: "(\<And>V K. V = {} \<Longrightarrow> K \<noteq> {{}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)" 
-      and se: "(\<And>V xa K. V = {xa} \<Longrightarrow> K = {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and sc: "(\<And>V xa K. V = {xa} \<Longrightarrow> K = {{}, {xa}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)" 
-      and sn: "(\<And>V xa K. V = {xa} \<Longrightarrow> K \<noteq> {} \<Longrightarrow> K \<noteq> {{}, {xa}} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and e2: "(\<And>V K. 2 \<le> card V \<Longrightarrow> K = {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and en2: "(\<And>V K. 2 \<le> card V \<Longrightarrow> K \<noteq> {} \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-      and inf: "(\<And>V K. infinite V \<Longrightarrow> x = (V, K) \<Longrightarrow> P)"
-  show P
-  proof (cases "finite (fst x)")
-    case False
-    show P
-      by (rule inf [of "fst x" "snd x"], intro False) auto
-  next
-    case True note finitex = True
-    show P
-    proof (cases "fst x = {}")
-      case True note ve = True
-      show P
-      proof (cases "snd x = {{}}")
-        case True
-        show P
-          by (rule ee [of "fst x" "snd x"], intro ve, intro True) simp
-      next
-        case False
-        show P
-          by (rule ene [of "fst x" "snd x"], intro ve, intro False) simp
-      qed
-    next
-      case False note vne = False
-      show P
-      proof (cases "card (fst x) = 1")
-        case True then obtain xa where f: "fst x = {xa}" by (rule card_1_singletonE)
-        show P
-        proof (cases "snd x = {}")
-          case True
-          show P
-            by (rule se [of "fst x" xa "snd x"], intro f, intro True) simp
-          next
-          case False note kne = False
-          show P
-          proof (cases "snd x = {{},{xa}}")
-            case True
-            show P
-              by (rule sc [of "fst x" xa "snd x"], intro f, intro True) simp
-          next
-            case False
-            show P
-              by (rule sn [of "fst x" xa "snd x"], intro f, intro kne, intro False) simp
-          qed
-        qed
-      next
-        case False
-        have card2: "2 \<le> card (fst x)" using finitex vne False
-          by (metis One_nat_def Suc_1 card_gt_0_iff le_SucE not_less not_less_eq_eq)
-        show P
-        proof (cases "snd x = {}")
-          case True
-          show P
-            by (rule e2 [of "fst x" "snd x"], intro card2, intro True) simp
-        next
-          case False
-          show P
-            by (rule en2 [of "fst x" "snd x"], intro card2, intro False) simp
-        qed
-      qed
-    qed
-  qed
-qed (auto)
-termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
-  show "wf (measure (\<lambda>(V, K). card V))" by simp
-  fix V :: "nat set" and K :: "nat set set" and x :: "nat"
-  assume c: "2 \<le> card V" and k: "K \<noteq> {}" and x: "x \<in> V"
-  show "((V - {x}, cost x V K), V, K) \<in> measure (\<lambda>(V, K). card V)"
-    using c k x by simp
-qed
-*)
-
 lemma shows "zero_collapsible {x} {}" by simp
 
 lemma shows "\<not> zero_collapsible {x} {{}}" by simp
@@ -2163,7 +1762,7 @@ lemma "link_ext x {x} {{}, {x}} = {{}}"
 
 lemma shows "zero_collapsible {x} {{}, {x}}" by simp
 
-lemma v_ge_2: assumes two: "2 \<le> card V" shows "zero_collapsible V {}"
+(*lemma v_ge_2: assumes two: "2 \<le> card V" shows "zero_collapsible V {}"
   using two proof (induct "card V" arbitrary: V)
   case 0
   fix V :: "nat set"
@@ -2188,16 +1787,15 @@ next
     show ?thesis unfolding V using zero_collapsible.simps (2) by simp
   qed
   show "zero_collapsible V {}"
-    unfolding zero_collapsible.simps (5) [OF two, of "{}"]
+    unfolding zero_collapsible.simps (5) [OF two, of "{}"] try
     using two link_ext_empty [of _ V] cone_empty [of V] n x
     by (metis cone_empty cost_empty zero_collapsible.simps(1))
-qed
+qed*)
 
 text\<open>There is always a valuation for which zero collapsible sets
  are not evasive.\<close>
 
-theorem
-  zero_collapsible_implies_not_evaders:
+theorem zero_collapsible_implies_not_evaders:
   assumes k: "K \<subseteq> powerset X"
     and x: "X \<noteq> {}" and f: "finite X" and cc: "zero_collapsible X K"
   shows "\<exists>l. (X, l) \<in> sorted_variables \<and> evaluation l K \<in> not_evaders"
