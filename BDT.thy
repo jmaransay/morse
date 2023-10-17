@@ -888,8 +888,12 @@ section\<open>A set of sets being a cone over a given vertex\<close>
 lemma conjI3: assumes "A" and "B" and "C" shows "A \<and> B \<and> C"
   using assms by simp
 
-definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+(*definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
   where "cone V K = ((\<exists>v\<in>V. \<exists>B. B \<noteq> {} \<and> B \<subseteq> powerset (V - {v})  
+                      \<and> K = B \<union> {s. \<exists>b\<in>B. s = insert v b}))"*)
+
+definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
+  where "cone V K = ((\<exists>v\<in>V. \<exists>B. {} \<in> B \<and> B \<subseteq> powerset (V - {v})  
                       \<and> K = B \<union> {s. \<exists>b\<in>B. s = insert v b}))"
 
 text\<open>A @{term cone} is a @{term join}, for simplicial complexes.\<close>
@@ -923,8 +927,14 @@ lemma singleton_cone: assumes v: "v \<in> V" shows "cone V {{v}, {}}"
 
 text\<open>The trivial simplicial complex is a cone over a non-empty vertex set.\<close>
 
-lemma cone_intro [intro]:
+(*lemma cone_intro [intro]:
   assumes a: "(\<exists>x\<in>X. \<exists>T. T \<noteq> {} \<and> T \<subseteq> powerset (X - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t})"
+  shows "cone X K"
+  unfolding cone_def
+  using assms by blast*)
+
+lemma cone_intro [intro]:
+  assumes a: "(\<exists>x\<in>X. \<exists>T. {} \<in> T \<and> T \<subseteq> powerset (X - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t})"
   shows "cone X K"
   unfolding cone_def
   using assms by blast
@@ -966,7 +976,7 @@ proof
     unfolding cost_def link_ext_def powerset_def by auto
 qed
 
-lemma cost_eq_link_ext_impl_cone:
+(*lemma cost_eq_link_ext_impl_cone:
   assumes c: "cost x V K = link_ext x V K"
     and x: "x \<in> V" and p: "K \<subseteq> powerset V" and p1: "cost x V K \<noteq> {}"
   shows "cone V K"
@@ -974,6 +984,48 @@ proof (unfold cone_def)
   show "\<exists>x\<in>V. \<exists>T. T \<noteq> {} \<and> T \<subseteq> powerset (V - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
   proof (rule bexI [OF _ x], rule exI [of _ "cost x V K"], rule conjI3)
     show "cost x V K \<noteq> {}" using p1 .
+    show "cost x V K \<subseteq> powerset (V - {x})"
+      using p unfolding cost_def powerset_def by auto
+    show "K = cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
+    proof
+      show "cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t} \<subseteq> K"
+        using x p
+        using c
+        unfolding cost_def powerset_def link_ext_def by auto
+      show "K \<subseteq> cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}" 
+      proof (subst c, unfold cost_def link_ext_def powerset_def, rule)
+        fix xa
+        assume xa: "xa \<in> K"
+        show "xa \<in> {s \<in> Pow V. x \<notin> s \<and> insert x s \<in> K} \<union>
+                {s. \<exists>t\<in>{s \<in> Pow (V - {x}). s \<in> K}. s = insert x t}"
+        proof (cases "x \<in> xa")
+          case False
+          then show ?thesis using xa c p 
+            unfolding cost_def link_ext_def powerset_def by blast
+        next
+          case True
+          have "xa - {x} \<in> {s \<in> Pow V. x \<notin> s \<and> insert x s \<in> K}"
+            using xa p True unfolding powerset_def
+            using mk_disjoint_insert by fastforce
+          hence "xa - {x} \<in> {s \<in> Pow (V - {x}). s \<in> K}"
+            using c unfolding cost_def link_ext_def powerset_def by simp
+          hence "xa \<in> {s. \<exists>t\<in>{s \<in> Pow (V - {x}). s \<in> K}. s = insert x t}"
+            using True by auto
+          thus ?thesis by fast
+        qed
+      qed
+    qed
+  qed
+qed*)
+
+lemma cost_eq_link_ext_impl_cone:
+  assumes c: "cost x V K = link_ext x V K" and p1: "{} \<in> cost x V K"
+    and x: "x \<in> V" and p: "K \<subseteq> powerset V" (*and p1: "cost x V K \<noteq> {}"*)
+  shows "cone V K"
+proof (unfold cone_def)
+  show "\<exists>x\<in>V. \<exists>T. {} \<in> T \<and> T \<subseteq> powerset (V - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
+  proof (rule bexI [OF _ x], rule exI [of _ "cost x V K"], rule conjI3)
+    show "{} \<in> cost x V K" using p1 .
     show "cost x V K \<subseteq> powerset (V - {x})"
       using p unfolding cost_def powerset_def by auto
     show "K = cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
@@ -1182,7 +1234,8 @@ proof
   qed
 qed
 
-lemma evaluation_cone_not_evaders:
+
+(*lemma evaluation_cone_not_evaders:
   assumes k: "K \<subseteq> powerset V"
     and c: "cone V K" and X: "V \<noteq> {}" and f: "finite V" and xl: "(V, l) \<in> sorted_variables"
   shows "evaluation l K \<in> not_evaders"
@@ -1297,7 +1350,150 @@ lemma evaluation_cone_not_evaders:
       qed
     qed
   qed
+qed*)
+
+lemma empty_set_in_cost: assumes s: "{} \<in> K" 
+  shows "{} \<in> cost v V K" using s unfolding cost_def powerset_def by simp
+
+lemma singleton_in_link_ext: assumes s: "{v} \<in> K" shows "{} \<in> link_ext v V K" 
+  using s unfolding link_ext_def powerset_def by simp
+
+lemma empty_set_in_link_ext:
+  assumes c: "cone V K" shows "\<exists>v. {v} \<in> K"
+proof -
+  from c obtain v B where "v \<in> V" and eB: "{} \<in> B" and "B \<subseteq> powerset (V - {v})" 
+    and KB: "K = B \<union> {s. \<exists>b\<in>B. s = insert v b}" unfolding cone_def by auto
+  show ?thesis apply (rule exI [of _ v]) using eB KB by auto
 qed
+
+lemma empty_set_in_link_ext:
+  assumes c: "cone V K" and kt: "K = link_ext v V K \<union> {s. \<exists>b\<in>link_ext v V K. s = insert v b}"
+  shows "{} \<in> link_ext v V K"
+proof -
+  from c have "{} \<in> K" unfolding cone_def by auto
+  thus ?thesis using kt by auto
+qed
+
+lemma evaluation_cone_not_evaders:
+  assumes k: "K \<subseteq> powerset V"
+    and c: "cone V K" and X: "V \<noteq> {}" and f: "finite V" and xl: "(V, l) \<in> sorted_variables"
+  shows "evaluation l K \<in> not_evaders"
+  proof -
+  from c and X obtain x :: nat and T :: "nat set set"
+    where x: "x \<in> V" and tne: "T \<noteq> {}" and cs: "T \<subseteq> powerset (V - {x})" 
+      and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
+    unfolding cone_def by auto
+  show ?thesis
+  using X f xl c proof (induct "card V" arbitrary: V l K)
+    case 0 with f have x: "V = {}" by simp
+    hence False using "0.prems" (1) by blast
+    thus ?case by (rule ccontr)
+  next
+    case (Suc n)
+    obtain x :: nat and T :: "nat set set"
+      where x: "x \<in> V" and tne: "T \<noteq> {}" and cs: "T \<subseteq> powerset (V - {x})"
+        and kt: "K = T \<union> {s. \<exists>k\<in>T. s = insert x k}"
+      using Suc.prems (1,4) unfolding cone_def by auto
+    obtain y l' where l: "l = y # l'" and y: "y \<in> V"
+      using Suc.prems Suc.hyps (2) sorted_variables_length_coherent [OF Suc.prems (3)]
+      by (metis insert_iff sorted_variables.cases)
+    show ?case
+      unfolding l
+      unfolding evaluation.simps (3)
+      unfolding l [symmetric] 
+      unfolding sorted_variables_coherent [OF Suc.prems (3), symmetric]
+    proof (cases "x = y")
+      case True
+      have cl_eq: "cost x V K = link_ext x V K"
+        by (rule cone_impl_cost_eq_link_ext [of x V T], rule x, rule cs, rule kt)
+      show "evaluation l' (link_ext y V K) @ evaluation l' (cost y V K) \<in> not_evaders"
+        using True using cl_eq unfolding l [symmetric]
+        using not_evaders.intros(1) by presburger
+    next
+      case False note xney = False
+      have crw: "cost y V K = cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}"
+      proof (rule cost_cone_eq)
+        show "x \<in> V" using x .
+        show "x \<noteq> y" using False .
+        show "T \<subseteq> powerset (V - {x})" using cs .
+        show "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" using kt .
+      qed
+      have lrw: "link_ext y V K = link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}"
+      proof (rule link_ext_cone_eq)
+        show "x \<in> V" using x .
+        show "x \<noteq> y" using False .
+        show "T \<subseteq> powerset (V - {x})" using cs .
+        show "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}" using kt .
+      qed
+      have xy_ne: "V - {y} \<noteq> {}" using x False by auto
+      have f_xy: "finite (V - {y})" using Suc.prems (2) by simp
+      have xyl'_sv:  "(V - {y}, l') \<in> sorted_variables"
+        using Suc.prems (3,1) using l y
+        by (metis Diff_insert_absorb list.inject sorted_variables.cases)
+      have l'_ne: "l' \<noteq> []"
+        using sorted_variables_coherent xy_ne xyl'_sv by fastforce
+      show "evaluation l' (link_ext y V K) @ evaluation l' (cost y V K) \<in> not_evaders"
+        unfolding crw lrw
+      proof (rule not_evaders.intros(2))
+        show "evaluation l' (link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}) \<in> not_evaders"
+        proof (cases "link_ext y (V - {x}) T = {}")
+          case True
+          show ?thesis unfolding True using evaluation.simps l'_ne
+            by (simp add: empty_set_not_evader)
+        next
+          case False
+          show ?thesis
+          proof (rule Suc.hyps (1) [of "V - {y}"])
+            show "n = card (V - {y})" using Suc.hyps (2) y x False by simp
+            show "V - {y} \<noteq> {}" using xy_ne .
+            show "finite (V - {y})" using f_xy .
+            show "(V - {y}, l') \<in> sorted_variables" using xyl'_sv .
+            show "cone (V - {y}) (link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t})"
+            proof (rule cone_intro, intro bexI [of _ x] exI [of _ "link_ext y (V - {x}) T"], rule conjI3)
+              show "{} \<in> link_ext y (V - {x}) T"
+                apply (rule empty_set_in_link_ext [of _ ])
+                using xney y apply blast
+                using cs link_ext_closed apply blast try
+              show "link_ext y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
+                unfolding link_ext_def powerset_def by auto
+              show "link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t} =
+                    link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}" ..
+              show "x \<in> V - {y}" using x xney by simp
+            qed
+          qed
+        qed
+        show "evaluation l' (cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}) \<in> not_evaders"
+        proof (cases "cost y (V - {x}) T = {}")
+          case True
+          show ?thesis unfolding True using evaluation.simps l'_ne
+            by (simp add: empty_set_not_evader)
+        next
+          case False
+          show ?thesis
+          proof (rule Suc.hyps (1) [of "V - {y}"])
+            show "n = card (V - {y})" using Suc.hyps (2) y x False by simp
+            show "V - {y} \<noteq> {}" using xy_ne .
+            show "finite (V - {y})" using f_xy .
+            show "(V - {y}, l') \<in> sorted_variables" using xyl'_sv .
+            show "cone (V - {y}) (cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t})"
+            proof (rule cone_intro, intro bexI [of _ x] exI [of _ "cost y (V - {x}) T"], rule conjI3)
+              show "cost y (V - {x}) T \<noteq> {}" using False .
+              show "cost y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
+                unfolding cost_def powerset_def by auto
+              show "cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t} =
+                    cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}" ..
+              show "x \<in> V - {y}" using x xney by simp
+            qed
+          qed
+        qed
+        show "length (evaluation l' (link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t})) =
+              length (evaluation l' (cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}))"
+          using length_evaluation_eq .
+      qed
+    qed
+  qed
+qed
+
 
 lemma "link x {x} {{}, {x}} = {{}}"
   unfolding link_def powerset_def by auto
