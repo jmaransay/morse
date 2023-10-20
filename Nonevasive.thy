@@ -1066,7 +1066,7 @@ proof -
      proof (cases "link_ext v (set (v # l)) K = {}")
        case True show ?thesis 
          unfolding True
-         using False cone_empty cone_non_evasive by blast
+         using False cone_not_empty cone_non_evasive by blast
      next
        case False
        show ?thesis
@@ -1085,7 +1085,7 @@ proof -
      proof (cases "cost v (set (v # l)) K = {}")
        case True show ?thesis 
          unfolding True
-         using False cone_empty cone_non_evasive by blast
+         using False cone_non_evasive cone_not_empty by blast
       next
        case False
        show ?thesis
