@@ -1575,10 +1575,9 @@ proof -
     show ?thesis
       using f fT v cs kt tp False proof (induct "card T" arbitrary: T K rule: less_induct)
       case less
-      obtain t where t: "facet t T" and tinT: "t \<in> T"
-        using less.prems (1,2,5,6,7) unfolding facet_def powerset_def
-        (*TODO: try to avoid smt?*)
-        by (smt (verit, best) Un_empty empty_Collect_eq empty_iff finite_has_maximal)
+      have tne: "T \<noteq> {}" using less.prems (5,7) by simp
+      then obtain t where t: "facet t T" and tinT: "t \<in> T"
+        unfolding facet_def using less.prems (2) by (meson finite_has_maximal)
       have vninT: "v \<notin> t" using tinT less.prems (6) unfolding powerset_def by auto
       have "insert v t \<in> K" using facet_in_K less.prems (5) t by auto
       have "t \<subset> insert v t"
@@ -1668,7 +1667,8 @@ text\<open>The following lemma proves that a cone that is not empty can be colla
   Note that we have to assume, in contrast to @{thm cone_collapsable}, that the complex
   @{term K} is @{thm pow_closed_def}.\<close>
 
-lemma assumes f: "finite V" and v: "v \<in> V" and KV: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}"
+lemma cone_collapses_to_peak:
+  assumes f: "finite V" and v: "v \<in> V" and KV: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}"
     and T: "T \<subseteq> powerset (V - {v})" and cs: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}"
     and pK: "pow_closed K"
   shows "(K, {{v}, {}}) \<in> collapses_rtrancl"
@@ -1679,11 +1679,9 @@ proof -
   show ?thesis
   using f fT v cs Kne T pK proof (induct "card T" arbitrary: T K rule: less_induct)
   case less
-  obtain t where t: "facet t T" and tinT: "t \<in> T"
-    unfolding facet_def
-    using less.prems (2,4,5)
-    (*TODO: try to remove smt?*)
-    by (smt (verit) Un_empty_left empty_Collect_eq empty_iff finite_has_maximal)
+  have tne: "T \<noteq> {}" using less.prems (2,4,5) by simp
+  then obtain t where t: "facet t T" and tinT: "t \<in> T"
+    using less.prems (2) unfolding facet_def by (meson finite_has_maximal)
   have vninT: "v \<notin> t" using tinT less.prems (6) unfolding powerset_def by auto
   have "insert v t \<in> K" using facet_in_K less.prems (4) t by auto
   have "t \<subset> insert v t"
@@ -1810,6 +1808,49 @@ lemma card_collapse_l:
   using f x
   by (metis Diff_subset card_seteq linorder_not_less subset_Diff_insert)
 
+lemma subset_collapses:
+  assumes f: "finite V" and v: "v \<notin> V" and K1V: "K1 \<subseteq> powerset V" and K2V: "K2 \<subseteq> powerset V"
+  and K2K1: "K2 \<subseteq> K1"
+    (*and Kne: "K \<noteq> {}"*)
+    (*and T: "T \<subseteq> powerset (V - {v})" and cs: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}"*)
+    and pK: "pow_closed K"
+  shows "(join_vertex v K1, join_vertex v K2) \<in> collapses_rtrancl"
+proof -
+  have fK1: "finite K1" and fK2: "finite K2" using f K1V K2V K2K1 unfolding powerset_def
+    by (simp add: finite_subset)+
+  show ?thesis
+  using f v K1V K2V K2K1 fK1 fK2 pK proof (induct "card (K1 - K2)" arbitrary: K1 rule: less_induct)
+  case less
+  show ?case
+  proof (cases "K1 = K2")
+    case True
+    show ?thesis unfolding True using collapses_rtrancl_def by blast
+  next
+    case False
+    hence "K2 \<subset> K1" using less.prems (5) by simp
+    have "finite (K1 - K2)" and "K1 - K2 \<noteq> {}" using fK2 less.prems (5,6) False by simp_all
+    then obtain t where t: "t \<in> K1 - K2" and ft: "facet t (K1 - K2)"
+      unfolding facet_def by (meson finite_has_maximal)
+    have "t \<in> join_vertex v K1" and ivt: "insert v t \<in> join_vertex v K1" 
+      using t unfolding join_vertex_def join_def by auto
+    have vnit: "v \<notin> t" and t_in_insert: "t \<subset> insert v t" 
+      using less.prems (2,3) t unfolding powerset_def by auto
+    have "insert v t = free_coface t (join_vertex v K1)"
+      unfolding free_coface_def
+    proof (rule the_equality [symmetric], intro conjI3)
+      show "insert v t \<in> join_vertex v K1" using ivt .
+      show "face t (insert v t)" 
+        using less.prems (2,3) t
+        unfolding face_def powerset_def by auto
+      show "\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = insert v t"
+        using less.prems(2) t_in_insert t ft vnit
+        unfolding join_vertex_def join_def face_def facet_def
+        try
+            show "\<And>b. b \<in> join_vertex v K1 \<and> face t b \<and> (\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+    have "t \<notin> join_vertex v K2" using t unfolding join_vertex_def join_def apply auto try
+    from ft obtain
+    have "(K1, K1 - {t, free_coface t K1}) \<in> collapses"
+    
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
 
 function zero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
