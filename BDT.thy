@@ -1808,9 +1808,11 @@ lemma card_collapse_l:
   using f x
   by (metis Diff_subset card_seteq linorder_not_less subset_Diff_insert)
 
+lemma foo: shows "join_vertex v {} = {{v}}" unfolding join_vertex_def join_def by auto
+
 lemma subset_collapses:
   assumes f: "finite V" and v: "v \<notin> V" and K1V: "K1 \<subseteq> powerset V" and K2V: "K2 \<subseteq> powerset V"
-  and K2K1: "K2 \<subseteq> K1" and pwK2: "closed_subset K2"
+  and K2K1: "K2 \<subseteq> K1" and pwK2: "closed_subset K2" and K2ne: "K2 \<noteq> {}"
     (*and Kne: "K \<noteq> {}"*)
     (*and T: "T \<subseteq> powerset (V - {v})" and cs: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}"*)
   shows "(join_vertex v K1, join_vertex v K2) \<in> collapses_rtrancl"
@@ -1818,7 +1820,7 @@ proof -
   have fK1: "finite K1" and fK2: "finite K2" using f K1V K2V K2K1 unfolding powerset_def
     by (simp add: finite_subset)+
   show ?thesis
-  using f v K1V K2V K2K1 fK1 fK2 pK proof (induct "card (K1 - K2)" arbitrary: K1 rule: less_induct)
+  using f v K1V K2V K2K1 fK1 fK2 K2ne proof (induct "card (K1 - K2)" arbitrary: K1 rule: less_induct)
   case less
   show ?case
   proof (cases "K1 = K2")
@@ -1826,54 +1828,121 @@ proof -
     show ?thesis unfolding True using collapses_rtrancl_def by blast
   next
     case False
-    hence "K2 \<subset> K1" using less.prems by simp
-    have "finite (K1 - K2)" and "K1 - K2 \<noteq> {}" using fK2 less.prems (5,6) False by simp_all
+    hence K2subsetK1: "K2 \<subset> K1" using less.prems by simp
+    have fK1K2: "finite (K1 - K2)" and K1K2ne: "K1 - K2 \<noteq> {}" using fK2 less.prems (5,6) False by simp_all
     then obtain t where t: "t \<in> K1 - K2" and ft: "facet t (K1 - K2)"
       unfolding facet_def by (meson finite_has_maximal)
-    have "facet t K1"
+    have tne: "t \<noteq> {}" using pwK2 t K1K2ne K2subsetK1 K2ne unfolding closed_subset_def by auto
+    have ftK1: "facet t K1"
     proof (unfold facet_def, intro conjI)
       show "t \<in> K1" using ft unfolding facet_def by simp
       show "\<forall>b\<in>K1. t \<subseteq> b \<longrightarrow> t = b"
       proof (rule, rule)
         fix b assume b: "b \<in> K1" and tb: "t \<subseteq> b" 
-        using pwK2 show "t = b" try
-          
-    have "t \<in> join_vertex v K1" and ivt: "insert v t \<in> join_vertex v K1" 
+        show "t = b" using tb pwK2 ft b
+          by (metis Diff_iff closed_subset_def facet_def)
+      qed
+    qed
+    have tinjoin: "t \<in> join_vertex v K1" and ivt: "insert v t \<in> join_vertex v K1" 
       using t unfolding join_vertex_def join_def by auto
-    have vnit: "v \<notin> t" and t_in_insert: "t \<subset> insert v t" 
+    have vnit: "v \<notin> t" and t_in_insert: "t \<subset> insert v t"
       using less.prems (2,3) t unfolding powerset_def by auto
-    have "insert v t = free_coface t (join_vertex v K1)"
-      unfolding free_coface_def
-    proof (rule the_equality [symmetric], intro conjI3)
-      show "insert v t \<in> join_vertex v K1" using ivt .
-      show "face t (insert v t)" 
+    have "face t (insert v t)"
         using less.prems (2,3) t
         unfolding face_def powerset_def by auto
-      show "\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = insert v t"
-      proof (rule, rule)
-        fix a1
-        assume a1_join: "a1 \<in> join_vertex v K1" and facet: "face t a1" 
-        show "a1 = insert v t"
-        proof (cases "a1 \<in> {{v}}")
+    have "insert v t \<in> (join_vertex v K1)" 
+      using facet_in_K [OF ftK1]
+      unfolding join_vertex_def join_def by auto
+    have "\<And>b. b \<in> join_vertex v K1 \<and> face t b \<and> (\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+      using \<open>face t (insert v t)\<close> ivt by blast
+    have "(\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = insert v t)"
+    proof (rule, rule)
+      fix a1
+      assume a1_join: "a1 \<in> join_vertex v K1" and facet: "face t a1" 
+      show "a1 = insert v t"
+      proof (cases "a1 \<in> {{v}}")
+        case True
+        (*The following case becomes a contradiction if we assume K2 \<noteq> {}:*)
+        hence "t = {}" using True vnit
+        by (metis \<open>face t a1\<close> empty_not_insert face_def insert_absorb insert_ident order_less_le singleton_insert_inj_eq)
+        thus ?thesis using True by simp
+      next
+        case False note tne = False
+        show ?thesis
+        proof (cases "a1 \<in> K1")
           case True
-          hence "t = {}" using True vnit
-            by (metis \<open>face t a1\<close> empty_not_insert face_def insert_absorb insert_ident order_less_le singleton_insert_inj_eq)
-          thus ?thesis using True by simp
+          show ?thesis 
+            using True vnit a1_join tne facet ft
+            unfolding join_vertex_def join_def facet_def
+            by (meson face_def facet_no_coface ftK1)
         next
-          case False note tne = False
-          show ?thesis
-          proof (cases "a1 \<in> K1")
-            case True
-            show ?thesis using True vnit a1_join tne facet ft
-              unfolding join_vertex_def join_def facet_def try
-          
-          using less.prems(2) t_in_insert t ft vnit
-        unfolding join_vertex_def join_def face_def facet_def
-       
-            show "\<And>b. b \<in> join_vertex v K1 \<and> face t b \<and> (\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
-    have "t \<notin> join_vertex v K2" using t unfolding join_vertex_def join_def apply auto try
-    from ft obtain
-    have "(K1, K1 - {t, free_coface t K1}) \<in> collapses"
+          case False with tne have "a1 \<in> {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>K1. w = s \<union> s'}"
+            using a1_join unfolding join_vertex_def join_def by simp
+          then obtain s' where s': "s' \<in> K1" and a1_insert: "a1 = insert v s'" by auto
+          thus ?thesis using vnit ftK1
+            by (metis face_def facet facet_no_coface order_less_le subset_insert)
+        qed
+      qed
+    qed
+    have free_face: "free_face t (join_vertex v K1)" 
+      unfolding free_face_def
+    proof (intro ex1I [of _ "insert v t"], rule conjI3)
+      show "insert v t \<in> join_vertex v K1" using \<open>insert v t \<in> join_vertex v K1\<close> .
+      show "face t (insert v t)" using \<open>t \<subset> insert v t\<close> unfolding face_def .
+      show "\<And>b. b \<in> (join_vertex v K1) \<and> face t b \<and> (\<forall>a1\<in>(join_vertex v K1). face t a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+        using \<open>\<And>b. b \<in> join_vertex v K1 \<and> face t b \<and> (\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t\<close> .
+      show "(\<forall>a1\<in>(join_vertex v K1). face t a1 \<longrightarrow> a1 = insert v t)"
+        using \<open>(\<forall>a1\<in>(join_vertex v K1). face t a1 \<longrightarrow> a1 = insert v t)\<close> .
+    qed
+    have free_coface: "insert v t = free_coface t (join_vertex v K1)"
+      unfolding free_coface_def
+    proof (rule the_equality [symmetric], intro conjI3)
+      show "insert v t \<in> join_vertex v K1" using \<open>insert v t \<in> join_vertex v K1\<close> .
+      show "face t (insert v t)" using \<open>t \<subset> insert v t\<close> unfolding face_def .
+      show "\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = insert v t"
+        using \<open>(\<forall>a1\<in>(join_vertex v K1). face t a1 \<longrightarrow> a1 = insert v t)\<close> .
+      show "\<And>b. b \<in> join_vertex v K1 \<and> face t b \<and> (\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+        using \<open>\<And>b. b \<in> join_vertex v K1 \<and> face t b \<and> (\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t\<close> .
+    qed
+    have "(join_vertex v K1, (join_vertex v K1) - {t, insert v t}) \<in> collapses"
+      unfolding free_coface
+      unfolding collapses_def
+      using \<open>free_face t (join_vertex v K1)\<close> \<open>insert v t = free_coface t (join_vertex v K1)\<close> t by auto
+    moreover have "join_vertex v K1 - {t, insert v t} = join_vertex v (K1 - {t})"
+    proof (cases "t = {}")
+      case False
+      show ?thesis
+      proof
+        show "join_vertex v K1 - {t, insert v t} \<subseteq> join_vertex v (K1 - {t})"
+          unfolding join_vertex_def join_def by auto
+        show "join_vertex v (K1 - {t}) \<subseteq> join_vertex v K1 - {t, insert v t}"
+          unfolding join_vertex_def join_def using vnit False t_in_insert 
+          apply auto
+          using facet_no_coface ftK1 t_in_insert apply auto[1]
+          by (metis facet_no_coface ftK1 insert_absorb insert_iff t_in_insert)
+      qed
+    next
+      case True
+      have False using True tne by simp
+      thus ?thesis by (rule ccontr)
+    qed
+    moreover have "(join_vertex v (K1 - {t}), join_vertex v K2) \<in> collapses_rtrancl"
+    proof (rule less.hyps)
+      show "card (K1 - {t} - K2) < card (K1 - K2)"
+        by (metis Diff_insert Diff_insert2 card_Diff1_less fK1K2 t)
+      show "finite V" using f .
+      show "v \<notin> V" using v .
+      show "K1 - {t} \<subseteq> powerset V" using less.prems(3) by auto
+      show "K2 \<subseteq> powerset V" using K2V .
+      show "K2 \<subseteq> K1 - {t}" using less.prems(5) t by force
+      show "finite (K1 - {t})" using less.prems(6) by blast
+      show "finite K2" using fK2 .
+      show "K2 \<noteq> {}" using K2ne .
+    qed
+    ultimately show ?thesis
+      using collapses_comp by presburger
+  qed
+qed
     
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
 
