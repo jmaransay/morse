@@ -128,20 +128,20 @@ text\<open>In the following we introduce a definition
   of being closed by the subset relation, 
   and simplicial complexes will not be required.\<close>
 
-definition pow_closed :: "'a set set \<Rightarrow> bool"
-  where "pow_closed S \<equiv> (\<forall>s\<in>S. \<forall>s'\<subseteq>s. s'\<in> S)"
+definition closed_subset :: "'a set set \<Rightarrow> bool"
+  where "closed_subset S \<equiv> (\<forall>s\<in>S. \<forall>s'\<subseteq>s. s'\<in> S)"
 
-value "pow_closed {{True, False},{True},{False},{}}"
+value "closed_subset {{True, False},{True},{False},{}}"
 
 lemma
-  assumes "pow_closed S" and "s \<in> S" and "s' \<subseteq> s"
+  assumes "closed_subset S" and "s \<in> S" and "s' \<subseteq> s"
   shows "s' \<in> S"
-  using assms(1,2,3) pow_closed_def by blast
+  using assms(1,2,3) closed_subset_def by blast
 
 inductive_set cc_s :: "(nat set \<times> nat set set) set"
   where "({}, {}) \<in> cc_s"
   | "(A, {}) \<in> cc_s"
-  | "A \<noteq> {} \<Longrightarrow> K \<subseteq> powerset A \<Longrightarrow> pow_closed K \<Longrightarrow> (A, K) \<in> cc_s"
+  | "A \<noteq> {} \<Longrightarrow> K \<subseteq> powerset A \<Longrightarrow> closed_subset K \<Longrightarrow> (A, K) \<in> cc_s"
 
 lemma cc_s_simplices:
   assumes cc_s: "(V, K) \<in> cc_s" and x: "x \<in> K"
@@ -162,7 +162,7 @@ next
     then show ?thesis 
       using V False  
       using cc_s.simps [of V K]
-      unfolding powerset_def pow_closed_def
+      unfolding powerset_def closed_subset_def
       using cc_s x by blast
   qed
 qed
@@ -194,9 +194,9 @@ next
   next
     case False
     from cc_s.simps [of A K]
-    have "pow_closed K" using False A
+    have "closed_subset K" using False A
       using assms(2) by presburger
-    then show ?thesis using assms (1,3) unfolding pow_closed_def by auto
+    then show ?thesis using assms (1,3) unfolding closed_subset_def by auto
   qed
 qed
 
@@ -209,17 +209,17 @@ lemma "({0,1,2}, {}) \<in> cc_s"
 lemma "({0,1,2}, {{1},{}}) \<in> cc_s" 
   by (rule cc_s.intros(3) [of "{0,1,2}" "{{1},{}}"], 
       simp, unfold powerset_def, auto,
-      unfold pow_closed_def, auto)
+      unfold closed_subset_def, auto)
 
 lemma "({0,1,2}, {{1},{2},{}}) \<in> cc_s"
   by (rule cc_s.intros(3) [of "{0,1,2}" "{{1},{2},{}}"], 
       simp, unfold powerset_def, auto,
-      unfold pow_closed_def, auto)
+      unfold closed_subset_def, auto)
 
 lemma "({0,1,2}, {{1,2},{1},{2},{}}) \<in> cc_s"
   by (rule cc_s.intros(3) [of "{0,1,2}" "{{1,2},{1},{2},{}}"], 
       simp, unfold powerset_def, auto,
-      unfold pow_closed_def, auto)
+      unfold closed_subset_def, auto)
 
 section\<open>Link and exterior link of a vertex in a set of sets\<close>
 
@@ -254,7 +254,7 @@ proof (cases "x \<in> V")
   next
     fix A L
     assume v: "V = A" and k: "K = L" and "A \<noteq> {}" and l: "L \<subseteq> powerset A"
-      and "pow_closed L" 
+      and "closed_subset L" 
     show "{s. insert x s \<in> K} = {}" 
       using False v k l unfolding powerset_def by auto
   qed
@@ -267,12 +267,12 @@ next
     show "{s. insert x s \<in> K} \<subseteq> powerset V" 
       using v True cc_s.intros (3) [of V K]
       using cc_s_simplices powerset_def by auto
-    show "pow_closed {s. insert x s \<in> K}"
+    show "closed_subset {s. insert x s \<in> K}"
     proof -  
-      have "pow_closed K" 
+      have "closed_subset K" 
         using v True cc_s.intros (3) [of V K]
-        by (simp add: cc_s_closed pow_closed_def)
-      thus ?thesis unfolding pow_closed_def
+        by (simp add: cc_s_closed closed_subset_def)
+      thus ?thesis unfolding closed_subset_def
         by auto (meson insert_mono)
     qed
   qed
@@ -301,12 +301,12 @@ next
       show "V \<noteq> {}" using True by fast
       show "{s \<in> powerset V. x \<notin> s \<and> insert x s \<in> K} \<subseteq> powerset V"
         using True unfolding powerset_def by auto
-      from v have pcK: "pow_closed K" 
+      from v have pcK: "closed_subset K" 
         using cc_s.simps True
-        by (meson cc_s_closed pow_closed_def)
-      show "pow_closed {s \<in> powerset V. x \<notin> s \<and> insert x s \<in> K}"
+        by (meson cc_s_closed closed_subset_def)
+      show "closed_subset {s \<in> powerset V. x \<notin> s \<and> insert x s \<in> K}"
         using pcK
-        unfolding pow_closed_def powerset_def
+        unfolding closed_subset_def powerset_def
         by auto (meson insert_mono)
     qed
   qed
@@ -378,10 +378,10 @@ next
     show "V \<noteq> {}" using False by fast
     have "K \<subseteq> powerset V" using cc_s_subset [OF v] .
     thus "{s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K} \<subseteq> powerset V" by auto
-    have "pow_closed K" using v
-      by (simp add: cc_s_closed pow_closed_def)
-    then show "pow_closed {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}"
-      unfolding pow_closed_def by auto (meson insert_mono)
+    have "closed_subset K" using v
+      by (simp add: cc_s_closed closed_subset_def)
+    then show "closed_subset {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}"
+      unfolding closed_subset_def by auto (meson insert_mono)
   qed
 qed
 
@@ -404,9 +404,9 @@ proof (unfold closed_remove_element_def, rule, rule)
   assume c: "c \<in> K" and x: "x \<in> c"
   then have v: "V \<noteq> {}" using cc_s
     using cc_s.cases by blast
-  have "pow_closed K" 
+  have "closed_subset K" 
     using cc_s c cc_s.cases by blast
-  then show "c - {x} \<in> K" using c unfolding pow_closed_def by simp
+  then show "c - {x} \<in> K" using c unfolding closed_subset_def by simp
 qed
 
 lemma closed_remove_element_cc_s:
@@ -418,8 +418,8 @@ lemma closed_remove_element_cc_s:
 proof
   show "V \<noteq> {}" using v .
   show "K \<subseteq> powerset V" using k .
-  show "pow_closed K"
-  proof (unfold pow_closed_def, safe)
+  show "closed_subset K"
+  proof (unfold closed_subset_def, safe)
     fix s s'
     assume s: "s \<in> K" and s's: "s' \<subseteq> s"
     have fs: "finite s" using s f k unfolding powerset_def
@@ -864,18 +864,18 @@ lemma [simp]:
   using w unfolding join_vertex_def join_def by auto
 
 proposition
-  assumes k: "K \<subseteq> powerset V" and p: "pow_closed K" and v: "{v} \<in> K"
+  assumes k: "K \<subseteq> powerset V" and p: "closed_subset K" and v: "{v} \<in> K"
   shows "closed_star v V K = join_vertex v (link v V K)"
 proof
  show "join_vertex v (link v V K) \<subseteq> closed_star v V K"
     using k v
     unfolding join_vertex_def join_def link_def closed_star_def star_def 
-      powerset_def pow_closed_def
+      powerset_def closed_subset_def
     by auto
  show "closed_star v V K \<subseteq> join_vertex v (link v V K)"
     using k v p
     unfolding join_def join_vertex_def link_def closed_star_def star_def 
-      powerset_def pow_closed_def
+      powerset_def closed_subset_def
     apply simp 
     apply safe 
       apply auto [1] 
@@ -889,7 +889,7 @@ lemma conjI3: assumes "A" and "B" and "C" shows "A \<and> B \<and> C"
   using assms by simp
 
 definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
-  where "cone V K = ((\<exists>v\<in>V. \<exists>B. B \<subseteq> powerset (V - {v})  
+  where "cone V K = ((\<exists>v\<in>V. \<exists>B. B \<subseteq> powerset (V - {v})
                       \<and> K = B \<union> {s. \<exists>b\<in>B. s = insert v b}))"
 
 (*definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
@@ -899,7 +899,7 @@ definition cone :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
 text\<open>A @{term cone} is a @{term join}, for simplicial complexes.\<close>
 
 lemma cone_is_join:
-  assumes c: "cone V K" and kne: "K \<noteq> {}" and p: "pow_closed K"
+  assumes c: "cone V K" and kne: "K \<noteq> {}" and p: "closed_subset K"
   shows "((\<exists>v\<in>V. \<exists>B. B \<subseteq> powerset (V - {v}) \<and> K = join_vertex v B))"
 proof -
   from c obtain v B where x: "v \<in> V" and t: "B \<subseteq> powerset (V - {v})"
@@ -909,7 +909,7 @@ proof -
   proof (rule bexI [of _ v], rule exI [of _ B], intro conjI, intro t)
     show "K = join_vertex v B"
       unfolding join_vertex_def join_def 
-      using k kne p unfolding pow_closed_def by auto
+      using k kne p unfolding closed_subset_def by auto
   qed (intro x)
 qed
 
@@ -1647,14 +1647,14 @@ proof -
  qed
 qed
 
-lemma pow_closed_free_face: assumes p: "pow_closed K" and f: "free_face t K" 
-  shows "pow_closed (K - {t, free_coface t K})"
-proof (unfold pow_closed_def, rule, rule, rule)
+lemma closed_subset_free_face: assumes p: "closed_subset K" and f: "free_face t K" 
+  shows "closed_subset (K - {t, free_coface t K})"
+proof (unfold closed_subset_def, rule, rule, rule)
   fix s s'
   assume s: "s \<in> K - {t, free_coface t K}" and s': "s' \<subseteq> s" 
   show "s' \<in> K - {t, free_coface t K}"
   proof
-    from s have "s \<in> K" by simp thus "s' \<in> K" using p s' unfolding pow_closed_def by simp
+    from s have "s \<in> K" by simp thus "s' \<in> K" using p s' unfolding closed_subset_def by simp
     from s s' have s'nt: "s' \<noteq> t"
       by (metis Diff_iff f face_def free_coface_free_face(3) insert_iff psubsetI)
     moreover from s s' have s'ncf: "s' \<noteq> free_coface t K"
@@ -1665,12 +1665,12 @@ qed
 
 text\<open>The following lemma proves that a cone that is not empty can be collapsed to its peak.
   Note that we have to assume, in contrast to @{thm cone_collapsable}, that the complex
-  @{term K} is @{thm pow_closed_def}.\<close>
+  @{term K} is @{thm closed_subset_def}.\<close>
 
 lemma cone_collapses_to_peak:
   assumes f: "finite V" and v: "v \<in> V" and KV: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}"
     and T: "T \<subseteq> powerset (V - {v})" and cs: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}"
-    and pK: "pow_closed K"
+    and pK: "closed_subset K"
   shows "(K, {{v}, {}}) \<in> collapses_rtrancl"
 proof -
   have fK: "finite K" using f KV unfolding powerset_def
@@ -1736,9 +1736,9 @@ proof -
       show "K - {t, insert v t} \<noteq> {}"
         using Tnet less.prems (4) using tinT
         using \<open>K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}\<close> by force
-      show "pow_closed (K - {t, insert v t})" 
+      show "closed_subset (K - {t, insert v t})" 
         unfolding \<open>free_coface t K = insert v t\<close> [symmetric]
-        by (rule pow_closed_free_face, intro less.prems (7), intro \<open>free_face t K\<close>) 
+        by (rule closed_subset_free_face, intro less.prems (7), intro \<open>free_face t K\<close>) 
     qed
     ultimately show "(K, {{v}, {}}) \<in> collapses_rtrancl"
       unfolding collapsable_def using collapses_comp by simp
@@ -1749,11 +1749,11 @@ proof -
       case False note tne = False
       have K: "K = {t, insert v t}"
         using less.prems (4) tinT vninT True by auto
-      have "pow_closed {t, insert v t}" unfolding pow_closed_def
-        by (metis K less.prems(7) pow_closed_def)
+      have "closed_subset {t, insert v t}" unfolding closed_subset_def
+        by (metis K less.prems(7) closed_subset_def)
       have "{v} \<subseteq> insert v t" by simp
       hence vin: "{v} \<in> K" using less.prems (7)
-        unfolding pow_closed_def
+        unfolding closed_subset_def
         using \<open>insert v t \<in> K\<close> by fastforce
       with K have False using tne vninT by blast
       thus ?thesis by (rule ccontr)
@@ -1810,10 +1810,9 @@ lemma card_collapse_l:
 
 lemma subset_collapses:
   assumes f: "finite V" and v: "v \<notin> V" and K1V: "K1 \<subseteq> powerset V" and K2V: "K2 \<subseteq> powerset V"
-  and K2K1: "K2 \<subseteq> K1"
+  and K2K1: "K2 \<subseteq> K1" and pwK2: "closed_subset K2"
     (*and Kne: "K \<noteq> {}"*)
     (*and T: "T \<subseteq> powerset (V - {v})" and cs: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}"*)
-    and pK: "pow_closed K"
   shows "(join_vertex v K1, join_vertex v K2) \<in> collapses_rtrancl"
 proof -
   have fK1: "finite K1" and fK2: "finite K2" using f K1V K2V K2K1 unfolding powerset_def
@@ -1827,10 +1826,18 @@ proof -
     show ?thesis unfolding True using collapses_rtrancl_def by blast
   next
     case False
-    hence "K2 \<subset> K1" using less.prems (5) by simp
+    hence "K2 \<subset> K1" using less.prems by simp
     have "finite (K1 - K2)" and "K1 - K2 \<noteq> {}" using fK2 less.prems (5,6) False by simp_all
     then obtain t where t: "t \<in> K1 - K2" and ft: "facet t (K1 - K2)"
       unfolding facet_def by (meson finite_has_maximal)
+    have "facet t K1"
+    proof (unfold facet_def, intro conjI)
+      show "t \<in> K1" using ft unfolding facet_def by simp
+      show "\<forall>b\<in>K1. t \<subseteq> b \<longrightarrow> t = b"
+      proof (rule, rule)
+        fix b assume b: "b \<in> K1" and tb: "t \<subseteq> b" 
+        using pwK2 show "t = b" try
+          
     have "t \<in> join_vertex v K1" and ivt: "insert v t \<in> join_vertex v K1" 
       using t unfolding join_vertex_def join_def by auto
     have vnit: "v \<notin> t" and t_in_insert: "t \<subset> insert v t" 
@@ -1843,9 +1850,26 @@ proof -
         using less.prems (2,3) t
         unfolding face_def powerset_def by auto
       show "\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = insert v t"
-        using less.prems(2) t_in_insert t ft vnit
+      proof (rule, rule)
+        fix a1
+        assume a1_join: "a1 \<in> join_vertex v K1" and facet: "face t a1" 
+        show "a1 = insert v t"
+        proof (cases "a1 \<in> {{v}}")
+          case True
+          hence "t = {}" using True vnit
+            by (metis \<open>face t a1\<close> empty_not_insert face_def insert_absorb insert_ident order_less_le singleton_insert_inj_eq)
+          thus ?thesis using True by simp
+        next
+          case False note tne = False
+          show ?thesis
+          proof (cases "a1 \<in> K1")
+            case True
+            show ?thesis using True vnit a1_join tne facet ft
+              unfolding join_vertex_def join_def facet_def try
+          
+          using less.prems(2) t_in_insert t ft vnit
         unfolding join_vertex_def join_def face_def facet_def
-        try
+       
             show "\<And>b. b \<in> join_vertex v K1 \<and> face t b \<and> (\<forall>a1\<in>join_vertex v K1. face t a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
     have "t \<notin> join_vertex v K2" using t unfolding join_vertex_def join_def apply auto try
     from ft obtain
