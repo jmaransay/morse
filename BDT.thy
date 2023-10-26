@@ -849,6 +849,10 @@ definition join :: "nat set set \<Rightarrow> nat set set \<Rightarrow> nat set 
 definition join_vertex :: "nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "join_vertex v V = join {{v}} V"
 
+text\<open>Our definition of @{term join_vertex} does not produce @{term closed_subset} sets.\<close>
+
+lemma shows "join_vertex v {} = {{v}}" unfolding join_vertex_def join_def by auto
+
 lemma [simp]:
   shows "{v} \<in> join_vertex v V"
    unfolding join_vertex_def join_def by auto
@@ -1527,25 +1531,25 @@ lemma assumes cr: "(K, K') \<in> collapses_rtrancl" and f: "finite K"
   using cr collapses_contained
   using collapses_rtrancl_subseteq f by (metis psubset_card_mono)
 
-(*definition collapsable :: "(nat set set) set"
-  where "collapsable = {K. \<exists>x K'. (K' = {{x},{}} \<and> (K, K') \<in> collapses_rtrancl)}"*)
+(*definition collapsible :: "(nat set set) set"
+  where "collapsible = {K. \<exists>x K'. (K' = {{x},{}} \<and> (K, K') \<in> collapses_rtrancl)}"*)
 
-definition collapsable :: "(nat set set) set"
-  where "collapsable = {K. (K, {}) \<in> collapses_rtrancl}"
+definition collapsible :: "(nat set set) set"
+  where "collapsible = {K. (K, {}) \<in> collapses_rtrancl}"
 
-lemma assumes k: "K \<in> collapsable" shows "(K, {}) \<in> collapses_rtrancl" 
-  using k unfolding collapsable_def by fast
+lemma assumes k: "K \<in> collapsible" shows "(K, {}) \<in> collapses_rtrancl" 
+  using k unfolding collapsible_def by fast
 
-lemma singleton_collapsable: "{{n},{}} \<in> collapsable" 
+lemma singleton_collapsable: "{{n},{}} \<in> collapsible"
   using singleton_collapses
-  unfolding collapsable_def collapses_rtrancl_def by auto
+  unfolding collapsible_def collapses_rtrancl_def by auto
 
-lemma "{{1,2},{1},{2},{}} \<in> collapsable"
-  unfolding collapsable_def collapses_rtrancl_def
+lemma "{{1,2},{1},{2},{}} \<in> collapsible"
+  unfolding collapsible_def collapses_rtrancl_def
   using example_collapses using singleton_collapses [of "{1}"] by simp
 
-lemma "{{1,2},{2,3},{1},{2},{3},{}} \<in> collapsable"
-  unfolding collapsable_def collapses_rtrancl_def
+lemma "{{1,2},{2,3},{1},{2},{3},{}} \<in> collapsible"
+  unfolding collapsible_def collapses_rtrancl_def
   using example_collapses_02 example_collapses
   using r_into_rtrancl rtrancl.rtrancl_into_rtrancl 
   using singleton_collapses [of "{1}"]
@@ -1555,12 +1559,12 @@ lemma facet_subset:
   assumes f: "facet y (T - {t})" and ny: "\<not> y \<subset> t" shows "facet y T"
   using f ny unfolding facet_def by auto
 
-lemma collapsable_empty: shows "{} \<in> collapsable"
-  unfolding collapsable_def using collapses_rtrancl_def by auto
+lemma collapsible_empty: shows "{} \<in> collapsible"
+  unfolding collapsible_def using collapses_rtrancl_def by auto
 
-lemma cone_collapsable:
+lemma cone_collapsible:
   assumes f: "finite V" and X: "V \<noteq> {}" and cs: "K \<subseteq> powerset V" and c: "cone V K"
-  shows "K \<in> collapsable"
+  shows "K \<in> collapsible"
 proof -
   from c and cone_def obtain v T where v: "v \<in> V"
     and tp: "T \<subseteq> powerset (V - {v})" and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}" by auto
@@ -1569,7 +1573,7 @@ proof -
   hence fT: "finite T" using kt by simp
   show ?thesis
   proof (cases "K = {}")
-    case True show ?thesis unfolding True using collapsable_empty .
+    case True show ?thesis unfolding True using collapsible_empty .
   next
     case False note kne = False
     show ?thesis
@@ -1605,14 +1609,14 @@ proof -
         show "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
           using \<open>(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)\<close> .
       qed
-      show "K \<in> collapsable"
+      show "K \<in> collapsible"
       proof (cases "T = {t}")
         case False note Tnet = False
         have "(K, K - {t, insert v t}) \<in> collapses" 
           unfolding \<open>free_coface t K = insert v t\<close> [symmetric]
           unfolding collapses_def
           using \<open>free_face t K\<close> less.prems(5) tinT by blast
-        moreover have "(K - {t, insert v t}) \<in> collapsable"
+        moreover have "(K - {t, insert v t}) \<in> collapsible"
         proof (rule less.hyps [of "T - {t}"])
           show "finite V" using f .
           show "finite (T - {t})" using less.prems(2) by blast
@@ -1631,14 +1635,14 @@ proof -
       show "K - {t, insert v t} \<noteq> {}"
         using Tnet \<open>K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}\<close> tinT by auto
     qed
-    ultimately show ?thesis unfolding collapsable_def using collapses_comp by auto
+    ultimately show ?thesis unfolding collapsible_def using collapses_comp by auto
   next
    case True note Tt = True
    have K: "K = {t, insert v t}" using less.prems (5) tinT vninT Tt by auto
    have "K - {t, free_coface t K} = {}" 
      using K using \<open>free_coface t K = insert v t\<close> by simp
-   show "K \<in> collapsable" 
-     unfolding K collapsable_def 
+   show "K \<in> collapsible"
+     unfolding K collapsible_def 
      unfolding collapses_rtrancl_def collapses_def
      using collapses_def \<open>free_face t K\<close> \<open>K - {t, free_coface t K} = {}\<close> tinT 
      using K by auto
@@ -1664,7 +1668,7 @@ proof (unfold closed_subset_def, rule, rule, rule)
 qed
 
 text\<open>The following lemma proves that a cone that is not empty can be collapsed to its peak.
-  Note that we have to assume, in contrast to @{thm cone_collapsable}, that the complex
+  Note that we have to assume, in contrast to @{thm cone_collapsible}, that the complex
   @{term K} is @{thm closed_subset_def}.\<close>
 
 lemma cone_collapses_to_peak:
@@ -1741,7 +1745,7 @@ proof -
         by (rule closed_subset_free_face, intro less.prems (7), intro \<open>free_face t K\<close>) 
     qed
     ultimately show "(K, {{v}, {}}) \<in> collapses_rtrancl"
-      unfolding collapsable_def using collapses_comp by simp
+      unfolding collapsible_def using collapses_comp by simp
   next
     case True note Tt = True
     show ?thesis
@@ -1808,13 +1812,9 @@ lemma card_collapse_l:
   using f x
   by (metis Diff_subset card_seteq linorder_not_less subset_Diff_insert)
 
-lemma foo: shows "join_vertex v {} = {{v}}" unfolding join_vertex_def join_def by auto
-
 lemma subset_collapses:
   assumes f: "finite V" and v: "v \<notin> V" and K1V: "K1 \<subseteq> powerset V" and K2V: "K2 \<subseteq> powerset V"
   and K2K1: "K2 \<subseteq> K1" and pwK2: "closed_subset K2" and K2ne: "K2 \<noteq> {}"
-    (*and Kne: "K \<noteq> {}"*)
-    (*and T: "T \<subseteq> powerset (V - {v})" and cs: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}"*)
   shows "(join_vertex v K1, join_vertex v K2) \<in> collapses_rtrancl"
 proof -
   have fK1: "finite K1" and fK2: "finite K2" using f K1V K2V K2K1 unfolding powerset_def
@@ -1942,8 +1942,114 @@ proof -
     ultimately show ?thesis
       using collapses_comp by presburger
   qed
+ qed
 qed
-    
+
+lemma assumes f: "finite V" and v: "v \<notin> V" and KV: "K \<subseteq> powerset V" and Kc: "K \<in> collapsible"
+    and Kne: "K \<noteq> {}"
+  (*  and K2V: "K2 \<subseteq> powerset V"
+  and K2K1: "K2 \<subseteq> K1" and pwK2: "closed_subset K2"*)
+  shows "(join_vertex v K, K) \<in> collapses_rtrancl"
+proof -  
+  have fK: "finite K" using f KV unfolding powerset_def
+    using finite_subset by auto
+  show ?thesis
+  using f fK v KV Kc Kne proof (induct "card K" arbitrary: K rule: less_induct)
+  case less
+  have kne: "K \<noteq> {}" using less.prems by simp
+  then obtain t where t: "t \<in> K" and ffs: "free_face t K"
+    using less.prems (5)
+    unfolding collapsible_def collapses_rtrancl_def collapses_def 
+    apply auto
+    using converse_rtranclE by force
+  have vnint: "v \<notin> t" using t less.prems unfolding powerset_def by auto
+  have "insert v t \<in> join_vertex v K"
+    using facet_in_K less.prems (4) t
+    unfolding join_vertex_def join_def by auto
+  have "t \<subset> insert v t"
+    using facet_in_K [OF t] unfolding powerset_def
+    using vninT by blast
+  have "\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+    using t unfolding facet_def powerset_def by (metis \<open>insert v t \<in> K\<close> \<open>t \<subset> insert v t\<close>)
+  have "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
+    using t tinT less.prems (4) \<open>t \<subset> insert v t\<close> 
+    unfolding facet_def powerset_def by auto
+  have "free_face t K" unfolding free_face_def unfolding facet_def face_def 
+  proof (intro ex1I [of _ "insert v t"], rule conjI3)
+    show "insert v t \<in> K" using \<open>insert v t \<in> K\<close> .
+    show "t \<subset> insert v t" using \<open>t \<subset> insert v t\<close> .
+    show "\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+       using \<open>\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t\<close> .
+    show "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
+       using \<open>(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)\<close> .
+  qed
+  have "free_coface t K = insert v t" unfolding free_coface_def face_def
+  proof (rule the_equality, intro conjI3)
+    show "insert v t \<in> K" using \<open>insert v t \<in> K\<close> .
+    show "t \<subset> insert v t" using \<open>t \<subset> insert v t\<close> .
+    show "\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t"
+      using \<open>\<And>b. b \<in> K \<and> t \<subset> b \<and> (\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = insert v t\<close> .
+    show "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
+      using \<open>(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)\<close> .
+  qed
+  show "(K, {{v}, {}}) \<in> collapses_rtrancl"
+  proof (cases "T = {t}")
+    case False note Tnet = False
+    have "(K, K - {t, insert v t}) \<in> collapses"
+      unfolding \<open>free_coface t K = insert v t\<close> [symmetric]
+      unfolding collapses_def
+      using \<open>free_face t K\<close> less.prems(4) tinT by blast
+    moreover have "(K - {t, insert v t}, {{v}, {}}) \<in> collapses_rtrancl"
+    proof (rule less.hyps [of "T - {t}"])
+      show "card (T - {t}) < card T"
+        using card_Diff1_less [OF less.prems (2) tinT] .
+      show "finite V" using f .
+      show "finite (T - {t})" using less.prems(2) by blast
+      show "v \<in> V" using less.prems (3) .
+      (*show "K - {t, insert v t} \<subseteq> powerset V" using less.prems (4) unfolding powerset_def by auto*)
+      show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (6) unfolding powerset_def by auto
+      show "K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
+      proof
+        show "K - {t, insert v t} \<subseteq> T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
+          using less.prems (4) by auto
+        show "T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t} \<subseteq> K - {t, insert v t}"
+          using less.prems (4,6) tinT vninT unfolding powerset_def by auto
+      qed
+      show "K - {t, insert v t} \<noteq> {}"
+        using Tnet less.prems (4) using tinT
+        using \<open>K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}\<close> by force
+      show "closed_subset (K - {t, insert v t})" 
+        unfolding \<open>free_coface t K = insert v t\<close> [symmetric]
+        by (rule closed_subset_free_face, intro less.prems (7), intro \<open>free_face t K\<close>) 
+    qed
+    ultimately show "(K, {{v}, {}}) \<in> collapses_rtrancl"
+      unfolding collapsible_def using collapses_comp by simp
+  next
+    case True note Tt = True
+    show ?thesis
+    proof (cases "t = {}")
+      case False note tne = False
+      have K: "K = {t, insert v t}"
+        using less.prems (4) tinT vninT True by auto
+      have "closed_subset {t, insert v t}" unfolding closed_subset_def
+        by (metis K less.prems(7) closed_subset_def)
+      have "{v} \<subseteq> insert v t" by simp
+      hence vin: "{v} \<in> K" using less.prems (7)
+        unfolding closed_subset_def
+        using \<open>insert v t \<in> K\<close> by fastforce
+      with K have False using tne vninT by blast
+      thus ?thesis by (rule ccontr)
+    next
+      case True
+      have "K = {{v}, {}}" using less.prems (4) unfolding Tt True by simp
+      thus ?thesis
+        by (simp add: collapses_rtrancl_def)
+      qed
+    qed
+  qed
+qed
+
+
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
 
 function zero_collapsible :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
