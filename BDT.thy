@@ -1567,6 +1567,42 @@ lemma facet_subset:
 lemma collapsible_empty: shows "{} \<in> collapsible"
   unfolding collapsible_def using collapses_rtrancl_def by auto
 
+thm rtrancl_induct
+
+theorem rtranclp_induct [consumes 1, case_names base step, induct set: rtranclp]:
+  assumes a: "r\<^sup>*\<^sup>* a b" and bla: "b < a" and y: "r a y" and "r\<^sup>*\<^sup>* y b"
+    and cases: "P a" "\<And>z. r a y \<Longrightarrow> r\<^sup>*\<^sup>* y z \<Longrightarrow> P y \<Longrightarrow> P z"
+  shows "P b"
+  using a y apply (induct x\<equiv>a b)
+  apply (rule cases)+ apply simp try
+  apply (rule cases)+ 
+
+lemma assumes k: "K \<in> collapsible" and t: "t \<in> K" and f: "free_face t K" 
+  and c: "(K, K - {t, free_coface t K}) \<in> collapses" shows "(K - {t, free_coface t K}) \<in> collapsible"
+  using k c t f proof (induct "card K" arbitrary: K rule: less_induct)
+  case less
+  show ?case
+  proof (cases "K = {}")
+    case True
+    then show ?thesis by (simp add: collapsible_empty)
+  next
+    case False
+    obtain t' where "t' \<in> K" and "free_face t' K"
+      using less.prems (1,3,4) False unfolding collapsible_def collapses_rtrancl_def collapses_def 
+      by simp
+    show ?thesis
+    proof (cases "t = t'")
+      case True thm less.hyps [of "K - {t', free_coface t' K}"]
+      show ?thesis apply (rule less.hyps)
+      apply (rule less.hyps)
+    then show ?thesis sorry
+  qed
+    
+  from less.prems (1)
+  then  sorry
+qed
+
+
 lemma cone_collapsible:
   assumes f: "finite V" and X: "V \<noteq> {}" and cs: "K \<subseteq> powerset V" and c: "cone V K"
   shows "K \<in> collapsible"
@@ -1949,6 +1985,63 @@ proof -
   qed
  qed
 qed
+
+lemma collapsible_ne_card_ge_2:
+  assumes f: "finite V" and KV: "K \<subseteq> powerset V" and cK: "K \<in> collapsible" and Kne: "K \<noteq> {}"
+  shows "2 \<le> card K" 
+proof -
+  from f have fK: "finite K" using KV unfolding powerset_def by (simp add: finite_subset)
+  from cK and Kne obtain t where t: "t \<in> K" and f: "free_face t K"
+    unfolding collapsible_def collapses_rtrancl_def collapses_def
+    using converse_rtranclE by force
+  have fc: "free_coface t K \<in> K" using free_coface_free_face(1) [OF f] .
+  have tnfc: "t \<noteq> free_coface t K"
+    by (metis f face_def free_coface_free_face(2) nless_le)
+  from t and fc and tnfc and fK show ?thesis
+    by (metis Kne card_0_eq card_Suc_eq less_2_cases_iff not_less singletonD)
+qed
+
+lemma collapsible_ne_free_face:
+  assumes f: "finite V" and KV: "K \<subseteq> powerset V" and cK: "K \<in> collapsible" and Kne: "K \<noteq> {}" 
+    and card: "2 < card K"
+  shows "\<exists>t\<in>K. free_face t K \<and> t \<noteq> {}"
+using KV cK Kne card proof (induct "card K" arbitrary: K rule: less_induct)
+  case less
+  then show ?case sorry
+qed
+  
+  from cK and Kne have Kcol: "(K,{}) \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}\<^sup>*"
+    unfolding collapsible_def collapses_rtrancl_def collapses_def by simp
+  then obtain K' where KK': "(K,K') \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}" 
+    using Kne by (meson converse_rtranclE)
+  then obtain t where t: "t \<in> K" and f: "free_face t K" and K': "K' = K - {t, free_coface t K}"
+    using Kne
+    unfolding collapsible_def collapses_rtrancl_def collapses_def
+    using converse_rtranclE by force
+  show ?thesis
+  proof (cases "t = {}")
+    case False
+    then show ?thesis using t f by auto
+  next
+    case True
+    have "(K, K') \<in> collapses"
+      using cK t f
+      unfolding K' collapses_def by auto
+    show ?thesis using KK' card unfolding K' True try
+    moreover
+    have "(K, {}) \<in> collapses_rtrancl" 
+      using cK
+      unfolding collapsible_def collapses_rtrancl_def by simp
+    ultimately have "(K - {t, free_coface t K}, {}) \<in> collapses_rtrancl"
+      using t f cK K' unfolding collapsible_def collapses_rtrancl_def collapses_def
+      unfolding collapses_rtrancl_def try
+      using converse_rtranclE
+
+thm collapses_comp'
+
+    then show ?thesis sorry
+  qed
+  
 
 lemma assumes f: "finite V" and v: "v \<notin> V" and KV: "K \<subseteq> powerset V" and Kc: "K \<in> collapsible"
     and Kne: "K \<noteq> {}" and csK: "closed_subset K"
