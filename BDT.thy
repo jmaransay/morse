@@ -1526,7 +1526,7 @@ lemma collapses_comp':
   using k k' using trans_rtrancl [of collapses_rtrancl]
   by (simp add: collapses_rtrancl_def)
 
-lemma collapses_rtrancl_subseteq: 
+lemma collapses_rtrancl_subseteq:
   assumes cr: "(K, K') \<in> collapses_rtrancl" shows "K' = K \<or> K' \<subset> K"
   using cr collapses_contained
   by (smt (verit, ccfv_threshold) collapses_rtrancl_def converse_rtrancl_induct psubset_trans rtrancl.simps)
@@ -1566,42 +1566,6 @@ lemma facet_subset:
 
 lemma collapsible_empty: shows "{} \<in> collapsible"
   unfolding collapsible_def using collapses_rtrancl_def by auto
-
-thm rtrancl_induct
-
-theorem rtranclp_induct [consumes 1, case_names base step, induct set: rtranclp]:
-  assumes a: "r\<^sup>*\<^sup>* a b" and bla: "b < a" and y: "r a y" and "r\<^sup>*\<^sup>* y b"
-    and cases: "P a" "\<And>z. r a y \<Longrightarrow> r\<^sup>*\<^sup>* y z \<Longrightarrow> P y \<Longrightarrow> P z"
-  shows "P b"
-  using a y apply (induct x\<equiv>a b)
-  apply (rule cases)+ apply simp try
-  apply (rule cases)+ 
-
-lemma assumes k: "K \<in> collapsible" and t: "t \<in> K" and f: "free_face t K" 
-  and c: "(K, K - {t, free_coface t K}) \<in> collapses" shows "(K - {t, free_coface t K}) \<in> collapsible"
-  using k c t f proof (induct "card K" arbitrary: K rule: less_induct)
-  case less
-  show ?case
-  proof (cases "K = {}")
-    case True
-    then show ?thesis by (simp add: collapsible_empty)
-  next
-    case False
-    obtain t' where "t' \<in> K" and "free_face t' K"
-      using less.prems (1,3,4) False unfolding collapsible_def collapses_rtrancl_def collapses_def 
-      by simp
-    show ?thesis
-    proof (cases "t = t'")
-      case True thm less.hyps [of "K - {t', free_coface t' K}"]
-      show ?thesis apply (rule less.hyps)
-      apply (rule less.hyps)
-    then show ?thesis sorry
-  qed
-    
-  from less.prems (1)
-  then  sorry
-qed
-
 
 lemma cone_collapsible:
   assumes f: "finite V" and X: "V \<noteq> {}" and cs: "K \<subseteq> powerset V" and c: "cone V K"
@@ -1817,7 +1781,7 @@ proposition facet_join:
   shows "facet ({v} \<union> a) (join_vertex v K)"
   using a f k v unfolding facet_def join_def join_vertex_def powerset_def by auto
 
-proposition facet_free_face_join: 
+proposition facet_free_face_join:
   assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
   shows "free_face a (join_vertex v K)"
 proof (unfold free_face_def, rule ex1I [of _ "{v} \<union> a"], rule conjI3)
@@ -1988,7 +1952,7 @@ qed
 
 lemma collapsible_ne_card_ge_2:
   assumes f: "finite V" and KV: "K \<subseteq> powerset V" and cK: "K \<in> collapsible" and Kne: "K \<noteq> {}"
-  shows "2 \<le> card K" 
+  shows "2 \<le> card K"
 proof -
   from f have fK: "finite K" using KV unfolding powerset_def by (simp add: finite_subset)
   from cK and Kne obtain t where t: "t \<in> K" and f: "free_face t K"
@@ -2001,48 +1965,88 @@ proof -
     by (metis Kne card_0_eq card_Suc_eq less_2_cases_iff not_less singletonD)
 qed
 
+lemma collapsible_card_2:
+  assumes f: "finite V" and KV: "K \<subseteq> powerset V" and cK: "K \<in> collapsible"
+    and k2: "2 = card K" shows "\<exists>t\<in>K. free_face t K \<and> K = {t, free_coface t K}"
+proof -
+  from k2 have kne: "K \<noteq> {}" by auto
+  from cK obtain t where t: "t \<in> K" and fft: "free_face t K" and "(K - {t, free_coface t K},{}) \<in> collapses_rtrancl"
+    unfolding collapsible_def collapses_rtrancl_def collapses_def
+    by (smt (verit, best) CollectD case_prod_conv converse_rtranclE kne)
+  have fcK: "free_coface t K \<in> K" using t
+    by (simp add: \<open>free_face t K\<close> free_coface_free_face(1))
+  have ne: "t \<noteq> free_coface t K" using t fcK
+    by (metis \<open>free_face t K\<close> face_def free_coface_free_face(2) psubset_eq)
+  show ?thesis using card_2_iff [of K] k2 t fcK ne fft by auto
+qed
+
 lemma collapsible_ne_free_face:
-  assumes f: "finite V" and KV: "K \<subseteq> powerset V" and cK: "K \<in> collapsible" and Kne: "K \<noteq> {}" 
-    and card: "2 < card K"
+  assumes f: "finite V" and KV: "K \<subseteq> powerset V" and cK: "K \<in> collapsible" (*and Kne: "K \<noteq> {}" *)
+    and card: "2 < card K" and cs: "closed_subset K"
   shows "\<exists>t\<in>K. free_face t K \<and> t \<noteq> {}"
-using KV cK Kne card proof (induct "card K" arbitrary: K rule: less_induct)
+using KV cK card cs proof (induct "card K" arbitrary: K rule: less_induct)
   case less
-  then show ?case sorry
+  from less.prems (3) have Kne: "K \<noteq> {}" by auto
+  from less.prems (2) obtain K' where kk': "(K, K') \<in> collapses" and k'c: "K' \<in> collapsible"
+    unfolding collapsible_def collapses_rtrancl_def
+    by (metis converse_rtranclE Kne mem_Collect_eq)
+  obtain t where t: "t \<in> K" and ft: "free_face t K" and k': "K' = K - {t, free_coface t K}"
+    using kk' unfolding collapses_def by auto
+  show ?case
+  proof (cases "t = {}")
+    case False thus ?thesis using t ft by auto
+  next
+    case True note tempty = True
+    have "\<exists>t\<in>K'. free_face t K' \<and> t \<noteq> {}"
+    proof (rule less.hyps [of K'])
+      show "card K' < card K" 
+        using k' t
+        using card.infinite collapses_card gr_implies_not0 kk' less.prems(3) by blast 
+      show k'p: "K' \<subseteq> powerset V" using k' less.prems (1) unfolding powerset_def by auto
+      show "K' \<in> collapsible" using k'c .
+      have fct: "free_coface t K \<in> K" using t
+        using free_coface_free_face(1) ft by blast
+      have tnefc: "t \<noteq> free_coface t K" using t fct ft
+        using face_def free_coface_free_face(2) by fastforce
+      have "K' \<noteq> {}"
+      proof -
+        from less.prems (3) have card_ge_3: "3 \<le> card K" by simp
+        have "{t, free_coface t K} \<subset> K" using t fct tnefc card_3_iff [of K] less.prems(3)
+          by (metis card_2_iff empty_subsetI insert_subset nless_le)
+        thus ?thesis using k' by simp
+      qed
+      show "2 < card K'"
+      proof -
+        have k'ge2: "2 \<le> card K'"
+        proof (rule collapsible_ne_card_ge_2 [OF f, of K'])
+          show "K' \<subseteq> powerset V" using \<open>K' \<subseteq> powerset V\<close> .
+          show "K' \<in> collapsible" using k'c .
+          show "K' \<noteq> {}" using \<open>K' \<noteq> {}\<close> .
+        qed
+        show ?thesis
+        proof (cases "2 = card K'")
+          case False show ?thesis using k'ge2 False by simp
+        next
+          case True obtain j where ffj: "free_face j K'" and k'_def: "K' = {j, free_coface j K'}"
+            and j: "j \<in> K'" and fcj: "free_coface j K' \<in> K'"
+            using collapsible_card_2 [OF f k'p k'c True] by auto
+          have csk': "closed_subset K'" using less.prems (4)
+            using closed_subset_free_face ft k' by blast
+          have "j \<subset> free_coface j K'" using j fcj ffj
+            using face_def free_coface_free_face(2) by presburger
+          hence je: "j = {}" using k'_def csk' unfolding closed_subset_def by auto
+          with tempty k' t j have False by simp
+          thus ?thesis by (rule ccontr)
+        qed
+      qed
+      show "closed_subset K'" using less.prems (4)
+        using closed_subset_free_face ft k' by blast
+    qed
+    thus ?thesis using kk' k' unfolding collapses_def
+      by (metis (no_types, opaque_lifting) DiffE True bot.not_eq_extremum face_def free_coface_free_face(3) ft insert_iff)
+  qed
 qed
   
-  from cK and Kne have Kcol: "(K,{}) \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}\<^sup>*"
-    unfolding collapsible_def collapses_rtrancl_def collapses_def by simp
-  then obtain K' where KK': "(K,K') \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}" 
-    using Kne by (meson converse_rtranclE)
-  then obtain t where t: "t \<in> K" and f: "free_face t K" and K': "K' = K - {t, free_coface t K}"
-    using Kne
-    unfolding collapsible_def collapses_rtrancl_def collapses_def
-    using converse_rtranclE by force
-  show ?thesis
-  proof (cases "t = {}")
-    case False
-    then show ?thesis using t f by auto
-  next
-    case True
-    have "(K, K') \<in> collapses"
-      using cK t f
-      unfolding K' collapses_def by auto
-    show ?thesis using KK' card unfolding K' True try
-    moreover
-    have "(K, {}) \<in> collapses_rtrancl" 
-      using cK
-      unfolding collapsible_def collapses_rtrancl_def by simp
-    ultimately have "(K - {t, free_coface t K}, {}) \<in> collapses_rtrancl"
-      using t f cK K' unfolding collapsible_def collapses_rtrancl_def collapses_def
-      unfolding collapses_rtrancl_def try
-      using converse_rtranclE
-
-thm collapses_comp'
-
-    then show ?thesis sorry
-  qed
-  
-
 lemma assumes f: "finite V" and v: "v \<notin> V" and KV: "K \<subseteq> powerset V" and Kc: "K \<in> collapsible"
     and Kne: "K \<noteq> {}" and csK: "closed_subset K"
   (*  and K2V: "K2 \<subseteq> powerset V"
@@ -2055,11 +2059,18 @@ proof -
   using f fK v KV Kc Kne csK proof (induct "card K" arbitrary: K rule: less_induct)
   case less
   have kne: "K \<noteq> {}" using less.prems by simp
-  then obtain t where t: "t \<in> K" and fft: "free_face t K"
+  (*then obtain t where t: "t \<in> K" and fft: "free_face t K"
     using less.prems (5)
     unfolding collapsible_def collapses_rtrancl_def collapses_def 
     apply auto
-    using converse_rtranclE by force
+    using converse_rtranclE by force*)
+  from kne obtain t K' where t: "t \<in> K" and fft: "free_face t K"
+    and "K' = K - {t, free_coface t K}" and
+      K'_collapsible: "(K', {}) \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}\<^sup>*"
+    using less.prems (5)
+    unfolding collapsible_def collapses_rtrancl_def collapses_def 
+    apply auto
+    using converse_rtranclE by force+
   have fct: "free_coface t K \<in> K" using t
     using fft free_coface_free_face(1) by auto
   have tsubsetfc: "t \<subset> free_coface t K" using t
@@ -2135,171 +2146,90 @@ proof -
     qed
     fix b
     assume b: "b \<in> join_vertex v K \<and> insert v t \<subset> b \<and> (\<forall>a1\<in>join_vertex v K. insert v t \<subset> a1 \<longrightarrow> a1 = b)" 
-    show "b = insert v (free_coface t K)" 
+    show "b = insert v (free_coface t K)"
       using \<open>face (insert v t) (insert v (free_coface t K))\<close> 
       using \<open>insert v (free_coface t K) \<in> join_vertex v K\<close>
       using b unfolding face_def by auto
   qed
   show "(join_vertex v K, K) \<in> collapses_rtrancl"
-  proof (cases "K = {t, free_coface t K}")
+  proof (cases "card K = 0")
     case True
-    have t: "t = {}" using less.prems (7) using True unfolding closed_subset_def
-      using tsubsetfc by blast
-    hence K: "K = {{}, free_coface {} K}" using True by auto
-    obtain s where s: "s = free_coface {} K" and K': "K = {{},s}" using K by blast
-    have vnis: "v \<notin> s" using s vnint t v fct less.prems (4) unfolding powerset_def by auto
-    have j: "join_vertex v K = {{}, insert v {}, s, insert v s}"
-      unfolding join_vertex_def join_def using K' s by auto
-    have "({{}, {v}, s, insert v s}, {{}, s}) \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}"
-    proof (rule, rule, rule bexI [of _ "{v}"], rule conjI)
-      show "free_face {v} {{}, {v}, s, insert v s}" using \<open>t = {}\<close> ffinsert j by auto
-      have fc: "free_coface {v} {{}, {v}, s, insert v s} = insert v s" using \<open>t = {}\<close> fcinsert j s by force
-      show "{{}, s} = {{}, {v}, s, insert v s} - {{v}, free_coface {v} {{}, {v}, s, insert v s}}"
-        unfolding fc using vnint vnis by auto
-      show "{v} \<in> {{}, {v}, s, insert v s}" by simp
-    qed
+    then show ?thesis using card_0_eq kne less.prems(2) by blast
   next
-    case False
-    with less.prems (5,6) have tne: "t \<noteq> {}" sorry
-  have "(join_vertex v K, join_vertex v K - {insert v t, insert v (free_coface t K)}) \<in> collapses"
-    unfolding \<open>insert v (free_coface t K) = free_coface (insert v t) (join_vertex v K)\<close>
-    unfolding collapses_def
-    using \<open>free_face (insert v t) (join_vertex v K)\<close> using ivt_in by blast
-  moreover have "join_vertex v K - {insert v t, insert v (free_coface t K)} =
-    join_vertex v (K - {t, free_coface t K})"
-  proof (cases "t = {}")
-    case True
-    hence False using tne by (simp) 
-    thus ?thesis by (rule ccontr)
-  next
-    case False
-    show "join_vertex v K - {insert v t, insert v (free_coface t K)} = join_vertex v (K - {t, free_coface t K})"
-    proof
-        show "join_vertex v (K - {t, free_coface t K}) \<subseteq> join_vertex v K - {insert v t, insert v (free_coface t K)}"
-          using False unfolding join_vertex_def join_def try
-        show "join_vertex v K - {insert v t, insert v (free_coface t K)} \<subseteq> join_vertex v (K - {t, free_coface t K})"
-        
-    show "join_vertex v K - {insert v t, insert v (free_coface t K)} \<subseteq> join_vertex v (K - {t, free_coface t K})"
-      unfolding join_vertex_def join_def using v less.prems (4) vnint
-      unfolding powerset_def try
-      show "join_vertex v (K - {t, free_coface t K}) \<subseteq> join_vertex v K - {insert v t, insert v (free_coface t K)}"
-  (*proof (cases "t = {}")
-    case False note tne = False
+    case False note cardKg0 = False
     show ?thesis
-    proof
-      show "join_vertex v K - {insert v t, insert v (free_coface t K)} \<subseteq> join_vertex v (K - {insert v t})"
-        unfolding join_vertex_def join_def by auto
-      show "join_vertex v (K - {insert v t}) \<subseteq> join_vertex v K - {insert v t, insert v (free_coface t K)}"
-      proof (rule)
-        fix x 
-        assume x: "x \<in> join_vertex v (K - {insert v t})" 
-        show "x \<in> join_vertex v K - {insert v t, insert v (free_coface t K)}" 
-        proof (cases "x \<in> {{v}}")
-          case True hence xv: "x = {v}" by simp
-          show ?thesis using xv tne tsubsetfc vnint unfolding join_vertex_def join_def by blast
-      next
-        case False note xnv = False
-        show ?thesis
-        proof (cases "x \<in> K")
-          case True show ?thesis 
-            using True tne vnint tsubsetfc 
-            using less.prems(4) powerset_def v 
-            unfolding join_vertex_def join_def by auto
-        next
-          case False hence "x \<in> {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>(K - {insert v t}). w = s \<union> s'}" 
-            using x xnv unfolding join_vertex_def join_def by simp
-          hence "\<exists>s'\<in>(K-{insert v t}). x = insert v s'" by simp
-          thus ?thesis using fft fct t_invt vnint less.prems (4) t 
-            unfolding powerset_def join_vertex_def join_def try
+    proof (cases "card K = 1")
+      case True
+      then show ?thesis using collapsible_ne_card_ge_2 [OF f less.prems (4) less.prems (5) kne]  
+        by simp
+    next
+      case False note cardK_g1 = False
+      show ?thesis
+      proof (cases "card K = 2")
+        case True
+        have K: "K = {t, free_coface t K}"
+          using collapsible_card_2 [OF f less.prems (4) less.prems (5) True[symmetric]]
+          using t fft fct tsubsetfc
+          by (metis empty_iff facet_no_coface free_coface_facet insert_iff)
+        hence t: "t = {}" using less.prems (7) using True unfolding closed_subset_def
+          using tsubsetfc by blast
+        hence K: "K = {{}, free_coface {} K}" using True K by auto
+        obtain s where s: "s = free_coface {} K" and K': "K = {{},s}" using K by blast
+        have vnis: "v \<notin> s" using s vnint t v fct less.prems (4) unfolding powerset_def by auto
+        have j: "join_vertex v K = {{}, insert v {}, s, insert v s}"
+          unfolding join_vertex_def join_def using K' s by auto
+        have "({{}, {v}, s, insert v s}, {{}, s}) \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}"
+        proof (rule, rule, rule bexI [of _ "{v}"], rule conjI)
+          show "free_face {v} {{}, {v}, s, insert v s}" using \<open>t = {}\<close> ffinsert j by auto
+          have fc: "free_coface {v} {{}, {v}, s, insert v s} = insert v s" using \<open>t = {}\<close> fcinsert j s by force
+          show "{{}, s} = {{}, {v}, s, insert v s} - {{v}, free_coface {v} {{}, {v}, s, insert v s}}"
+            unfolding fc using vnint vnis by auto
+          show "{v} \<in> {{}, {v}, s, insert v s}" by simp
         qed
-      qed
-        
-        unfolding join_vertex_def join_def
-        using False vnint tsubsetfc less.prems(4) v
-        using facet_no_coface unfolding powerset_def
-        apply auto try
-        using less.prems(4) powerset_def v apply auto[1]
-        using tsubsetfc apply auto[1]
-           apply auto[1] try
-          using vnint apply auto[1]
-          by (metis facet_no_coface ftK1 insert_absorb insert_iff t_in_insert)
-      qed
-    next
-      case True
-      have False using True tne by simp
-      thus ?thesis by (rule ccontr)
-    qed*)
-    sorry
-  moreover have "(join_vertex v (K - {t, free_coface t K}), (K - {t, free_coface t K})) \<in> collapses_rtrancl"
-  proof (rule less.hyps)
-    show "card (K - {t, free_coface t K}) < card K"
-      using card_collapse_l less.prems(2) t by blast
-    show "finite V" using f .
-    show "finite (K - {t, free_coface t K})" using less.prems(2) by blast
-    show "v \<notin> V" using v .
-    show "K - {t, free_coface t K} \<subseteq> powerset V" using less.prems(4) by auto
-    show "K - {t, free_coface t K} \<noteq> {}"
-    proof (cases "K - {t, free_coface t K} \<noteq> {}")
-      case True thus ?thesis by simp
-    next
-      case False hence "K = {t, free_coface t K}" using fft t fct by auto
-      show ?thesis try
-      show "K - {t, free_coface t K} \<in> collapsible" using less.prems (5)
-      using fft t
-      unfolding collapsible_def collapses_rtrancl_def collapses_def try
-      apply simp
+        thus ?thesis using K' collapses_def collapses_rtrancl_def j by auto
+      next
+        case False have card_K_g2: "2 < card K" using False cardK_g1 cardKg0 by auto
+        hence tne: "t \<noteq> {}" using less.prems(7) False fct fft
+          by (metis (no_types, opaque_lifting) DiffE Diff_eq_empty_iff \<open>K' = K - {t, free_coface t K}\<close> card_2_iff closed_subset_def closed_subset_free_face equalityI ex_in_conv face_def free_coface_free_face(2) insert_subset not_psubset_empty)
+        have "(join_vertex v K, join_vertex v K - {insert v t, insert v (free_coface t K)}) \<in> collapses"
+          unfolding \<open>insert v (free_coface t K) = free_coface (insert v t) (join_vertex v K)\<close>
+          unfolding collapses_def
+          using \<open>free_face (insert v t) (join_vertex v K)\<close> using ivt_in by blast
+        moreover have "join_vertex v K - {insert v t, insert v (free_coface t K)} =
+          join_vertex v (K - {t, free_coface t K})"
+          sorry
+        (*proof
+          show "join_vertex v (K - {t, free_coface t K}) \<subseteq> join_vertex v K - {insert v t, insert v (free_coface t K)}"
+            unfolding join_vertex_def join_def using v less.prems (4) vnint
+            unfolding powerset_def try
+          show "join_vertex v K - {insert v t, insert v (free_coface t K)} \<subseteq> join_vertex v (K - {t, free_coface t K})"
+            unfolding join_vertex_def join_def using v less.prems (4) vnint
+            unfolding powerset_def try
+        qed*)
+    moreover have "(join_vertex v (K - {t, free_coface t K}), (K - {t, free_coface t K})) \<in> collapses_rtrancl"
+        proof (rule less.hyps)
+          show "card (K - {t, free_coface t K}) < card K"
+            using card_collapse_l less.prems(2) t by blast
+          show "finite V" using f .
+          show "finite (K - {t, free_coface t K})" using less.prems(2) by blast
+          show "v \<notin> V" using v .
+          show "K - {t, free_coface t K} \<subseteq> powerset V" using less.prems(4) by auto
+          show "K - {t, free_coface t K} \<noteq> {}"
+          proof -
+            have card_K_ge3: "3 \<le> card K" using card_K_g2 by simp 
+            have "{t, free_coface t K} \<subset> K" 
+              using t fct card_K_ge3 card_3_iff [of K] tsubsetfc
+              by (metis False card_2_iff empty_subsetI insert_subset nless_le)
+            thus ?thesis by simp
+          qed
+          show "closed_subset (K - {t, free_coface t K})" 
+            by (rule closed_subset_free_face, intro less.prems (7), intro fft)
+          show "K - {t, free_coface t K} \<in> collapsible" using K'_collapsible
+            by (simp add: \<open>K' = K - {t, free_coface t K}\<close> collapses_def collapses_rtrancl_def collapsible_def)
+        qed
+        ultimately show ?thesis try
       
-    sorry
-    (*proof (rule less.hyps)
-    
-      show "card (T - {t}) < card T"
-        using card_Diff1_less [OF less.prems (2) tinT] .
-      show "finite V" using f .
-      show "finite (T - {t})" using less.prems(2) by blast
-      show "v \<in> V" using less.prems (3) .
-      (*show "K - {t, insert v t} \<subseteq> powerset V" using less.prems (4) unfolding powerset_def by auto*)
-      show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (6) unfolding powerset_def by auto
-      show "K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
-      proof
-        show "K - {t, insert v t} \<subseteq> T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
-          using less.prems (4) by auto
-        show "T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t} \<subseteq> K - {t, insert v t}"
-          using less.prems (4,6) tinT vninT unfolding powerset_def by auto
-      qed
-      show "K - {t, insert v t} \<noteq> {}"
-        using Tnet less.prems (4) using tinT
-        using \<open>K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}\<close> by force
-      show "closed_subset (K - {t, insert v t})" 
-        unfolding \<open>free_coface t K = insert v t\<close> [symmetric]
-        by (rule closed_subset_free_face, intro less.prems (7), intro \<open>free_face t K\<close>) 
-    qed
-    ultimately show "(K, {{v}, {}}) \<in> collapses_rtrancl"
-      unfolding collapsible_def using collapses_comp by simp
-  next
-    case True note Tt = True
-    show ?thesis
-    proof (cases "t = {}")
-      case False note tne = False
-      have K: "K = {t, insert v t}"
-        using less.prems (4) tinT vninT True by auto
-      have "closed_subset {t, insert v t}" unfolding closed_subset_def
-        by (metis K less.prems(7) closed_subset_def)
-      have "{v} \<subseteq> insert v t" by simp
-      hence vin: "{v} \<in> K" using less.prems (7)
-        unfolding closed_subset_def
-        using \<open>insert v t \<in> K\<close> by fastforce
-      with K have False using tne vninT by blast
-      thus ?thesis by (rule ccontr)
-    next
-      case True
-      have "K = {{v}, {}}" using less.prems (4) unfolding Tt True by simp
-      thus ?thesis
-        by (simp add: collapses_rtrancl_def)*)
-      ultimately show ?thesis
-      qed
-    qed
-  qed
-qed
+      
 
 
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
