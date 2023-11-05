@@ -4,7 +4,7 @@ theory BDT
     "HOL-Library.Tree"
 begin
 
-text\<open>The following file can be processed with Isabelle-2022\<close>
+text\<open>The following file can be processed with Isabelle-2023\<close>
 
 section\<open>BDT\<close>
 
@@ -2191,22 +2191,7 @@ proof -
         case False have card_K_g2: "2 < card K" using False cardK_g1 cardKg0 by auto
         hence tne: "t \<noteq> {}" using less.prems(7) False fct fft
           by (metis (no_types, opaque_lifting) DiffE Diff_eq_empty_iff \<open>K' = K - {t, free_coface t K}\<close> card_2_iff closed_subset_def closed_subset_free_face equalityI ex_in_conv face_def free_coface_free_face(2) insert_subset not_psubset_empty)
-        have "(join_vertex v K, join_vertex v K - {insert v t, insert v (free_coface t K)}) \<in> collapses"
-          unfolding \<open>insert v (free_coface t K) = free_coface (insert v t) (join_vertex v K)\<close>
-          unfolding collapses_def
-          using \<open>free_face (insert v t) (join_vertex v K)\<close> using ivt_in by blast
-        moreover have "join_vertex v K - {insert v t, insert v (free_coface t K)} =
-          join_vertex v (K - {t, free_coface t K})"
-          sorry
-        (*proof
-          show "join_vertex v (K - {t, free_coface t K}) \<subseteq> join_vertex v K - {insert v t, insert v (free_coface t K)}"
-            unfolding join_vertex_def join_def using v less.prems (4) vnint
-            unfolding powerset_def try
-          show "join_vertex v K - {insert v t, insert v (free_coface t K)} \<subseteq> join_vertex v (K - {t, free_coface t K})"
-            unfolding join_vertex_def join_def using v less.prems (4) vnint
-            unfolding powerset_def try
-        qed*)
-    moreover have "(join_vertex v (K - {t, free_coface t K}), (K - {t, free_coface t K})) \<in> collapses_rtrancl"
+        have hypoth_coll: "(join_vertex v (K - {t, free_coface t K}), (K - {t, free_coface t K})) \<in> collapses_rtrancl"
         proof (rule less.hyps)
           show "card (K - {t, free_coface t K}) < card K"
             using card_collapse_l less.prems(2) t by blast
@@ -2227,8 +2212,76 @@ proof -
           show "K - {t, free_coface t K} \<in> collapsible" using K'_collapsible
             by (simp add: \<open>K' = K - {t, free_coface t K}\<close> collapses_def collapses_rtrancl_def collapsible_def)
         qed
-        ultimately show ?thesis try
-      
+        have "(join_vertex v K, join_vertex v K - {insert v t, insert v (free_coface t K)}) \<in> collapses"
+          unfolding \<open>insert v (free_coface t K) = free_coface (insert v t) (join_vertex v K)\<close>
+          unfolding collapses_def
+          using \<open>free_face (insert v t) (join_vertex v K)\<close> using ivt_in by blast
+        moreover have "join_vertex v K - {insert v t, insert v (free_coface t K)} =
+          join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}"
+        proof
+          show "join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K} 
+                  \<subseteq> join_vertex v K - {insert v t, insert v (free_coface t K)}"
+          proof (unfold join_vertex_def join_def, rule)
+            fix x
+            assume xin: "x \<in> {{v}} \<union> (K - {t, free_coface t K}) \<union>
+                {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>K - {t, free_coface t K}. w = s \<union> s'} \<union> {t, free_coface t K}"
+            show "x \<in> {{v}} \<union> K \<union> {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>K. w = s \<union> s'} - {insert v t, insert v (free_coface t K)}"
+            proof (cases "x \<in> {{v}}")
+              case True thus ?thesis using tne tsubsetfc vnint by blast
+            next
+              case False note xnv = False
+              show ?thesis
+              proof (cases "x \<in> (K - {t, free_coface t K})")
+                case True thus ?thesis 
+                  using tne tsubsetfc vnint t fct less.prems(4) v 
+                  unfolding powerset_def by auto
+              next
+                case False note xninK = False
+                show ?thesis  
+                proof (cases "x \<in> {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>K - {t, free_coface t K}. w = s \<union> s'}")
+                  case True
+                  have "x \<in> {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>K. w = s \<union> s'} - {insert v t, insert v (free_coface t K)}" 
+                    using True tne tsubsetfc vnint t fct less.prems(4) v 
+                    unfolding powerset_def apply auto by (fast)+
+                  thus ?thesis by simp
+                next
+                  case False hence "x \<in> {t, free_coface t K}" using xin xninK xnv by auto
+                  thus ?thesis using t fct tne tsubsetfc vnint less.prems(4) v 
+                    unfolding powerset_def by auto
+                qed
+              qed
+            qed
+          qed
+          next
+            show "join_vertex v K - {insert v t, insert v (free_coface t K)} 
+                  \<subseteq> join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}"
+            unfolding join_vertex_def join_def using tne v less.prems (4) vnint
+            unfolding powerset_def by auto
+          qed
+          moreover have "(join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K},
+              (K - {t, free_coface t K}) \<union> {t, free_coface t K}) \<in> collapses_rtrancl"
+          proof (unfold collapses_rtrancl_def collapses_def)
+            from hypoth_coll obtain K' s where "s \<in> join_vertex v (K - {t, free_coface t K})"
+              and "free_face s (join_vertex v (K - {t, free_coface t K}))"
+              and "K' = (join_vertex v (K - {t, free_coface t K})) - {s, free_coface s (join_vertex v (K - {t, free_coface t K}))}"
+              unfolding collapses_rtrancl_def collapses_def join_vertex_def join_def 
+              using vnint apply auto try
+            show ?thesis
+            proof (unfold collapses_rtrancl_def collapses_def, rule)
+            case less
+            
+            then show ?case sorry
+          qed try
+            unfolding collapses_def collapses_rtrancl_def sorry
+          moreover have "(K - {t, free_coface t K}) \<union> {t, free_coface t K} = K"
+            using fct t by blast
+          ultimately show ?thesis
+            by (simp add: collapses_comp)
+        qed
+      qed
+    qed
+  qed
+qed
       
 
 
