@@ -2046,7 +2046,13 @@ using KV cK card cs proof (induct "card K" arbitrary: K rule: less_induct)
       by (metis (no_types, opaque_lifting) DiffE True bot.not_eq_extremum face_def free_coface_free_face(3) ft insert_iff)
   qed
 qed
-  
+
+lemma assumes f: "finite V" and AV: "A \<subseteq> powerset V" and BV: "B \<subseteq> powerset V"
+  and ac: "A \<inter> C = {}" and bc: "B \<inter> C = {}" and BV: "B \<subseteq> powerset V"
+  and a: "(A, B) \<in> collapses_rtrancl"
+  shows "(A \<union> C, B \<union> C) \<in> collapses_rtrancl"
+proof (induct "card (A - B)" arbitrary: A rule: less_induct)
+
 lemma assumes f: "finite V" and v: "v \<notin> V" and KV: "K \<subseteq> powerset V" and Kc: "K \<in> collapsible"
     and Kne: "K \<noteq> {}" and csK: "closed_subset K"
   (*  and K2V: "K2 \<subseteq> powerset V"
@@ -2282,7 +2288,6 @@ proof -
     qed
   qed
 qed
-      
 
 
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
