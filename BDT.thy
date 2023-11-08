@@ -2047,7 +2047,7 @@ using KV cK card cs proof (induct "card K" arbitrary: K rule: less_induct)
   qed
 qed
 
-lemma union_collapses: assumes f: "finite V" and AV: "A \<subseteq> powerset V" and BV: "B \<subseteq> powerset V"
+(*lemma union_collapses: assumes f: "finite V" and AV: "A \<subseteq> powerset V" and BV: "B \<subseteq> powerset V"
   and ac: "A \<inter> C = {}" and bc: "B \<inter> C = {}"
   and a: "(A, B) \<in> collapses_rtrancl"
   shows "(A \<union> C, B \<union> C) \<in> collapses_rtrancl"
@@ -2104,7 +2104,45 @@ proof -
       qed
     qed
   qed
-qed
+qed*)
+
+lemma union_collapses:
+  assumes f: "finite V" and v: "v \<notin> V"
+    (*and A: "A = join_vertex v (K - {t, free_coface t K})"*) and t: "t \<in> K" 
+    and fct: "free_coface t K \<in> K" and K: "K \<subseteq> powerset V" and cs: "closed_subset K"
+    and c: "(join_vertex v (K - {t, free_coface t K}), (K - {t, free_coface t K})) \<in> collapses_rtrancl"
+  shows "(join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K},
+              (K - {t, free_coface t K}) \<union> {t, free_coface t K}) \<in> collapses_rtrancl"
+proof (cases "join_vertex v (K - {t, free_coface t K}) = K - {t, free_coface t K}")
+  case True thus ?thesis unfolding True using t fct
+    by (simp add: collapses_rtrancl_def)
+  next
+  case False note join_ne_k = False
+  show ?thesis
+  proof (cases "K = {t, free_coface t K}")
+    case True hence "t = {}" using cs unfolding closed_subset_def try
+    hence ke: "K - {t, free_coface t K} = {}" by simp
+    have "join_vertex v (K - {t, free_coface t K}) = {{v}}"
+      unfolding ke unfolding join_vertex_def join_def apply auto try
+    show ?thesis unfolding ke unfolding join_vertex_def join_def
+      unfolding collapses_rtrancl_def try apply (subst True)
+  
+  show ?thesis using v t fct c False proof (induct "card K" arbitrary: K rule: less_induct)
+    case less
+    from less.prems (2,3) have kne: "K \<noteq> {}" by auto
+    
+    obtain t' where t: "t' \<in> join_vertex v (K - {t, free_coface t K})" 
+      and fft: "free_face t' (join_vertex v (K - {t, free_coface t K}))"
+      (*and "K' = K - {t, free_coface t K}" and
+      K'_collapsible: "(K', {}) \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}\<^sup>*"*)
+    using less.prems (4) less.prems (5)
+    unfolding collapsible_def collapses_rtrancl_def collapses_def try
+    apply auto
+    using converse_rtranclE by force
+    then show ?case sorry
+  qed
+  
+
 
 lemma assumes f: "finite V" and v: "v \<notin> V" and KV: "K \<subseteq> powerset V" and Kc: "K \<in> collapsible"
     and Kne: "K \<noteq> {}" and csK: "closed_subset K"
@@ -2319,6 +2357,16 @@ proof -
           qed
           moreover have "(join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K},
               (K - {t, free_coface t K}) \<union> {t, free_coface t K}) \<in> collapses_rtrancl"
+          proof (cases "join_vertex v (K - {t, free_coface t K}) = K" )
+            case True show ?thesis unfolding True unfolding collapses_rtrancl_def 
+              using t fct by (metis Un_Diff_cancel2 rtrancl.simps)
+          next
+            case False
+            show ?thesis 
+              using hypoth_coll
+            proof (induct "card (join_vertex v (K - {t, free_coface t K}))" 
+                arbitrary: rule: less_induct)
+            using t fct proof ()
           proof (rule union_collapses [of"V \<union> {v}"])
             show "finite (V \<union> {v})" using f by simp
             show "join_vertex v (K - {t, free_coface t K}) \<subseteq> powerset (V \<union> {v})"
