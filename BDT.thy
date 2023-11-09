@@ -1536,6 +1536,17 @@ lemma assumes cr: "(K, K') \<in> collapses_rtrancl" and f: "finite K"
   using cr collapses_contained
   using collapses_rtrancl_subseteq f by (metis psubset_card_mono)
 
+lemma collapses_at_least_one: assumes ab: "(A, B) \<in> collapses\<^sup>*" and aneb: "A \<noteq> B" 
+  shows "\<exists>K'. (A, K') \<in> collapses \<and> (K', B) \<in> collapses\<^sup>*"
+  using ab aneb using converse_rtranclE by metis
+
+corollary collapses_at_least_one_free_face:
+  assumes ab: "(A, B) \<in> collapses\<^sup>*" and aneb: "A \<noteq> B"
+  shows "\<exists>K'. \<exists>t\<in>A. free_face t A \<and> K' = (A - {t, free_coface t A}) \<and> (K', B) \<in> collapses\<^sup>*
+  \<and> t \<notin> B"
+  using collapses_at_least_one [OF ab aneb] unfolding collapses_def apply auto
+  by (metis (no_types, lifting) Diff_iff collapses_def collapses_rtrancl_def collapses_rtrancl_subseteq insertCI insert_Diff insert_subset psubsetE)
+
 (*definition collapsible :: "(nat set set) set"
   where "collapsible = {K. \<exists>x K'. (K' = {{x},{}} \<and> (K, K') \<in> collapses_rtrancl)}"*)
 
@@ -1956,8 +1967,9 @@ lemma collapsible_ne_card_ge_2:
 proof -
   from f have fK: "finite K" using KV unfolding powerset_def by (simp add: finite_subset)
   from cK and Kne obtain t where t: "t \<in> K" and f: "free_face t K"
-    unfolding collapsible_def collapses_rtrancl_def collapses_def
-    using converse_rtranclE by force
+    unfolding collapsible_def collapses_rtrancl_def
+    using collapses_at_least_one_free_face by auto
+    (*using converse_rtranclE by force*)
   have fc: "free_coface t K \<in> K" using free_coface_free_face(1) [OF f] .
   have tnfc: "t \<noteq> free_coface t K"
     by (metis f face_def free_coface_free_face(2) nless_le)
@@ -1970,9 +1982,11 @@ lemma collapsible_card_2:
     and k2: "2 = card K" shows "\<exists>t\<in>K. free_face t K \<and> K = {t, free_coface t K}"
 proof -
   from k2 have kne: "K \<noteq> {}" by auto
-  from cK obtain t where t: "t \<in> K" and fft: "free_face t K" and "(K - {t, free_coface t K},{}) \<in> collapses_rtrancl"
-    unfolding collapsible_def collapses_rtrancl_def collapses_def
-    by (smt (verit, best) CollectD case_prod_conv converse_rtranclE kne)
+  from cK obtain t where t: "t \<in> K" and fft: "free_face t K" 
+    and "(K - {t, free_coface t K},{}) \<in> collapses_rtrancl"
+    unfolding collapsible_def collapses_rtrancl_def
+    using collapses_at_least_one_free_face
+    by (metis kne mem_Collect_eq)
   have fcK: "free_coface t K \<in> K" using t
     by (simp add: \<open>free_face t K\<close> free_coface_free_face(1))
   have ne: "t \<noteq> free_coface t K" using t fcK
@@ -1989,7 +2003,7 @@ using KV cK card cs proof (induct "card K" arbitrary: K rule: less_induct)
   from less.prems (3) have Kne: "K \<noteq> {}" by auto
   from less.prems (2) obtain K' where kk': "(K, K') \<in> collapses" and k'c: "K' \<in> collapsible"
     unfolding collapsible_def collapses_rtrancl_def
-    by (metis converse_rtranclE Kne mem_Collect_eq)
+    using collapses_at_least_one by (metis Kne mem_Collect_eq)
   obtain t where t: "t \<in> K" and ft: "free_face t K" and k': "K' = K - {t, free_coface t K}"
     using kk' unfolding collapses_def by auto
   show ?case
@@ -2106,7 +2120,7 @@ proof -
   qed
 qed*)
 
-lemma union_collapses:
+(*lemma union_collapses:
   assumes f: "finite V" and v: "v \<notin> V"
     (*and A: "A = join_vertex v (K - {t, free_coface t K})"*) and t: "t \<in> K" 
     and fct: "free_coface t K \<in> K" and K: "K \<subseteq> powerset V" and cs: "closed_subset K"
@@ -2140,9 +2154,7 @@ proof (cases "join_vertex v (K - {t, free_coface t K}) = K - {t, free_coface t K
     apply auto
     using converse_rtranclE by force
     then show ?case sorry
-  qed
-  
-
+  qed*)
 
 lemma assumes f: "finite V" and v: "v \<notin> V" and KV: "K \<subseteq> powerset V" and Kc: "K \<in> collapsible"
     and Kne: "K \<noteq> {}" and csK: "closed_subset K"
@@ -2165,9 +2177,8 @@ proof -
     and "K' = K - {t, free_coface t K}" and
       K'_collapsible: "(K', {}) \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}\<^sup>*"
     using less.prems (5)
-    unfolding collapsible_def collapses_rtrancl_def collapses_def 
-    apply auto
-    using converse_rtranclE by force+
+    using collapses_at_least_one_free_face [OF _ kne]
+    unfolding collapsible_def collapses_rtrancl_def collapses_def by auto
   have fct: "free_coface t K \<in> K" using t
     using fft free_coface_free_face(1) by auto
   have tsubsetfc: "t \<subset> free_coface t K" using t
@@ -2334,7 +2345,7 @@ proof -
                   unfolding powerset_def by auto
               next
                 case False note xninK = False
-                show ?thesis  
+                show ?thesis
                 proof (cases "x \<in> {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>K - {t, free_coface t K}. w = s \<union> s'}")
                   case True
                   have "x \<in> {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>K. w = s \<union> s'} - {insert v t, insert v (free_coface t K)}" 
@@ -2357,30 +2368,95 @@ proof -
           qed
           moreover have "(join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K},
               (K - {t, free_coface t K}) \<union> {t, free_coface t K}) \<in> collapses_rtrancl"
-          proof (cases "join_vertex v (K - {t, free_coface t K}) = K" )
-            case True show ?thesis unfolding True unfolding collapses_rtrancl_def 
-              using t fct by (metis Un_Diff_cancel2 rtrancl.simps)
-          next
-            case False
-            show ?thesis 
-              using hypoth_coll
-            proof (induct "card (join_vertex v (K - {t, free_coface t K}))" 
-                arbitrary: rule: less_induct)
-            using t fct proof ()
-          proof (rule union_collapses [of"V \<union> {v}"])
-            show "finite (V \<union> {v})" using f by simp
-            show "join_vertex v (K - {t, free_coface t K}) \<subseteq> powerset (V \<union> {v})"
-              using less.prems (4)
-              unfolding powerset_def join_vertex_def join_def by auto
-            show "K - {t, free_coface t K} \<subseteq> powerset (V \<union> {v})" 
-              using less.prems (4) unfolding powerset_def by auto
-            show "join_vertex v (K - {t, free_coface t K}) \<inter> {t, free_coface t K} = {}"
-              using v t fct less.prems (4)
-              unfolding join_vertex_def join_def powerset_def by auto
-            show "(K - {t, free_coface t K}) \<inter> {t, free_coface t K} = {}" by simp
-            show "(join_vertex v (K - {t, free_coface t K}), K - {t, free_coface t K}) \<in> collapses_rtrancl"
-              using hypoth_coll .
-          qed
+            using hypoth_coll t tne fct card_K_g2 less.prems (4) 
+          proof (induct "card K" arbitrary: K rule: less_induct)
+          case less
+          from less.prems (5) have kne: "K - {t, free_coface t K} \<noteq> {}" using less.prems (2,4) 
+            by (metis One_nat_def Un_Diff_cancel Un_commute Un_insert_right card_2_iff insert_absorb insert_absorb2 is_singletonI is_singleton_altdef less_2_cases_iff less_le_not_le sup_bot.right_neutral)
+          then have join_ne: "join_vertex v (K - {t, free_coface t K}) \<noteq> {}"
+            unfolding join_vertex_def join_def by simp
+          have join_ne_K: "join_vertex v (K - {t, free_coface t K}) \<noteq> K - {t, free_coface t K}"
+            using v less.prems (6) unfolding powerset_def join_vertex_def join_def by auto
+          with less.prems (1) obtain t' where t': "t' \<in> join_vertex v (K - {t, free_coface t K})"
+            and fft': "free_face t' (join_vertex v (K - {t, free_coface t K}))" 
+            and t'nK: "t' \<notin> K - {t, free_coface t K}"
+            unfolding collapses_rtrancl_def
+            using collapses_at_least_one_free_face [OF _ join_ne_K] by auto
+          from t' t'nK have vt': "v \<in> t'" unfolding join_vertex_def join_def by auto
+          have vfct': "v \<in> free_coface t' (join_vertex v (K - {t, free_coface t K}))" 
+            using psubsetD [of t' "free_coface t' (join_vertex v (K - {t, free_coface t K}))" v]
+            using free_coface_free_face [OF fft'] vt'
+            unfolding face_def by fast
+          have fft'_new: "free_face t' (join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K})"
+            unfolding free_face_def unfolding facet_def face_def
+          proof (intro ex1I [of _ "free_coface t' (join_vertex v (K - {t, free_coface t K}))"], rule conjI3)
+             show "free_coface t' (join_vertex v (K - {t, free_coface t K}))
+                \<in> join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}"
+               by (simp add: fft' free_coface_free_face(1))
+             show "t' \<subset> free_coface t' (join_vertex v (K - {t, free_coface t K}))"
+               using face_def fft' free_coface_free_face(2) by presburger
+             show "\<forall>a1\<in>join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}.
+                t' \<subset> a1 \<longrightarrow> a1 = free_coface t' (join_vertex v (K - {t, free_coface t K}))"
+               by (smt (verit, del_insts) Pow_iff Un_iff Un_insert_right face_def fft' free_coface_free_face(3) insert_absorb less.prems(2) less.prems(4) less.prems(6) powerset_def psubsetE subsetD sup_bot_left v vt')
+             show "\<And>b. b \<in> join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K} \<and>
+                t' \<subset> b \<and> (\<forall>a1\<in>join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}. t' \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow>
+                b = free_coface t' (join_vertex v (K - {t, free_coface t K}))"
+               by (meson \<open>\<forall>a1\<in>join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}. t' \<subset> a1 \<longrightarrow> a1 = free_coface t' (join_vertex v (K - {t, free_coface t K}))\<close>)
+           qed
+           have fct'_new: "free_coface t' (join_vertex v (K - {t, free_coface t K})) =
+            free_coface t' (join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K})"
+           proof (unfold free_coface_def [of t' "(join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K})"] face_def, rule the_equality [symmetric], intro conjI3)
+            show "free_coface t' (join_vertex v (K - {t, free_coface t K}))
+                \<in> join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}"
+               by (simp add: fft' free_coface_free_face(1))
+             show "t' \<subset> free_coface t' (join_vertex v (K - {t, free_coface t K}))"
+               using face_def fft' free_coface_free_face(2) by presburger
+             show "\<forall>a1\<in>join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}.
+                t' \<subset> a1 \<longrightarrow> a1 = free_coface t' (join_vertex v (K - {t, free_coface t K}))"
+               by (smt (verit, del_insts) Pow_iff Un_iff Un_insert_right face_def fft' free_coface_free_face(3) insert_absorb less.prems(2) less.prems(4) less.prems(6) powerset_def psubsetE subsetD sup_bot_left v vt')
+             show "\<And>b. b \<in> join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K} \<and>
+                t' \<subset> b \<and> (\<forall>a1\<in>join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}. t' \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow>
+                b = free_coface t' (join_vertex v (K - {t, free_coface t K}))"
+               by (meson \<open>\<forall>a1\<in>join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}. t' \<subset> a1 \<longrightarrow> a1 = free_coface t' (join_vertex v (K - {t, free_coface t K}))\<close>)
+           qed
+           text\<open>We start the collapse process:\<close>
+           have "(join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K},
+              join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K} - 
+              {t', free_coface t' (join_vertex v (K - {t, free_coface t K}))}) \<in> collapses"
+           proof (unfold collapses_def, rule, rule, intro bexI [of _ t'], intro conjI)
+             show "free_face t' (join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K})" 
+               using fft'_new .
+             show "join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K} -
+              {t', free_coface t' (join_vertex v (K - {t, free_coface t K}))} =
+              join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K} -
+              {t', free_coface t' (join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K})}"
+               using fct'_new by presburger
+             show "t' \<in> join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}" 
+               using t' by blast
+           qed
+           moreover have "(join_vertex v (K - {t, free_coface t K}) \<union> {t, free_coface t K}) - 
+              {t', free_coface t' (join_vertex v (K - {t, free_coface t K}))} = 
+              (join_vertex v (K - {t, free_coface t K}) - {t', free_coface t' (join_vertex v (K - {t, free_coface t K}))}) 
+                \<union> {t, free_coface t K}"
+           proof -
+             have "t \<noteq> t'"
+               using vnint vt' by blast
+             moreover have "t \<noteq> free_coface t' (join_vertex v (K - {t, free_coface t K}))"
+               using vfct' vnint by blast
+             moreover have "free_coface t K \<noteq> t'"
+               using less.prems(4) less.prems(6) powerset_def v vt' by auto
+             moreover have "free_coface t K \<noteq> free_coface t' (join_vertex v (K - {t, free_coface t K}))" 
+               by (metis Pow_iff less.prems(4) less.prems(6) powerset_def subsetD v vfct')
+             ultimately show ?thesis by auto
+           qed
+ 
+          {
+            
+          
+          
+          
+          
+          }
           moreover have "(K - {t, free_coface t K}) \<union> {t, free_coface t K} = K"
             using fct t by blast
           ultimately show ?thesis
