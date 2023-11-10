@@ -2162,13 +2162,16 @@ lemma union_free_pair_collapses:
     and at'b: "(A - {t', free_coface t' A}, B) \<in> collapses\<^sup>*"
     and binb': "B \<subset> B'"
     and fft: "free_face t B'" and tb': "t \<in> B'" and tb: "t \<notin> B" and ta: "t \<notin> A"
-    and fct: "free_coface t B' \<in> B'" and fctb: "free_coface t B' \<notin> B" 
-    and fcta: "free_coface t B' \<notin> A" and nott't: "\<not> t' \<subset> t"
+    and fct: "free_coface t B' \<in> B'" and fctb: "free_coface t B' \<notin> B"
+    and fcta: "free_coface t B' \<notin> A" and nott't: "\<not> t' \<subset> t" and nott'fct: "\<not> t' \<subset> free_coface t B'"
   shows "(A \<union> {t, free_coface t B'}, B \<union> {t, free_coface t B'}) \<in> collapses_rtrancl"
-(*proof (cases "A = B")
+proof (cases "A = B")
   case True thus ?thesis unfolding True collapses_rtrancl_def by blast
 next
-  case False have "free_face t' (A \<union> {t, free_coface t B'})"
+  case False
+  have fct': "free_coface t' A \<in> A"
+      using free_coface_free_face(1) [OF fft'] .
+  have fft'_union: "free_face t' (A \<union> {t, free_coface t B'})"
     unfolding free_face_def unfolding facet_def face_def
   proof (intro ex1I [of _ "free_coface t' A"], rule conjI3)
     show "free_coface t' A \<in> A \<union> {t, free_coface t B'}" 
@@ -2176,14 +2179,81 @@ next
      show "t' \<subset> free_coface t' A"
        using \<open>free_face t' A\<close> face_def free_coface_free_face(2) by presburger
      show "\<forall>a1\<in>A \<union> {t, free_coface t B'}. t' \<subset> a1 \<longrightarrow> a1 = free_coface t' A"
-        using \<open>free_face t' A\<close> face_def free_coface_free_face(3) apply auto
-        using nott't apply blast
-        using nott't apply force try
-           show "\<And>b. b \<in> A \<union> {t, free_coface t B'} \<and> t' \<subset> b \<and> 
+     proof (rule, rule)
+       fix a1
+       assume t': "t' \<subset> a1" and a1in: "a1 \<in> A \<union> {t, free_coface t B'}" 
+       show "a1 = free_coface t' A"
+       proof (cases "a1 \<in> A")
+         case True 
+         show ?thesis
+           using \<open>free_face t' A\<close> face_def free_coface_free_face(3) [OF fft'] True t' by simp
+       next
+         case False hence a1in2: "a1 \<in> {t, free_coface t B'}" using a1in by simp
+         show ?thesis
+         proof (cases "a1 = t")
+           case True with t' nott't have False by simp 
+           thus ?thesis by (rule ccontr)
+         next
+           case False hence "a1 = free_coface t B'" using a1in2 by simp
+           with t' nott't show ?thesis
+             using \<open>free_face t' A\<close> face_def free_coface_free_face(3) [OF fft'] nott'fct by simp
+         qed
+       qed
+     qed
+     show "\<And>b. b \<in> A \<union> {t, free_coface t B'} \<and> t' \<subset> b \<and>
             (\<forall>a1\<in>A \<union> {t, free_coface t B'}. t' \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = free_coface t' A"
-  using assms proof (induct "card (A - B)" arbitrary: A rule: less_induct)
-  case less
-  then show ?case*) sorry
+       by (metis \<open>free_coface t' A \<in> A \<union> {t, free_coface t B'}\<close> \<open>t' \<subset> free_coface t' A\<close>)
+   qed
+   have fft'_union: "free_coface t' A = free_coface t' (A \<union> {t, free_coface t B'})"
+   proof (unfold free_coface_def [of t' "(A \<union> {t, free_coface t B'})"] face_def, rule the_equality [symmetric], intro conjI3)
+    show "free_coface t' A \<in> A \<union> {t, free_coface t B'}" 
+      using free_coface_free_face(1) [OF fft'] by simp
+     show "t' \<subset> free_coface t' A"
+       using \<open>free_face t' A\<close> face_def free_coface_free_face(2) by presburger
+     show "\<forall>a1\<in>A \<union> {t, free_coface t B'}. t' \<subset> a1 \<longrightarrow> a1 = free_coface t' A"
+     proof (rule, rule)
+       fix a1
+       assume t': "t' \<subset> a1" and a1in: "a1 \<in> A \<union> {t, free_coface t B'}" 
+       show "a1 = free_coface t' A"
+       proof (cases "a1 \<in> A")
+         case True 
+         show ?thesis
+           using \<open>free_face t' A\<close> face_def free_coface_free_face(3) [OF fft'] True t' by simp
+       next
+         case False hence a1in2: "a1 \<in> {t, free_coface t B'}" using a1in by simp
+         show ?thesis
+         proof (cases "a1 = t")
+           case True with t' nott't have False by simp 
+           thus ?thesis by (rule ccontr)
+         next
+           case False hence "a1 = free_coface t B'" using a1in2 by simp
+           with t' nott't show ?thesis
+             using \<open>free_face t' A\<close> face_def free_coface_free_face(3) [OF fft'] nott'fct by simp
+         qed
+       qed
+     qed
+     show "\<And>b. b \<in> A \<union> {t, free_coface t B'} \<and> t' \<subset> b \<and>
+            (\<forall>a1\<in>A \<union> {t, free_coface t B'}. t' \<subset> a1 \<longrightarrow> a1 = b) \<Longrightarrow> b = free_coface t' A"
+       by (metis \<open>free_coface t' A \<in> A \<union> {t, free_coface t B'}\<close> \<open>t' \<subset> free_coface t' A\<close>)
+   qed
+   show ?thesis
+   using fct' proof (induct "card (A - B)" arbitrary: A rule: less_induct)
+     case less
+     have "(A \<union> {t, free_coface t B'},
+      (A \<union> {t, free_coface t B'}) - {t', free_coface t' (A \<union> {t, free_coface t B'})}) \<in> collapses"
+       sorry
+     moreover have "(A \<union> {t, free_coface t B'}) - {t', free_coface t' (A \<union> {t, free_coface t B'})} = 
+      (A  - {t', free_coface t' (A \<union> {t, free_coface t B'})}) \<union> {t, free_coface t B'}"
+       sorry
+     moreover have "(A  - {t', free_coface t' (A \<union> {t, free_coface t B'})}) \<union> {t, free_coface t B'} = 
+      (A  - {t', free_coface t' A}) \<union> {t, free_coface t B'}"
+       sorry
+     moreover have "((A - {t', free_coface t' A}) \<union> {t, free_coface t B'}, B \<union> {t, free_coface t B'}) 
+        \<in> collapses_rtrancl"
+     apply (rule less.hyps) using less.prems
+     show "free_coface t' A \<in> A \<union> {t, free_coface t B'}"
+
+     then show ?case sorry
 
 lemma assumes f: "finite V" and v: "v \<notin> V" and KV: "K \<subseteq> powerset V" and Kc: "K \<in> collapsible"
     and Kne: "K \<noteq> {}" and csK: "closed_subset K"
@@ -2203,11 +2273,11 @@ proof -
     apply auto
     using converse_rtranclE by force*)
   from kne obtain t K' where t: "t \<in> K" and fft: "free_face t K"
-    and "K' = K - {t, free_coface t K}" and
-      K'_collapsible: "(K', {}) \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}\<^sup>*"
+    and "K' = K - {t, free_coface t K}" 
+    and K'_collapsible: "(K', {}) \<in> {(K, K'). \<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_coface x K}}\<^sup>*"
     using less.prems (5)
     using collapses_at_least_one_free_face [OF _ kne]
-    unfolding collapsible_def collapses_rtrancl_def collapses_def by auto
+    unfolding collapsible_def collapses_rtrancl_def collapses_def by fastforce
   have fct: "free_coface t K \<in> K" using t
     using fft free_coface_free_face(1) by auto
   have tsubsetfc: "t \<subset> free_coface t K" using t
@@ -2378,7 +2448,7 @@ proof -
                 proof (cases "x \<in> {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>K - {t, free_coface t K}. w = s \<union> s'}")
                   case True
                   have "x \<in> {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>K. w = s \<union> s'} - {insert v t, insert v (free_coface t K)}" 
-                    using True tne tsubsetfc vnint t fct less.prems(4) v 
+                    using True tne tsubsetfc vnint t fct less.prems(4) v
                     unfolding powerset_def apply auto by (fast)+
                   thus ?thesis by simp
                 next
@@ -2446,7 +2516,11 @@ proof -
                 using v less.prems (4) tne vnint fct
                 unfolding join_vertex_def join_def powerset_def by auto
               show "\<not> t' \<subset> t" using vnint vt' by auto
+              show "\<not> t' \<subset> free_coface t K" 
+                using vnint vt' free_coface_free_face (2) [OF fft'] v less.prems(4) fct
+                by (metis Pow_iff insert_absorb insert_subset powerset_def psubsetE)
               show "free_face t' (join_vertex v (K - {t, free_coface t K}))" using fft' .
+            qed
           qed
           (*using hypoth_coll t tne fft fct card_K_g2 less.prems (4,7)
           proof (induct "card K" arbitrary: K rule: less_induct)
@@ -2576,7 +2650,7 @@ proof -
            moreover have ""*)
           moreover have "(K - {t, free_coface t K}) \<union> {t, free_coface t K} = K"
             using fct t by blast
-          ultimately show ?thesis
+          ultimately show "(join_vertex v K, K) \<in> collapses_rtrancl"
             by (simp add: collapses_comp)
         qed
       qed
