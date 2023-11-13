@@ -2061,7 +2061,76 @@ using KV cK card cs proof (induct "card K" arbitrary: K rule: less_induct)
   qed
 qed
 
-(*lemma union_collapses: assumes f: "finite V" and AV: "A \<subseteq> powerset V" and BV: "B \<subseteq> powerset V"
+lemma union_collapses:
+  assumes f: "finite V" and v: "v \<notin> V" and K1V: "K1 \<subseteq> powerset V" and K2V: "K2 \<subseteq> powerset V"
+    and K3V: "K3 \<subseteq> powerset V" and K2K1: "K2 \<subseteq> K1" (*and K3K2: "K3 \<subseteq> K2"*) 
+    and K2col: "(K2, K3) \<in> collapses_rtrancl"
+    (*and pwK2: "closed_subset K2" and K2ne: "K2 \<noteq> {}"*)
+  shows "(K1 \<union> join_vertex v K2, K1 \<union> join_vertex v K3) \<in> collapses_rtrancl"
+proof (cases "K2 = K3")
+  case True
+  thus ?thesis unfolding collapses_rtrancl_def by simp
+next
+  case False
+  hence "K3 \<subseteq> K2" using K2col
+    using K2col collapses_rtrancl_subseteq by blast
+  with False have K3K2: "K3 \<subset> K2" by simp
+  show ?thesis proof (induct "card (K2 - K3)" arbitrary: K2 rule: less_induct)
+    case less
+    obtain t where t: "t \<in> K2" and fft: "free_face t K2" and 
+      K2tcol: "(K2 - {t, free_coface t K2}, K3) \<in> collapses_rtrancl"
+      using K2col unfolding collapses_rtrancl_def
+      by (meson False collapses_at_least_one_free_face)
+   have fct: "free_coface t K2 \<in> K2" using t
+    using fft free_coface_free_face(1) by auto
+   have tsubsetfc: "t \<subset> free_coface t K2" using t
+    using fft free_coface_free_face(2) unfolding face_def by auto
+   have vnint: "v \<notin> t" using t  unfolding powerset_def by auto
+   have ivt_in: "insert v t \<in> join_vertex v K2"
+    using facet_in_K less.prems (4) t
+    unfolding join_vertex_def join_def by auto
+  have t_invt: "t \<subset> insert v t" using t less.prems (3,4) unfolding powerset_def by auto
+  have "face (insert v t) (insert v (free_coface t K))"
+    using tsubsetfc using less.prems (3,4) t fct unfolding powerset_def face_def by fast
+
+
+  have ffinsert: "free_face (insert v t') (join_vertex v K2)"
+    unfolding free_face_def unfolding facet_def face_def
+  proof (intro ex1I [of _ "insert v (free_coface t' K2)"], rule conjI3)
+    show "insert v (free_coface t' K2) \<in> join_vertex v K2" using fct by simp
+    show "insert v t' \<subset> insert v (free_coface t' K2)"
+      using \<open>face (insert v t') (insert v (free_coface t' K2))\<close> unfolding face_def .
+    show "\<forall>a1\<in>join_vertex v K. insert v t \<subset> a1 \<longrightarrow> a1 = insert v (free_coface t K)"
+    proof (rule, rule)
+      fix a1 assume a1: "a1 \<in> join_vertex v K" and ivt: "insert v t \<subset> a1"
+      have fcf: "\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = (free_coface t K)" using free_coface_free_face (3) [OF fft] unfolding face_def .
+      show "a1 = insert v (free_coface t K)"
+      proof (cases "a1 \<in> {{v}}")
+        case True hence a1v: "a1 = {v}" by simp
+        show ?thesis using a1v ivt by fastforce
+      next
+        case False note a1nv = False
+        show ?thesis
+        proof (cases "a1 \<in> K")
+          case True show ?thesis using True fcf ivt by fastforce
+        next
+          case False hence "a1 \<in> {w. \<exists>s\<in>{{v}}. \<exists>s'\<in>K. w = s \<union> s'}" 
+            using a1 a1nv unfolding join_vertex_def join_def by simp
+          hence "\<exists>s'\<in>K. a1 = insert v s'" by simp
+          thus ?thesis using fcf fct ivt t_invt vnint
+            by (metis dual_order.strict_trans2 insert_mono subset_insert subset_not_subset_eq)
+        qed
+      qed
+    qed
+    fix b
+    assume b: "b \<in> join_vertex v K \<and> insert v t \<subset> b \<and> (\<forall>a1\<in>join_vertex v K. insert v t \<subset> a1 \<longrightarrow> a1 = b)" 
+    show "b = insert v (free_coface t K)" 
+      using \<open>face (insert v t) (insert v (free_coface t K))\<close> 
+      using \<open>insert v (free_coface t K) \<in> join_vertex v K\<close>
+      using b unfolding face_def by auto
+  qed
+  
+  (*lemma union_collapses: assumes f: "finite V" and AV: "A \<subseteq> powerset V" and BV: "B \<subseteq> powerset V"
   and ac: "A \<inter> C = {}" and bc: "B \<inter> C = {}"
   and a: "(A, B) \<in> collapses_rtrancl"
   shows "(A \<union> C, B \<union> C) \<in> collapses_rtrancl"
