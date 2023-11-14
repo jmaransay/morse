@@ -2063,7 +2063,7 @@ qed
 
 lemma union_collapses:
   assumes f: "finite V" and v: "v \<notin> V" and K1V: "K1 \<subseteq> powerset V" and K2V: "K2 \<subseteq> powerset V"
-    and K3V: "K3 \<subseteq> powerset V" and K2K1: "K2 \<subseteq> K1" (*and K3K2: "K3 \<subseteq> K2"*) 
+    and K3V: "K3 \<subseteq> powerset V" and csK2: "closed_subset K2" and K2K1: "K2 \<subseteq> K1" (*and K3K2: "K3 \<subseteq> K2"*) 
     and K2col: "(K2, K3) \<in> collapses_rtrancl"
     (*and pwK2: "closed_subset K2" and K2ne: "K2 \<noteq> {}"*)
   shows "(K1 \<union> join_vertex v K2, K1 \<union> join_vertex v K3) \<in> collapses_rtrancl"
@@ -2076,7 +2076,7 @@ next
     using K2col collapses_rtrancl_subseteq by blast
   with False have K3K2: "K3 \<subset> K2" by simp
   have fK2: "finite K2" using K2V f unfolding powerset_def by (simp add: finite_subset)
-  show ?thesis using K2col K3K2 K2V K2K1 fK2 
+  show ?thesis using K2col K3K2 K2V K2K1 fK2 csK2 
   proof (induct "card (K2 - K3)" arbitrary: K2 rule: less_induct)
    case less
    obtain t where t: "t \<in> K2" and fft: "free_face t K2" and
@@ -2084,11 +2084,13 @@ next
     unfolding collapses_rtrancl_def
     using less.prems(1,2)
     using collapses_at_least_one_free_face
-    by (metis collapses_rtrancl_def psubset_eq)
+    by (metis collapses_rtrancl_def psubset_eq) 
    have fct: "free_coface t K2 \<in> K2" using t
      using fft free_coface_free_face(1) by auto
    have tsubsetfc: "t \<subset> free_coface t K2" using t
-    using fft free_coface_free_face(2) unfolding face_def by auto
+     using fft free_coface_free_face(2) unfolding face_def by auto
+   from t and fct and tsubsetfc have cardK2: "2 \<le> card K2" using less.prems (5)
+     by (metis card_0_eq card_Suc_eq empty_iff less_2_cases_iff linorder_not_less psubset_eq singletonD)
    have vnint: "v \<notin> t" using v t less.prems (3) unfolding powerset_def by auto
    have vninfct: "v \<notin> free_coface t K2"
      using v t less.prems (3) vnint fct unfolding powerset_def by auto
@@ -2131,12 +2133,12 @@ next
      case True have False using True a1 ivt fcf K1V v unfolding powerset_def by blast
      thus ?thesis by (rule ccontr)
    qed
- qed 
+ qed
  have ffinsert: "free_face (insert v t) (K1 \<union> join_vertex v K2)"
     unfolding free_face_def unfolding facet_def face_def
  proof (intro ex1I [of _ "insert v (free_coface t K2)"], rule conjI3)
   show "insert v (free_coface t K2) \<in> (K1 \<union> join_vertex v K2)" 
-   using \<open>insert v (free_coface t K2) \<in> (K1 \<union> join_vertex v K2)\<close> . 
+   using \<open>insert v (free_coface t K2) \<in> (K1 \<union> join_vertex v K2)\<close> .
   show "insert v t \<subset> insert v (free_coface t K2)"
    using \<open>face (insert v t) (insert v (free_coface t K2))\<close> unfolding face_def .
   show "\<forall>a1\<in>(K1 \<union> join_vertex v K2). insert v t \<subset> a1 \<longrightarrow> a1 = insert v (free_coface t K2)"
@@ -2164,7 +2166,20 @@ next
    using \<open>face (insert v t) (insert v (free_coface t K2))\<close> 
    using \<open>insert v (free_coface t K2) \<in> K1 \<union> join_vertex v K2\<close>
    using b unfolding face_def by auto
-  qed
+qed
+  show ?case
+  proof (cases "card K2 = 2")
+    case True hence K2_explicit: "K2 = {t, free_coface t K2}" using t fct tsubsetfc
+      unfolding closed_subset_def by auto (metis card_2_iff')+
+    hence te: "t = {}" using less.prems (6) unfolding closed_subset_def
+      using fct tsubsetfc by blast
+    have K3e: "K3 = {}" using less.prems (1,2) K2_explicit
+      using K2tcol collapses_rtrancl_subseteq by auto
+    have "join_vertex v K2 = {{}, {v}, free_coface {} K2, insert v (free_coface {} K2)}" 
+      using K2_explicit unfolding te unfolding join_vertex_def join_def by auto
+    have "join_vertex v K3 = {{v}}" unfolding K3e join_vertex_def join_def by simp
+    thus ?thesis sorry
+  next
   text\<open>We start here the collapsing process:\<close>
   have "(K1 \<union> join_vertex v K2, K1 \<union> join_vertex v K2 - {insert v t, insert v (free_coface t K2)})
       \<in> collapses"
