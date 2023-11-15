@@ -200,7 +200,7 @@ qed
 
 section\<open>\emph{Zero-collapsible} implies \emph{non-evasive}.\<close>
 
-theorem zerocollapsible__non_evasive:
+theorem zerocollapsible_non_evasive:
   assumes f: "finite V" and z: "zero_collapsible V K" shows "non_evasive V K"
 using z f proof (induct "card V" arbitrary: V K)
    case 0
