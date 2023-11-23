@@ -2323,7 +2323,7 @@ proof -
   qed
 qed
 
-lemma union_join_collapses:
+lemma union_join_collapses_join:
   assumes f: "finite V" and v: "v \<notin> V" and K1V: "K1 \<subseteq> powerset V" and csK3: "closed_subset K3"
     and K2V: "K2 \<subseteq> powerset V" and csK2: "closed_subset K2" and K2K1: "K2 \<subseteq> K1"
     and K3V: "K3 \<subseteq> powerset V" (*and K3ne: "K3 \<noteq> {}"*)
@@ -2576,6 +2576,15 @@ proof -
     show "(K, {}) \<in> collapses_rtrancl" using Kc unfolding collapsible_def by simp
   qed
 qed
+
+lemma union_join_collapses:
+  assumes f: "finite V" and v: "v \<notin> V" 
+    and K1V: "K1 \<subseteq> powerset V" and csK1: "closed_subset K1"
+    and K2V: "K2 \<subseteq> powerset V" and csK2: "closed_subset K2"
+    and K3V: "K3 \<subseteq> powerset V" and K3K2: "K3 \<subseteq> K2"
+    and K2col: "(K1, K2) \<in> collapses_rtrancl"
+  shows "(K1 \<union> join_vertex v K3, K2 \<union> join_vertex v K3) \<in> collapses_rtrancl"
+  sorry
 
 lemma union_join_collapses_twice:
   assumes f: "finite V" and v: "v \<notin> V" and K0V: "K0 \<subseteq> powerset V" 
