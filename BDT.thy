@@ -1595,9 +1595,6 @@ corollary collapses_at_least_one_free_face_free_coface:
   using collapses_at_least_one_free_face [OF ab aneb]
   using collapses_at_least_one_free_coface by metis
 
-(*definition collapsible :: "(nat set set) set"
-  where "collapsible = {K. \<exists>x K'. (K' = {{x},{}} \<and> (K, K') \<in> collapses_rtrancl)}"*)
-
 definition collapsible :: "(nat set set) set"
   where "collapsible = {K. (K, {}) \<in> collapses_rtrancl}"
 
@@ -1726,7 +1723,8 @@ text\<open>The following lemma proves that a cone that is not empty can be colla
   @{term K} is @{thm closed_subset_def}.\<close>
 
 lemma cone_collapses_to_peak:
-  assumes f: "finite V" and v: "v \<in> V" and KV: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}"
+  assumes f: "finite V" and v: "v \<in> V" 
+    and KV: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}"
     and T: "T \<subseteq> powerset (V - {v})" and cs: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}"
     and pK: "closed_subset K"
   shows "(K, {{v}, {}}) \<in> collapses_rtrancl"
@@ -1771,7 +1769,6 @@ proof -
       show "finite V" using f .
       show "finite (T - {t})" using less.prems(2) by blast
       show "v \<in> V" using less.prems (3) .
-      (*show "K - {t, insert v t} \<subseteq> powerset V" using less.prems (4) unfolding powerset_def by auto*)
       show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (6) unfolding powerset_def by auto
       show "K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
       proof
@@ -1852,15 +1849,16 @@ lemma card_collapse_l:
   by (metis Diff_subset card_seteq linorder_not_less subset_Diff_insert)
 
 lemma join_subset_collapses:
-  assumes f: "finite V" and v: "v \<notin> V" and K1V: "K1 \<subseteq> powerset V" and K2V: "K2 \<subseteq> powerset V"
-  and K2K1: "K2 \<subseteq> K1" and pwK1: "closed_subset K1" and pwK2: "closed_subset K2" 
-  (*and K2ne: "K2 \<noteq> {}"*)
+  assumes f: "finite V" and v: "v \<notin> V" 
+    and K1V: "K1 \<subseteq> powerset V" and pwK1: "closed_subset K1" 
+    and K2V: "K2 \<subseteq> powerset V" and pwK2: "closed_subset K2"
+    and K2K1: "K2 \<subseteq> K1"
   shows "(join_vertex v K1, join_vertex v K2) \<in> collapses_rtrancl"
 proof -
   have fK1: "finite K1" and fK2: "finite K2" using f K1V K2V K2K1 unfolding powerset_def
     by (simp add: finite_subset)+
   show ?thesis
-  using f v K1V K2V K2K1 fK1 fK2 pwK1 proof (induct "card (K1 - K2)" arbitrary: K1 rule: less_induct)
+  using K1V K2K1 fK1 pwK1 proof (induct "card (K1 - K2)" arbitrary: K1 rule: less_induct)
   case less
   show ?case
   proof (cases "K1 = K2")
@@ -1872,7 +1870,8 @@ proof -
     proof (cases "K2 = {}")
       case False
       have K2subsetK1: "K2 \<subset> K1" using K2neK1 less.prems by simp
-      have fK1K2: "finite (K1 - K2)" and K1K2ne: "K1 - K2 \<noteq> {}" using fK2 less.prems (5,6) K2neK1 by simp_all
+      have fK1K2: "finite (K1 - K2)" and K1K2ne: "K1 - K2 \<noteq> {}" 
+        using fK2 less.prems (2,3) K2neK1 by simp_all
       then obtain t where t: "t \<in> K1 - K2" and ft: "facet t (K1 - K2)"
         unfolding facet_def by (meson finite_has_maximal)
       have tne: "t \<noteq> {}" using pwK2 t K1K2ne K2subsetK1 False unfolding closed_subset_def by auto
@@ -1889,9 +1888,9 @@ proof -
       have tinjoin: "t \<in> join_vertex v K1" and ivt: "insert v t \<in> join_vertex v K1" 
         using t unfolding join_vertex_def join_def by auto
       have vnit: "v \<notin> t" and t_in_insert: "t \<subset> insert v t"
-        using less.prems (2,3) t unfolding powerset_def by auto
+        using less.prems (1) v t unfolding powerset_def by auto
       have "face t (insert v t)"
-        using less.prems (2,3) t
+        using less.prems (1) v t
         unfolding face_def powerset_def by auto
       have "insert v t \<in> (join_vertex v K1)"
         using facet_in_K [OF ftK1]
@@ -1959,15 +1958,11 @@ proof -
       proof (rule less.hyps)
         show "card (K1 - {t} - K2) < card (K1 - K2)"
           by (metis Diff_insert Diff_insert2 card_Diff1_less fK1K2 t)
-        show "finite V" using f .
-        show "v \<notin> V" using v .
-        show "K1 - {t} \<subseteq> powerset V" using less.prems(3) by auto
-        show "K2 \<subseteq> powerset V" using K2V .
-        show "K2 \<subseteq> K1 - {t}" using less.prems(5) t by force
-        show "finite (K1 - {t})" using less.prems(6) by blast
-        show "finite K2" using fK2 .
+        show "K1 - {t} \<subseteq> powerset V" using less.prems(1) by auto
+        show "K2 \<subseteq> K1 - {t}" using less.prems(2) t by force
+        show "finite (K1 - {t})" using less.prems(3) by blast
         show "closed_subset (K1 - {t})"
-          using less.prems (8) ftK1 unfolding closed_subset_def facet_def by auto
+          using less.prems (4) ftK1 unfolding closed_subset_def facet_def by auto
       qed
       ultimately show ?thesis
         using collapses_comp by presburger
@@ -1979,18 +1974,18 @@ proof -
         show "finite (V \<union> {v})" using f by blast
         show "v \<in> V \<union> {v}" by simp
         show "join_vertex v K1 \<subseteq> powerset (V \<union> {v})" 
-          using less.prems (3)
+          using less.prems (1)
           unfolding powerset_def join_vertex_def join_def by auto
         show "join_vertex v K1 \<noteq> {}" unfolding powerset_def join_vertex_def join_def
           using K2neK1 True by auto
         show "K1 \<subseteq> powerset (V \<union> {v} - {v})"
-          using less.prems (3) unfolding powerset_def using v by simp
+          using less.prems (1) unfolding powerset_def using v by simp
         show "join_vertex v K1 = K1 \<union> {s. \<exists>t\<in>K1. s = insert v t}"
         proof
           show "K1 \<union> {s. \<exists>t\<in>K1. s = insert v t} \<subseteq> join_vertex v K1"
             unfolding join_vertex_def join_def by auto
           show "join_vertex v K1 \<subseteq> K1 \<union> {s. \<exists>t\<in>K1. s = insert v t}"
-            using K2neK1 less.prems (5,8)
+            using K2neK1 less.prems (2) v
             unfolding join_vertex_def join_def closed_subset_def by auto
         qed
         show "closed_subset (join_vertex v K1)"
@@ -2000,7 +1995,7 @@ proof -
             and s's: "s' \<subseteq> s"
           show "s' \<in> {w. \<exists>s\<in>{{}, {v}}. \<exists>s'\<in>K1. w = s \<union> s'}" 
             using s s's
-            using less.prems (8)
+            using less.prems (4) v
             unfolding join_def join_vertex_def closed_subset_def jvK2
             by auto (metis insert_Diff subset_insert_iff)
         qed
@@ -2043,7 +2038,6 @@ proof -
   from cK and Kne obtain t where t: "t \<in> K" and f: "free_face t K"
     unfolding collapsible_def collapses_rtrancl_def
     using collapses_at_least_one_free_face by auto
-    (*using converse_rtranclE by force*)
   have fc: "free_coface t K \<in> K" using free_coface_free_face(1) [OF f] .
   have tnfc: "t \<noteq> free_coface t K"
     by (metis f face_def free_coface_free_face(2) nless_le)
@@ -2135,9 +2129,8 @@ using KV cK card cs proof (induct "card K" arbitrary: K rule: less_induct)
   qed
 qed
 
-
 lemma union_join_collapses_to_base:
-  assumes f: "finite V" and v: "v \<in> V" and KV: "K \<subseteq> powerset V" (*and Tne: "T \<noteq> {}"*)
+  assumes f: "finite V" and v: "v \<in> V" and KV: "K \<subseteq> powerset V"
     and T: "T \<subseteq> powerset (V - {v})" and cs: "K = join_vertex v T"
     and pK: "closed_subset K" and TK1: "T \<subseteq> K1" and K1: "K1 \<subseteq> powerset (V - {v})"
     and Kv: "(T, {}) \<in> collapses_rtrancl"
@@ -2335,7 +2328,6 @@ proof -
           ultimately show ?thesis unfolding fftKfftT using free_coface_insertK
             by (metis Diff_insert)
         qed
-        (*show "T - {t, free_coface t T} \<noteq> {}" using Ttfct .*)
       qed
       ultimately show ?thesis
         using collapses_comp by presburger
@@ -2344,11 +2336,12 @@ proof -
 qed
 
 lemma union_join_collapses_join:
-  assumes f: "finite V" and v: "v \<notin> V" and K1V: "K1 \<subseteq> powerset V" and csK3: "closed_subset K3"
-    and K2V: "K2 \<subseteq> powerset V" and csK2: "closed_subset K2" and K2K1: "K2 \<subseteq> K1"
-    and K3V: "K3 \<subseteq> powerset V" (*and K3ne: "K3 \<noteq> {}"*)
+  assumes f: "finite V" and v: "v \<notin> V" 
+    and K1V: "K1 \<subseteq> powerset V"
+    and K2V: "K2 \<subseteq> powerset V" and csK2: "closed_subset K2"
+    and K3V: "K3 \<subseteq> powerset V" and csK3: "closed_subset K3"
+    and K2K1: "K2 \<subseteq> K1" 
     and K2col: "(K2, K3) \<in> collapses_rtrancl"
-    (*and pwK2: "closed_subset K2" and K2ne: "K2 \<noteq> {}"*)
   shows "(K1 \<union> join_vertex v K2, K1 \<union> join_vertex v K3) \<in> collapses_rtrancl"
 proof (cases "K2 = K3")
   case True
@@ -2368,8 +2361,6 @@ next
     using less.prems(1,2)
     using collapses_at_least_one_free_face
     by (metis collapses_rtrancl_def psubset_eq)
-   (*have "{} \<in> K3" using csK3 K3ne unfolding closed_subset_def by auto
-   hence tne: "t \<noteq> {}" using tniK3 csK3 t unfolding closed_subset_def by auto*)
    have fct: "free_coface t K2 \<in> K2" using t
      using fft free_coface_free_face(1) by auto
    have tsubsetfc: "t \<subset> free_coface t K2" using t
@@ -2737,21 +2728,42 @@ next
 qed
 
 lemma union_join_collapses_twice:
-  assumes f: "finite V" and v: "v \<notin> V" and K0V: "K0 \<subseteq> powerset V" 
-    and K1V: "K1 \<subseteq> powerset V" and csK3: "closed_subset K3"
+  assumes f: "finite V" and v: "v \<notin> V"
+    and K0V: "K0 \<subseteq> powerset V"
+    and K1V: "K1 \<subseteq> powerset V" and csK1: "closed_subset K1"
     and K2V: "K2 \<subseteq> powerset V" and csK2: "closed_subset K2"
-    and K3V: "K3 \<subseteq> powerset V" (*and K3ne: "K3 \<noteq> {}"*)
+    and K3V: "K3 \<subseteq> powerset V" and csK3: "closed_subset K3"
     and K2K0: "K2 \<subseteq> K0" and K3K1: "K3 \<subseteq> K1"
-    and K2col: "(K2, K3) \<in> collapses_rtrancl"
-    (*and pwK2: "closed_subset K2" and K2ne: "K2 \<noteq> {}"*)
+    and K0col: "(K0, K1) \<in> collapses_rtrancl" and K2col: "(K2, K3) \<in> collapses_rtrancl"
   shows "(K0 \<union> join_vertex v K2, K1 \<union> join_vertex v K3) \<in> collapses_rtrancl"
-proof (cases "K0 = K1")
-  case True
-  show ?thesis unfolding True using union_join_collapses_join [OF f v K1V csK3 K2V csK2 _ K3V K2col]
-    using K2K0 True by auto
-next
-  case False
-  show ?thesis sorry
+proof -
+  have "(K0 \<union> join_vertex v K2, K0 \<union> join_vertex v K3) \<in> collapses_rtrancl"
+    by (rule union_join_collapses_join [of V], intro f, intro v, intro K0V, 
+      intro csK3, intro K2V, intro csK2, intro K2K0, intro K3V, intro K2col)
+  moreover have "(K0 \<union> join_vertex v K3, K1 \<union> join_vertex v K3) \<in> collapses_rtrancl"
+    by (rule union_join_collapses [of V], intro f, intro v, intro K0V, intro K1V, intro csK1, 
+      intro K3K1, intro K0col)
+  ultimately show ?thesis unfolding collapses_rtrancl_def by simp
+qed
+
+lemma join_collapses_union:
+  assumes f: "finite V" and v: "v \<notin> V"
+    and K0V: "K0 \<subseteq> powerset V" and csK0: "closed_subset K0"
+    and K1V: "K1 \<subseteq> powerset V" and csK1: "closed_subset K1"
+    and K2V: "K2 \<subseteq> powerset V" and csK2: "closed_subset K2"
+    and K1K0: "K1 \<subseteq> K0"
+    and K1col: "(K1, K2) \<in> collapses_rtrancl"
+  shows "(join_vertex v K0, K1 \<union> join_vertex v K2) \<in> collapses_rtrancl"
+proof -
+  have "(join_vertex v K0, join_vertex v K1) \<in> collapses_rtrancl"
+    by (rule join_subset_collapses [of V], intro f, intro v, intro K0V, 
+      intro K1V, intro K1K0, intro csK0, intro csK1)
+  moreover have "join_vertex v K1 = K1 \<union> join_vertex v K1"
+    unfolding join_vertex_def join_def by auto
+  moreover have "(K1 \<union> join_vertex v K1, K1 \<union> join_vertex v K2) \<in> collapses_rtrancl"
+    by (rule union_join_collapses_join [of V], intro f, intro v, intro K1V,
+        intro csK2, intro K1V, intro csK1, rule subset_refl, intro K2V, intro K1col)
+  ultimately show ?thesis unfolding collapses_rtrancl_def by simp
 qed
 
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
