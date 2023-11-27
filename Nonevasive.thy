@@ -1003,7 +1003,7 @@ proof (rule ccontr)
     by (metis evaluation.simps(1) evaluation.simps(2) false_evader true_evader)
 qed
 
-lemma not_evaders_implies_non_evasive:
+theorem not_evaders_implies_non_evasive:
   assumes k: "K \<subseteq> powerset V" and f: "finite V" and kne: "K \<noteq> {}"
     and l: "\<exists>l. (V, l) \<in> sorted_variables \<and> evaluation l K \<in> not_evaders"
   shows "non_evasive V K"
@@ -1120,5 +1120,104 @@ proof -
   qed
  qed
 qed
+
+section\<open>Being @{term "non_evasive"} implies @{term "collapsible"}}.\<close>
+
+theorem assumes k: "K \<subseteq> powerset V" and f: "finite V" and cs: "closed_subset K" 
+  and ne: "non_evasive V K" 
+  shows "K \<in> collapsible"
+proof -
+  from f and k have fK: "finite K" by (simp add: finite_subset powerset_def)
+  show ?thesis 
+  proof (cases "card V = 0")
+    case True with f have "V = {}" by simp
+    hence "K = {}" using k ne unfolding powerset_def by auto
+    thus ?thesis using collapsible_empty by simp
+  next
+    case False note vne = False
+    show ?thesis
+    proof (cases "card V = 1")
+      case True then obtain v where vs: "V = {v}" using card_1_singletonE by auto
+      hence "K = {} | K = {{},{v}}" using ne using non_evasive.simps [of V] by metis
+      thus ?thesis using collapsible_empty singleton_collapsable by (metis insert_commute)
+    next
+      case False with vne f have v_ge_2: "2 \<le> card V" by linarith
+      show ?thesis
+      proof (cases "card V = 2")
+        show ?thesis using k ne cs v_ge_2 proof (induct "card V" arbitrary: V K rule: less_induct)
+          case less
+          from less.prems (2,4) obtain v where v: "v \<in> V"
+            and ne_link: "non_evasive (V - {v}) (link_ext v V K)" and ne_cost: "non_evasive (V - {v}) (cost v V K)"
+            using non_evasive.simps (5) [OF less.prems (4), of K] by auto
+          hence vne: "V \<noteq> {}" by auto
+          have kdec: "K = cost v V K \<union> (join_vertex v (link_ext v V K))"
+              using complex_decomposition [OF less.prems (1) less.prems (3), of v]
+              unfolding closed_subset_link_eq_link_ext [OF vne less.prems (1) less.prems (3), of v, symmetric] .
+
+          show ?case
+          proof (cases "card V = 2")
+            case False hence card_V_g2: "2 < card V" using less.prems(4) by linarith
+            have "(cost v V K \<union> (join_vertex v (link_ext v V K)), cost v V K) \<in> collapses_rtrancl"
+            proof (rule union_join_collapses_to_base [of V v _ "link_ext v V K"])
+              show "finite V" using less.prems (2) using non_evasive.simps(6) by blast
+              show "v \<in> V" using v .
+              show "join_vertex v (link_ext v V K) \<subseteq> powerset V"
+                using less.prems(1) calculation by auto
+              show "link_ext v V K \<subseteq> powerset (V - {v})" unfolding powerset_def link_ext_def by auto
+              show "join_vertex v (link_ext v V K) = join_vertex v (link_ext v V K)" ..
+              show "closed_subset (join_vertex v (link_ext v V K))"
+              (*folding closed_subset_def join_vertex_def join_def link_ext_def powerset_def
+              apply auto*) sorry
+              show "link_ext v V K \<subseteq> cost v V K"
+                using less.prems(1) less.prems(3) vne by (metis closed_subset_link_eq_link_ext link_subset_cost)
+              show "cost v V K \<subseteq> powerset (V - {v})" using cost_closed less.prems(1) by blast
+              show "(link_ext v V K, {}) \<in> collapses_rtrancl"
+              proof -
+                have "link_ext v V K \<in> collapsible"
+                proof (rule less.hyps [of "V - {v}"])
+                  show "card (V - {v}) < card V" using v
+                    by (meson \<open>finite V\<close> card_Diff1_less_iff)
+                  show "link_ext v V K \<subseteq> powerset (V - {v})"
+                    using \<open>link_ext v V K \<subseteq> powerset (V - {v})\<close> by fastforce
+                  show "non_evasive (V - {v}) (link_ext v V K)" using ne_link .
+                  show "closed_subset (link_ext v V K)"
+                    using less.prems(1) less.prems(3) vne
+                    by (meson cc_s.intros(3) cc_s_closed closed_subset_def link_ext_cc_s)
+                  show "2 \<le> card (V - {v})" using card_V_g2 v by simp
+                qed
+              thus ?thesis unfolding collapsible_def by simp
+            qed
+          qed
+          moreover have "cost v V K \<in> collapsible"
+          proof (rule less.hyps [of "V - {v}"])
+            show "card (V - {v}) < card V" using card_V_g2 v by auto
+            show "cost v V K \<subseteq> powerset (V - {v})" using cost_closed less.prems(1) by blast
+            show "non_evasive (V - {v}) (cost v V K)" using ne_cost .
+            show "closed_subset (cost v V K)" sorry
+              (*using less.prems (3) unfolding closed_subset_def try*)
+            show "2 \<le> card (V - {v})" using card_V_g2 v by simp
+          qed
+          ultimately show ?thesis using kdec unfolding collapsible_def try
+        next
+          case True then obtain v1 v2 where V: "V = {v1, v2}" and ne: "v1 \<noteq> v2"
+            by (meson card_2_iff)
+          from less.prems (2) and non_evasive.simps (5)
+          (*obtain x where x: "x \<in> V"
+            and "non_evasive (V - {x}) (link_ext x V K)" and "non_evasive (V - {x}) (cost x V K)"*)
+          show ?thesis 
+          proof (cases "v = v1")
+            case True hence "K = cost v1 V K \<union> (join_vertex v1 (link_ext v1 V K))" using kdec
+          have "K = {{}} | K = {{}, {v1}} | K = {{},{v2}}"
+            using V less.prems (1,2,3) unfolding powerset_def closed_subset_def 
+            using less.prems (3)
+            using non_evasive.simps (5) less.prems (3) try
+          show ?thesis
+
+      
+        then show ?case
+      qed
+
+end
+
 
 end

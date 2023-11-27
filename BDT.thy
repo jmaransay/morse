@@ -364,6 +364,11 @@ proof
   qed
 qed
 
+corollary closed_subset_link_eq_link_ext:
+  assumes f: "V \<noteq> {}" and K: "K \<subseteq> powerset V" and cs: "closed_subset K"
+  shows "link x V K = link_ext x V K"
+  by (rule cc_s_link_eq_link_ext, rule, intro f, intro K, intro cs)
+
 lemma link_cc:
   assumes v: "(V,K) \<in> cc_s" and x: "x \<in> V"
   shows "(V, {s. x \<notin> s \<and> s \<in> K \<and> insert x s \<in> K}) \<in> cc_s"
@@ -892,12 +897,12 @@ lemma union_in_join_vertex [simp]:
   shows "{v} \<union> w \<in> join_vertex v V"
   using w unfolding join_vertex_def join_def by auto
 
-proposition
-  assumes k: "K \<subseteq> powerset V" and p: "closed_subset K" and v: "{v} \<in> K"
+proposition closed_star_is_join:
+  assumes k: "K \<subseteq> powerset V" and p: "closed_subset K" (*and v: "{v} \<in> K"*)
   shows "closed_star v V K = join_vertex v (link v V K)"
 proof
   show "join_vertex v (link v V K) \<subseteq> closed_star v V K"
-   using k v p
+   using k p
    unfolding join_vertex_def join_def link_def
      closed_star_def star_def powerset_def closed_subset_def by auto
   show "closed_star v V K \<subseteq> join_vertex v (link v V K)"
@@ -920,6 +925,11 @@ proof
     ultimately show "star v V K \<union> link v V K \<subseteq> join_vertex v (link v V K)" by simp
   qed
 qed
+
+lemma complex_decomposition:
+  assumes k: "K \<subseteq> powerset V" and p: "closed_subset K"
+  shows "K = cost v V K \<union> join_vertex v (link v V K)"
+  unfolding closed_star_is_join [OF k p, symmetric] using cost_union_closed_star [OF k] .
 
 section\<open>A set of sets being a cone over a given vertex\<close>
 
@@ -2738,8 +2748,8 @@ lemma union_join_collapses_twice:
   shows "(K0 \<union> join_vertex v K2, K1 \<union> join_vertex v K3) \<in> collapses_rtrancl"
 proof -
   have "(K0 \<union> join_vertex v K2, K0 \<union> join_vertex v K3) \<in> collapses_rtrancl"
-    by (rule union_join_collapses_join [of V], intro f, intro v, intro K0V, 
-      intro csK3, intro K2V, intro csK2, intro K2K0, intro K3V, intro K2col)
+    by (rule union_join_collapses_join [of V], intro f, intro v, intro K0V, intro K2V, 
+        intro csK2, intro K3V, intro csK3, intro K2K0, intro K2col)
   moreover have "(K0 \<union> join_vertex v K3, K1 \<union> join_vertex v K3) \<in> collapses_rtrancl"
     by (rule union_join_collapses [of V], intro f, intro v, intro K0V, intro K1V, intro csK1, 
       intro K3K1, intro K0col)
@@ -2757,12 +2767,12 @@ lemma join_collapses_union:
 proof -
   have "(join_vertex v K0, join_vertex v K1) \<in> collapses_rtrancl"
     by (rule join_subset_collapses [of V], intro f, intro v, intro K0V, 
-      intro K1V, intro K1K0, intro csK0, intro csK1)
+        intro csK0, intro K1V, intro csK1, intro K1K0)
   moreover have "join_vertex v K1 = K1 \<union> join_vertex v K1"
     unfolding join_vertex_def join_def by auto
   moreover have "(K1 \<union> join_vertex v K1, K1 \<union> join_vertex v K2) \<in> collapses_rtrancl"
-    by (rule union_join_collapses_join [of V], intro f, intro v, intro K1V,
-        intro csK2, intro K1V, intro csK1, rule subset_refl, intro K2V, intro K1col)
+    by (rule union_join_collapses_join [of V], intro f, intro v, intro K1V, intro K1V, 
+        intro csK1, intro K2V, intro csK2, rule subset_refl, intro K1col)
   ultimately show ?thesis unfolding collapses_rtrancl_def by simp
 qed
 
