@@ -544,6 +544,41 @@ lemma link_cost_commute:
         cost x (V - {y}) (link y V K)"
   using x y xy unfolding link_def cost_def powerset_def by auto
 
+lemma cost_cc_s:
+  assumes v: "(V, K) \<in> cc_s"
+  shows "(V, cost x V K) \<in> cc_s"
+proof (cases "V = {}")
+  case True
+  show ?thesis using v unfolding True cost_def powerset_def
+    by (simp add: cc_s.simps)
+next
+  case False note vne = False
+  show ?thesis
+  proof (cases "x \<in> V")
+    case False
+    show ?thesis
+      using False cc_s_subset [OF v]
+      using cc_s.simps cc_s_simplices [OF v] cc_s_closed v vne
+      unfolding cost_def powerset_def
+      apply auto[1] using cc_s_simplices cc_s_closed v unfolding closed_subset_def
+      by (metis mem_Collect_eq)
+  next
+    case True
+    show ?thesis unfolding cost_def
+    proof (rule cc_s.intros (3))
+      show "V \<noteq> {}" using True by fast
+      show "{s \<in> powerset (V - {x}). s \<in> K} \<subseteq> powerset V"
+        using True unfolding powerset_def by auto
+      from v have pcK: "closed_subset K" 
+        using cc_s.simps True
+        by (meson cc_s_closed closed_subset_def)
+      show "closed_subset {s \<in> powerset (V - {x}). s \<in> K}"
+        using pcK
+        unfolding closed_subset_def powerset_def by blast
+    qed
+  qed
+qed
+
 section\<open>Open star of a vertex in a set of sets\<close>
 
 definition star :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
@@ -877,6 +912,30 @@ lemma join_closed_subset: assumes cs: "closed_subset V"
   shows "closed_subset (join_vertex v V)"
   using cs unfolding closed_subset_def join_vertex_def join_def
   by auto (metis insert_Diff subset_insert_iff)
+
+lemma link_ext_empty_vertex: "link_ext v {} K = {} | link_ext v {} K = {{}}" 
+  unfolding link_ext_def powerset_def by auto
+
+corollary closed_subset_empty_vertex_link: "closed_subset (link_ext v {} K)"
+  using link_ext_empty_vertex unfolding closed_subset_def by fastforce
+
+lemma cost_empty_vertex: "cost v {} K = {} | cost v {} K = {{}}" 
+  unfolding cost_def powerset_def by auto
+
+corollary closed_subset_empty_vertex_cost: "closed_subset (cost v {} K)"
+  using cost_empty_vertex unfolding closed_subset_def by fastforce
+
+corollary closed_subset_link_ext:
+  assumes v: "K \<subseteq> powerset V" and c: "closed_subset K" (*and vne: "V \<noteq> {}"*)
+  shows "closed_subset (link_ext v V K)"
+  using c cc_s.intros(3) cc_s_closed closed_subset_def link_ext_cc_s v closed_subset_empty_vertex_link
+  by metis
+
+corollary closed_subset_cost:
+  assumes v: "K \<subseteq> powerset V" and c: "closed_subset K" (*and vne: "V \<noteq> {}"*)
+  shows "closed_subset (cost v V K)" 
+  using cost_cc_s [of V K] cc_s.intros(3) closed_subset_empty_vertex_cost 
+  by (metis c cc_s_closed closed_subset_def v)
 
 lemma [simp]:
   assumes "{} \<in> V" shows "{} \<in> join_vertex v V" and "{v} \<in> join_vertex v V"
@@ -1542,12 +1601,12 @@ lemma assumes f: "(\<exists>x\<in>K. free_face x K \<and> K' = K - {x, free_cofa
   shows "(K, K') \<in> collapses_rtrancl"
   using f unfolding collapses_rtrancl_def collapses_def by auto
 
-lemma assumes k: "(K, K') \<in> collapses_rtrancl" and k': "(K', K'') \<in> collapses_rtrancl"
+lemma collapses_rtrancl_comp: assumes k: "(K, K') \<in> collapses_rtrancl" and k': "(K', K'') \<in> collapses_rtrancl"
   shows "(K, K'') \<in> collapses_rtrancl"
   using k k' using trans_rtrancl [of collapses_rtrancl]
   by (metis collapses_rtrancl_def rtrancl_trans)
 
-lemma collapses_comp: 
+lemma collapses_comp:
   assumes k: "(K, K') \<in> collapses" and k': "(K', K'') \<in> collapses_rtrancl"
   shows "(K, K'') \<in> collapses_rtrancl"
   using k k' using trans_rtrancl [of collapses_rtrancl]
