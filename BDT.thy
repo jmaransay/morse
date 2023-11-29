@@ -1024,10 +1024,10 @@ text\<open>There cannot be cones over an empty set of vertexes.\<close>
 
 lemma "\<not> cone {} K" unfolding cone_def by simp
 
-text\<open>Any cone has at least one distinguished element.\<close>
-
 lemma cone_not_empty: assumes vne: "V \<noteq> {}" shows "cone V {}" 
   using vne unfolding cone_def by auto
+
+text\<open>Any non-emtpy cone has at least one distinguished element.\<close>
 
 lemma singleton_cone: assumes v: "v \<in> V" shows "cone V {{v}, {}}"
   unfolding cone_def
@@ -2404,7 +2404,7 @@ proof -
   qed
 qed
 
-lemma union_join_collapses_join:
+lemma union_join_collapses_union_join:
   assumes f: "finite V" and v: "v \<notin> V" 
     and K1V: "K1 \<subseteq> powerset V"
     and K2V: "K2 \<subseteq> powerset V" and csK2: "closed_subset K2"
@@ -2807,7 +2807,7 @@ lemma union_join_collapses_twice:
   shows "(K0 \<union> join_vertex v K2, K1 \<union> join_vertex v K3) \<in> collapses_rtrancl"
 proof -
   have "(K0 \<union> join_vertex v K2, K0 \<union> join_vertex v K3) \<in> collapses_rtrancl"
-    by (rule union_join_collapses_join [of V], intro f, intro v, intro K0V, intro K2V, 
+    by (rule union_join_collapses_union_join [of V], intro f, intro v, intro K0V, intro K2V, 
         intro csK2, intro K3V, intro csK3, intro K2K0, intro K2col)
   moreover have "(K0 \<union> join_vertex v K3, K1 \<union> join_vertex v K3) \<in> collapses_rtrancl"
     by (rule union_join_collapses [of V], intro f, intro v, intro K0V, intro K1V, intro csK1, 
@@ -2830,9 +2830,26 @@ proof -
   moreover have "join_vertex v K1 = K1 \<union> join_vertex v K1"
     unfolding join_vertex_def join_def by auto
   moreover have "(K1 \<union> join_vertex v K1, K1 \<union> join_vertex v K2) \<in> collapses_rtrancl"
-    by (rule union_join_collapses_join [of V], intro f, intro v, intro K1V, intro K1V, 
+    by (rule union_join_collapses_union_join [of V], intro f, intro v, intro K1V, intro K1V, 
         intro csK1, intro K2V, intro csK2, rule subset_refl, intro K1col)
   ultimately show ?thesis unfolding collapses_rtrancl_def by simp
+qed
+
+lemma union_join_collapses_join:
+  assumes f: "finite V" and v: "v \<notin> V"
+    and K1V: "K1 \<subseteq> powerset V"
+    and K2V: "K2 \<subseteq> powerset V" and csK2: "closed_subset K2"
+    and K3V: "K3 \<subseteq> powerset V" and csK3: "closed_subset K3"
+    and K3K2: "K3 \<subseteq> K2"
+    and K1col: "(K1, K2) \<in> collapses_rtrancl"
+  shows "(K1 \<union> join_vertex v K2, join_vertex v K3) \<in> collapses_rtrancl"
+proof -
+  have "(K1 \<union> join_vertex v K2, K2 \<union> join_vertex v K2) \<in> collapses_rtrancl"
+    using union_join_collapses [OF f v K1V K2V csK2 subset_refl [of K2] K1col] .
+  moreover have "K2 \<union> join_vertex v K2 = join_vertex v K2" by auto
+  moreover have "(join_vertex v K2, join_vertex v K3) \<in> collapses_rtrancl"
+    using join_subset_collapses [OF f v K2V csK2 K3V csK3 K3K2] .
+  ultimately show ?thesis by (metis collapses_rtrancl_comp)
 qed
 
 section\<open>Zero collapsible sets, based on @{term link_ext} and @{term cost}\<close>
