@@ -22,7 +22,7 @@ function ordered_non_evasive :: "nat list \<Rightarrow> nat set set \<Rightarrow
   by auto
 termination by (relation "Wellfounded.measure (\<lambda>(l,K). length l)", auto)
 
-(*Definition using an additiona set for the vertexes, instead of just a list:
+(*Definition using an additional set for the vertexes, instead of just a list:
 
 function ordered_non_evasive :: "nat set \<Rightarrow> nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
