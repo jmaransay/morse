@@ -1022,7 +1022,7 @@ qed
 
 text\<open>There cannot be cones over an empty set of vertexes.\<close>
 
-lemma "\<not> cone {} K" unfolding cone_def by simp
+lemma not_cone_empty_vertex_set: "\<not> cone {} K" unfolding cone_def by simp
 
 lemma cone_not_empty: assumes vne: "V \<noteq> {}" shows "cone V {}" 
   using vne unfolding cone_def by auto
