@@ -1085,8 +1085,7 @@ proof
 qed
 
 lemma cost_eq_link_ext_impl_cone:
-  assumes c: "cost x V K = link_ext x V K" and p1: "K \<noteq> {}"
-    and x: "x \<in> V" and p: "K \<subseteq> powerset V"
+  assumes c: "cost x V K = link_ext x V K" and x: "x \<in> V" and p: "K \<subseteq> powerset V"
   shows "cone V K"
 proof (unfold cone_def)
   show "\<exists>x\<in>V. \<exists>T. T \<subseteq> powerset (V - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"

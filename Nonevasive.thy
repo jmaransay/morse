@@ -1047,7 +1047,6 @@ proof -
      show "cost v (set (v # l)) K = link_ext v (set (v # l)) K" using lc_eq ..
      show "v \<in> set (v # l)" by simp
      show "K \<subseteq> powerset (set (v # l))" using Cons.prems (2) .
-     show "K \<noteq> {}" using Cons.prems (6) .
    qed
    show ?thesis using cone_non_evasive [OF Cons.prems (1) cone] .
  next

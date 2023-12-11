@@ -16,6 +16,66 @@ lemma "cone {} K = False"
 
 lemma "cone_peak {} K v = False" by (simp add: cone_peak_def)
 
+text\<open>Proposition 1 in the paper\<close>
+
+lemma cone_peak_cost_eq_link_ext: 
+  assumes v: "v \<in> V" and c: "cone_peak V K v" shows "cost v V K = link_ext v V K"
+proof -
+  obtain B where B: "B \<subseteq> powerset (V - {v})" and K: "K = B \<union> {s. \<exists>b\<in>B. s = insert v b}"
+    using c unfolding cone_peak_def by auto
+  show ?thesis
+    by (rule cone_impl_cost_eq_link_ext [of _ _ B], rule v, rule B, rule K)
+qed
+
+lemma cost_eq_link_ext_cone_peak: 
+  assumes v: "v \<in> V" and K: "K \<subseteq> powerset V" and c: "cost v V K = link_ext v V K" 
+    shows "cone_peak V K v"
+proof (unfold cone_peak_def, intro conjI, rule v)
+  have "K = (cost v V K) \<union> {s. \<exists>b\<in>(cost v V K). s = insert v b}"
+  proof
+    show "cost v V K \<union> {s. \<exists>b\<in>cost v V K. s = insert v b} \<subseteq> K"
+      using K c v unfolding powerset_def cost_def link_ext_def by auto
+    show "K \<subseteq> cost v V K \<union> {s. \<exists>b\<in>cost v V K. s = insert v b}"
+    proof (subst c, unfold cost_def link_ext_def powerset_def, rule)
+      fix xa
+      assume xa: "xa \<in> K"
+      show "xa \<in> {s \<in> Pow V. v \<notin> s \<and> insert v s \<in> K} \<union>
+                {s. \<exists>t\<in>{s \<in> Pow (V - {v}). s \<in> K}. s = insert v t}"
+      proof (cases "v \<in> xa")
+        case False then show ?thesis using xa c K 
+          unfolding cost_def link_ext_def powerset_def by blast
+      next
+        case True
+        have "xa - {v} \<in> {s \<in> Pow V. v \<notin> s \<and> insert v s \<in> K}"
+          using xa K True mk_disjoint_insert unfolding powerset_def
+          by fastforce
+        hence "xa - {v} \<in> {s \<in> Pow (V - {v}). s \<in> K}"
+          using c unfolding cost_def link_ext_def powerset_def by simp
+        hence "xa \<in> {s. \<exists>t\<in>{s \<in> Pow (V - {v}). s \<in> K}. s = insert v t}"
+          using True by auto
+        thus ?thesis by fast
+      qed
+    qed
+  qed
+  moreover have "cost v V K \<subseteq> powerset (V - {v})" 
+    using K
+    unfolding cost_def powerset_def by auto
+  ultimately show "\<exists>B\<subseteq>powerset (V - {v}). K = B \<union> {s. \<exists>b\<in>B. s = insert v b}" by auto
+qed
+
+corollary proposition_1:
+  assumes v: "v \<in> V" and K: "K \<subseteq> powerset V" shows "cone_peak V K v \<equiv> (cost v V K = link_ext v V K)"
+  using cone_peak_cost_eq_link_ext [OF v] 
+  using cost_eq_link_ext_cone_peak [OF v K] by (smt (verit))
+
+text\<open>Proposition 2 in our paper.\<close>
+
+lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K"
+  shows "K = cost v V K \<union> join_vertex v (link_ext v V K)"
+  using complex_decomposition [OF K c] 
+  using cc_s_link_eq_link_ext [of V K v] using K c using cc_s.intros
+  by (smt (verit, best) CollectD Diff_empty Diff_insert0 Diff_insert_absorb bot.extremum_uniqueI insert_Diff_single link_ext_def link_ext_empty_vertex link_intro link_subset_link_ext singletonI subsetD)
+
 section\<open>Definition of \emph{ordered-no-evasive}\<close>
 
 function ordered_non_evasive :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool"
@@ -27,48 +87,7 @@ function ordered_non_evasive :: "nat list \<Rightarrow> nat set set \<Rightarrow
   by auto
 termination by (relation "Wellfounded.measure (\<lambda>(l,K). length l)", auto)
 
-(*Definition using an additional set for the vertexes, instead of just a list:
-
-function ordered_non_evasive :: "nat set \<Rightarrow> nat list \<Rightarrow> nat set set \<Rightarrow> bool"
-  where
-  "V = {} \<Longrightarrow> ordered_non_evasive V l K = False"
-  | "0 < card V \<Longrightarrow> set l = V \<Longrightarrow> ordered_non_evasive V l K = ((cone_peak V K (hd l))
-      | (ordered_non_evasive (V - {hd l}) (tl l) (cost (hd l) V K)) \<and>
-          ordered_non_evasive (V - {hd l}) (tl l) (link_ext (hd l) V K))"
-  | "0 < card V \<Longrightarrow> set l \<noteq> V \<Longrightarrow> ordered_non_evasive V l K = False"
-  | "\<not> finite V \<Longrightarrow> ordered_non_evasive V l K = False"
-proof -
-  fix P :: "bool" and x :: "(nat set \<times> nat list \<times> nat set set)"
-  assume ee: "(\<And>V l K. V = {} \<Longrightarrow> x = (V, l, K) \<Longrightarrow> P)"
-      and se: "(\<And>V l K. 0 < card V \<Longrightarrow> set l = V \<Longrightarrow> x = (V, l, K) \<Longrightarrow> P)"
-      and sne: "(\<And>V l K. 0 < card V \<Longrightarrow> set l \<noteq> V \<Longrightarrow> x = (V, l, K) \<Longrightarrow> P)"
-      and inf: "(\<And>V l K. infinite V \<Longrightarrow> x = (V, l, K) \<Longrightarrow> P)"
-  show P
-  proof (cases "finite (fst x)")
-    case False
-    show P by (rule inf [of "fst x" "fst (snd x)" "snd (snd x)"], intro False) auto
-  next
-    case True note finitex = True
-    show P
-    proof (cases "fst x = {}")
-      case True note ve = True
-      show P using ee True by (metis eq_fst_iff)
-      next
-      case False
-      show P
-        by (metis False card_gt_0_iff eq_fst_iff inf se sne)
-    qed
-  qed
-qed auto
-termination proof (relation "Wellfounded.measure (\<lambda>(V,K). card V)")
-  show "wf (measure (\<lambda>(V, K). card V))" by simp
-  fix V :: "nat set" and l :: "nat list"and K :: "nat set set" and x :: "nat"
-  assume c: "0 < card V" and s: "set l = V"
-  show "((V - {hd l}, tl l, cost (hd l) V K), V, l, K) \<in> measure (\<lambda>(V, K). card V)"
-    using c s by auto (simp add: card_gt_0_iff)
-  show "((V - {hd l}, tl l, link_ext (hd l) V K), V, l, K) \<in> measure (\<lambda>(V, K). card V)"
-    using c s by auto (simp add: card_gt_0_iff)
-qed*)
+section\<open>Lemmas about @{term cone_peak}.\<close>
 
 lemma cone_peak_cost_cone_eq:
   assumes v: "v \<in> V" and c: "cone_peak V K v" and yv: "y \<noteq> v" 
