@@ -168,7 +168,7 @@ termination by (relation "Wellfounded.measure (\<lambda>(l,K). length l)", auto)
 function ordered_m_collapsible :: "nat \<Rightarrow> nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
   "l = [] \<Longrightarrow> ordered_m_collapsible m l K = False"
-  | "0 < length l \<Longrightarrow> 0 = m \<Longrightarrow> ordered_m_collapsible m l K = ((cone_peak (set l) K (hd l)))" 
+  | "0 < length l \<Longrightarrow> 0 = m \<Longrightarrow> ordered_m_collapsible m l K = ordered_zero_collapsible l K"
   | "0 < length l \<Longrightarrow> 0 < m \<Longrightarrow> ordered_m_collapsible m l K = ((cone_peak (set l) K (hd l))
       | (ordered_m_collapsible m (tl l) (cost (hd l) (set l) K) \<and>
          ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)))"
@@ -324,7 +324,8 @@ next
   show ?thesis 
     using c 
     using ordered_m_collapsible.simps (2) [OF l0, of "0"]
-    using ordered_m_collapsible.simps (3) [OF l0, of "1"] by simp
+    using ordered_m_collapsible.simps (3) [OF l0, of "1"]
+    using K d ordered_zero_collapsible_ordered_one_collapsible by blast
 qed
 
 lemma ordered_m_collapsible_suc:
@@ -373,7 +374,8 @@ lemma ordered_m_collapsible_suc:
       next
         case True
         show ?thesis using less.prems unfolding True 
-          using l0 notcone ordered_m_collapsible.simps(2) by blast
+          using l0 notcone ordered_m_collapsible.simps(2)
+          by (metis add_cancel_left_left ordered_m_collapsible_0_ordered_m_collapsible_one)
     qed
   qed
  qed
@@ -488,7 +490,8 @@ lemma ordered_m_collapsible_ordered_non_evasive:
       next
         case True
         show ?thesis using less.prems unfolding True
-          using l0 notcone ordered_m_collapsible.simps(2) by blast
+          using l0 notcone ordered_m_collapsible.simps(2)
+          using ordered_zero_collapsible_ordered_non_evasive by blast
     qed
   qed
  qed
