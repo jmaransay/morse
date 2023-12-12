@@ -14,7 +14,7 @@ lemma cone_cone_peak:
 lemma "cone {} K = False"
   by (simp add: not_cone_empty_vertex_set)
 
-lemma "cone_peak {} K v = False" by (simp add: cone_peak_def)
+lemma cone_peak_empty: "cone_peak {} K v = False" by (simp add: cone_peak_def)
 
 text\<open>Proposition 1 in the paper\<close>
 
@@ -573,5 +573,59 @@ proof (rule exI [of _ "length l"])
   qed
  qed
 qed
+
+lemma
+  assumes l: "2 \<le> length l" and K: "K \<subseteq> powerset (set l)" and d: "distinct l"
+    and o: "ordered_zero_collapsible l K" 
+    and nc_0: "\<not> cone_peak (set l) K (l!0)"
+    and nc_1: "\<not> cone_peak (set l) K (l!1)"
+  shows "ordered_zero_collapsible ((l!1) # (l!0) # tl (tl l)) K"
+  using l d o nc_0 nc_1 proof (induct "length l" arbitrary: l K rule: less_induct)
+  case less
+  show ?case proof (cases "length l = 2")
+    case True hence lcons: "l = [l ! 0, l ! 1]"
+      by (metis One_nat_def add_diff_cancel_right' diff_is_0_eq' hd_conv_nth le_numeral_extra(4) length_0_conv length_greater_0_conv length_tl lessI list.exhaust_sel nth_Cons_Suc one_add_one zero_neq_numeral)
+    hence lneq: "l ! 0 \<noteq> l ! 1" 
+      using less.prems (2) by (metis distinct_length_2_or_more)
+    from lcons have tl: "tl (tl l) = []" by (metis list.sel(3))
+    from lcons have "ordered_zero_collapsible [l!0,l!1] K" using less.prems (3) by simp
+    with less.prems (4) and ordered_zero_collapsible.simps (2) [of l K] and True
+    have "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and>
+     cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd l)"
+      by (metis Suc_1 lcons list.sel(1) zero_less_Suc)
+    thus ?thesis
+      unfolding tl
+      using less.prems (4,5) and ordered_zero_collapsible.simps (2) [of "[l!1,l!0]" K] and True
+      by (metis cone_peak_def distinct.simps(2) lcons less.prems(2) list.sel(1) list.sel(3))
+  next
+    case False
+    hence l2: "2 < length l" and l0: "0 < length l" using less.prems (1,3) by auto
+
+
+lemma
+  assumes l: "2 \<le> length l" and K: "K \<subseteq> powerset (set l)" and d: "distinct l" 
+    and o: "ordered_m_collapsible m l K" 
+    and nc_1: "\<not> cone_peak (set l) K (l!0)"
+    and nc_cost: "\<not> cone_peak (set (tl l)) (cost (l!0) (set (tl l)) K) (l!1)"
+    and nc_link: "\<not> cone_peak (set (tl l)) (link_ext (l!0) (set (tl l)) K) (l!1)"
+  shows "ordered_m_collapsible m ((l!1) # (l!0) # tl (tl l)) K"
+  using l d o nc_1 nc_cost nc_link proof (induct "length l" arbitrary: l K rule: less_induct)
+  case less
+  show ?case proof (cases "length l = 2")
+    case True hence lcons: "l = [l ! 0, l ! 1]"
+      by (metis One_nat_def add_diff_cancel_right' diff_is_0_eq' hd_conv_nth le_numeral_extra(4) length_0_conv length_greater_0_conv length_tl lessI list.exhaust_sel nth_Cons_Suc one_add_one zero_neq_numeral)
+    hence lneq: "l ! 0 \<noteq> l ! 1" 
+      using less.prems (2) by (metis distinct_length_2_or_more)
+    from lcons have tl: "tl (tl l) = []" by (metis list.sel(3))
+    from lcons have "ordered_m_collapsible m [l!0,l!1] K" using less.prems (3) by simp
+    with less.prems (4) and ordered_m_collapsible.simps
+    have "ordered_m_collapsible m [l!1,l!0] K"
+    using ordered_m_collapsible.simps
+    thus ?thesis using tl by simp
+
+
+    qed
+
+
 
 end
