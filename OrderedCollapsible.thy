@@ -574,6 +574,64 @@ proof (rule exI [of _ "length l"])
  qed
 qed
 
+section\<open>Main Theorem.\<close>
+
+theorem
+  assumes"ordered_m_collapsible m l K" and "distinct l" and "K \<subseteq> powerset (set l)" and "closed_subset K"
+  shows "(cost (hd l) (set (tl l)) K, link_ext (hd l) (set (tl l)) K) \<in> collapses_rtrancl"
+  sorry
+
+section\<open>Consequences of the main theorem.\<close>
+
+definition vertex_set :: "nat set set \<Rightarrow> nat set"
+  where "vertex_set K = {v::nat. {v} \<in> K}"
+
+lemma assumes c: "closed_subset K" 
+  shows "K \<subseteq> powerset (vertex_set K)" 
+  using c unfolding powerset_def vertex_set_def closed_subset_def by auto
+term facet
+
+definition facets :: "nat set set \<Rightarrow> nat set set"
+  where "facets K = {a. facet a K}"
+
+lemma shows "facet a K \<equiv> a \<in> facets K" 
+  unfolding facets_def by simp
+
+definition pure_d :: "nat \<Rightarrow> nat set set \<Rightarrow> bool"
+  where "pure_d d K = (\<forall>f\<in>facets K. card f = d)"
+
+text\<open>Lemma 9 in our paper:\<close>
+
+lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and d: "0 < d" 
+  and p: "pure_d d K" and v: "{v} \<in> K" shows "pure_d (d - 1) (link_ext v V K)"
+proof (unfold pure_d_def, rule)
+  fix f
+  assume f: "f \<in> facets (link_ext v V K)" 
+  hence "f \<in> link_ext v V K" 
+    unfolding facets_def
+    using facet_in_K by auto
+  hence vnf: "v \<notin> f" unfolding link_ext_def powerset_def by simp
+  have insf: "insert v f \<in> facets K"
+  proof (unfold facets_def, rule, unfold facet_def, rule)
+    show "insert v f \<in> K"
+      using f unfolding facets_def link_ext_def facet_def by simp
+    show "\<forall>b\<in>K. insert v f \<subseteq> b \<longrightarrow> insert v f = b"
+    proof (rule, rule)
+      fix b assume b: "b \<in> K" and i: "insert v f \<subseteq> b"
+      show "insert v f = b"
+      proof (rule ccontr)
+        assume "insert v f \<noteq> b" hence ins: "insert v f \<subset> b" using i by auto
+        have "b - {v} \<in> link_ext v V K" using b K i unfolding link_ext_def powerset_def
+          by auto (simp add: insert_absorb)
+        moreover have "f \<subset> b - {v}" using ins vnf by auto
+        ultimately show False using f unfolding facets_def facet_def by auto
+      qed
+    qed
+  qed
+  show "card f = d - 1" using insf p vnf d unfolding pure_d_def
+    by (metis (no_types, lifting) Diff_insert_absorb card_Diff_singleton insertCI)
+qed
+
 lemma
   assumes l: "2 \<le> length l" and K: "K \<subseteq> powerset (set l)" and d: "distinct l"
     and o: "ordered_zero_collapsible l K" 
