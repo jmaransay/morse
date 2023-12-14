@@ -589,12 +589,11 @@ definition vertex_set :: "nat set set \<Rightarrow> nat set"
 lemma assumes c: "closed_subset K" 
   shows "K \<subseteq> powerset (vertex_set K)" 
   using c unfolding powerset_def vertex_set_def closed_subset_def by auto
-term facet
 
 definition facets :: "nat set set \<Rightarrow> nat set set"
   where "facets K = {a. facet a K}"
 
-lemma shows "facet a K \<equiv> a \<in> facets K" 
+lemma shows "facet a K \<equiv> a \<in> facets K"
   unfolding facets_def by simp
 
 definition pure_d :: "nat \<Rightarrow> nat set set \<Rightarrow> bool"
@@ -630,6 +629,44 @@ proof (unfold pure_d_def, rule)
   qed
   show "card f = d - 1" using insf p vnf d unfolding pure_d_def
     by (metis (no_types, lifting) Diff_insert_absorb card_Diff_singleton insertCI)
+qed
+
+definition dim :: "nat set set \<Rightarrow> nat"
+  where "dim K = Max {n. \<exists>k\<in>K. n = card k} - 1"
+
+lemma "dim {{}} = 0" and "dim {{7}} = 0" and "dim {{3,7}} = 1" 
+  unfolding dim_def by auto
+
+lemma assumes n: "non_evasive (vertex_set K) K" and p: "pure_d d K" and d: "0 < d" 
+  shows "2 \<le> card {f. free_face f K}"
+proof (cases "K = {}")
+  case True
+  from n
+  have False unfolding True vertex_set_def by simp thus ?thesis by (rule ccontr)
+next
+  case False note Kne = False
+  show ?thesis
+  proof (cases "K = {{}}")
+    case True
+    have False using n unfolding True vertex_set_def by simp
+    thus ?thesis by (rule ccontr)
+  next
+    case False
+    show ?thesis
+      using Kne False n p d proof (induct "dim K")
+      case 0 from "0.prems" and "0" have False unfolding pure_d_def facets_def facet_def dim_def apply auto
+      then show ?case sorry
+    next
+      case (Suc x)
+      then show ?case sorry
+    qed
+    
+  case 0
+  
+  then show ?case sorry
+next
+  case (Suc x)
+  then show ?case sorry
 qed
 
 lemma
