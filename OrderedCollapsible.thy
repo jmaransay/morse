@@ -637,8 +637,19 @@ definition dim :: "nat set set \<Rightarrow> nat"
 lemma "dim {{}} = 0" and "dim {{7}} = 0" and "dim {{3,7}} = 1" 
   unfolding dim_def by auto
 
-lemma assumes n: "non_evasive (vertex_set K) K" and p: "pure_d d K" and d: "0 < d" 
-  shows "2 \<le> card {f. free_face f K}"
+lemma assumes n: "non_evasive (vertex_set K) K" and p: "pure_d 1 K"
+  and f: "finite (vertex_set K)" and K: "K \<subseteq> powerset (vertex_set K)" shows "2 \<le> card {v. {v} \<in> K}"
+proof (induct "card {v\<in>K. card v = 2}")
+  case 0 with n
+  show ?case sorry
+next
+  case (Suc x)
+  then show ?case sorry
+qed
+
+
+lemma assumes n: "non_evasive (vertex_set K) K" and p: "pure_d d K" and d: "0 < d"
+      and f: "finite (vertex_set K)" and K: "K \<subseteq> powerset (vertex_set K)" shows "2 \<le> card {f. free_face f K}"
 proof (cases "K = {}")
   case True
   from n
@@ -652,10 +663,22 @@ next
     thus ?thesis by (rule ccontr)
   next
     case False
+    have "finite K" using f K unfolding vertex_set_def powerset_def
+      by (simp add: finite_subset)
     show ?thesis
       using Kne False n p d proof (induct "dim K")
-      case 0 from "0.prems" and "0" have False unfolding pure_d_def facets_def facet_def dim_def apply auto
-      then show ?case sorry
+      case 0 note prems = "0.prems" and hyp = 0
+      show ?case
+      proof (induct "card (facets K)")
+        case 0 with prems (4,5) and `finite K` have False unfolding pure_d_def
+        show ?case sorry
+      next
+        case (Suc x)
+        then show ?case sorry
+      qed
+
+        from "0.prems" and "0" have False unfolding pure_d_def facets_def facet_def dim_def apply auto
+      then  sorry
     next
       case (Suc x)
       then show ?case sorry
