@@ -194,15 +194,6 @@ function ordered_m_collapsible :: "nat \<Rightarrow> nat list \<Rightarrow> nat 
   by (auto+)
 termination by (relation "Wellfounded.measure (\<lambda>(m,l,K). length l)", auto)
 
-(*function ordered_m_collapsible :: "nat \<Rightarrow> nat list \<Rightarrow> nat set set \<Rightarrow> bool"
-  where
-  "l = [] \<Longrightarrow> ordered_m_collapsible m l K = False"
-  | "0 < length l \<Longrightarrow> ordered_m_collapsible m l K = ((cone_peak (set l) K (hd l))
-      | (ordered_m_collapsible m (tl l) (cost (hd l) (set l) K) \<and>
-         ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)))"
-  by (auto+)
-termination by (relation "Wellfounded.measure (\<lambda>(m,l,K). length l)", auto)*)
-
 text\<open>A cone over a vertex @{term v} is @{term ordered_zero_collapsible}.\<close>
 
 lemma cone_is_ordered_zero_collapsible:
@@ -239,34 +230,6 @@ proof -
   thus ?thesis using K sc unfolding closed_subset_def
     by (smt (verit, ccfv_threshold) empty_subsetI insert_commute insert_subset subset_antisym subset_insert subset_insertI)
 qed
-
-
-(*lemma cone_is_one:
-  assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l" and lne: "l \<noteq> []"
-  shows "ordered_m_collapsible 0 l K = cone_peak (set l) K (hd l)"
-proof (cases l)
-  case Nil
-  have "ordered_m_collapsible 0 l K = False" using ordered_m_collapsible.simps (1) [OF Nil] .
-  moreover have "cone_peak (set l) K (hd l) = False" using lne local.Nil by auto
-  ultimately show ?thesis by fast
-next
-  case (Cons a list)
-  hence l0: "0 < length l" by simp
-  have "ordered_m_collapsible 0 (a # list) K = cone_peak (set l) K (hd l)"
-  proof (cases "cone_peak (set l) K (hd l)")
-    case True
-    then show ?thesis using ordered_m_collapsible.simps (2) [OF l0, of 0 K]
-      using local.Cons by blast
-  next
-    case False
-    then show ?thesis using ordered_m_collapsible.simps (2) [OF l0, of 0 K] try
-  qed
-    using ordered_m_collapsible.simps (2)
-  show ?thesis sorry
-qed
-  
-  using ordered_m_collapsible.simps
-*)
 
 lemma ordered_zero_collapsible_ordered_one_collapsible:
   assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l"
@@ -516,12 +479,10 @@ lemma ordered_m_collapsible_ordered_non_evasive:
  qed
 qed
 
-lemma ordered_non_evasive_ordered_m_collapsible:
+lemma ordered_non_evasive_ordered_m_collapsible_length:
   assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l"
     and c: "ordered_non_evasive l K"
-  shows "\<exists>m. ordered_m_collapsible m l K"
-proof (rule exI [of _ "length l"])
-  show "ordered_m_collapsible (length l) l K"
+  shows "ordered_m_collapsible (length l) l K"
   using K d c proof (induct "length l" arbitrary: l K rule: less_induct)
   case less
   have l0: "0 < length l" using less.prems(3) by auto
@@ -571,7 +532,108 @@ proof (rule exI [of _ "length l"])
     ultimately show ?thesis using ordered_m_collapsible.simps (3) [OF l0, of "length l", of K] l0
       by simp
   qed
- qed
+qed
+
+corollary ordered_non_evasive_ordered_m_collapsible:
+  assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l"
+    and c: "ordered_non_evasive l K"
+  shows "\<exists>m. ordered_m_collapsible m l K"
+  by (rule exI [of _ "length l"], rule ordered_non_evasive_ordered_m_collapsible_length [OF K d c])
+
+lemma not_cone_outer_vertex:
+  assumes K: "K \<subseteq> powerset V" and v: "v \<in> V" and w: "w \<notin> V" and nc: "\<not> cone_peak V K v"
+  shows "\<not> cone_peak (insert w V) K v"
+proof (rule)
+  assume c: "cone_peak (insert w V) K v"
+  then obtain B where B: "B \<subseteq> powerset (insert w V - {v})" and Kd: "K = B \<union> {s. \<exists>b\<in>B. s = insert v b}" 
+    unfolding cone_peak_def by auto
+  from K and w and B and Kd have "B \<subseteq> powerset (V - {v})" unfolding powerset_def by auto
+  with nc and Kd and v show False unfolding cone_peak_def by auto
+qed
+  
+lemma assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l" and v: "v \<notin> set l" 
+    and l: "2 \<le> length l" and c: "ordered_zero_collapsible (v # hd l # tl l) K"
+  shows "ordered_zero_collapsible (hd l # v # tl l) K"
+  using K d c v l proof (induct "length l" arbitrary: l K rule: less_induct)
+  case less
+  have l0: "0 < length (hd l # v # tl l)" using less.prems(3) by auto
+  show ?case
+  proof (cases "cone_peak (set l) K (hd l)")
+    case True note cone = True
+    show ?thesis
+      unfolding ordered_zero_collapsible.simps (2) [OF l0]
+      using cone l0 less.prems(1,2) unfolding list.sel(1)
+      by (smt (verit, del_insts) Diff_insert_absorb Pow_mono cone_is_one cone_peak_def distinct.simps(2) distinct_length_2_or_more insert_absorb list.exhaust_sel list.simps(15) ordered_non_evasive.simps(1) powerset_def set_subset_Cons subset_trans)
+  next
+    case False note ncone = False  
+    have s: "set (hd l # v # tl l) = insert v (set l)" using less.prems (1,2,4,5) False
+      by (metis Suc_1 insert_commute less_eq_Suc_le less_nat_zero_code list.exhaust_sel list.simps(15) list.size(3))
+    have ncone2: "\<not> cone_peak (set (hd l # v # tl l)) K (hd (hd l # v # tl l))"
+      unfolding s list.sel (1)
+    proof (rule not_cone_outer_vertex)
+      show "K \<subseteq> powerset (set l)" using less.prems (1) .
+      show "hd l \<in> set l" using less.prems(5)
+        by (metis list.set_sel(1) list.size(3) not_numeral_le_zero)
+      show "v \<notin> set l" using less.prems (4) .
+      show "\<not> cone_peak (set l) K (hd l)" using ncone .
+    qed
+    have "ordered_zero_collapsible (tl (hd l # v # tl l)) (cost (hd (hd l # v # tl l)) (set (hd l # v # tl l)) K)"
+      unfolding list.sel
+      using less.hyps
+        moreover have "cone_peak (set (tl (hd l # v # tl l))) (link_ext (hd (hd l # v # tl l)) (set (hd l # v # tl l)) K)
+     (hd (hd l # v # tl l))"
+      show ?thesis
+        unfolding ordered_zero_collapsible.simps (2) [OF l0] using ncone2
+    have "ordered_zero_collapsible (tl (hd l # v # tl l)) (cost (hd (hd l # v # tl l)) (set (hd l # v # tl l)) K)"
+      unfolding list.sel
+      unfolding ordered_zero_collapsible.simps (2) [OF l0'] using False
+      using less.hyps False
+      show ?thesis
+        unfolding ordered_m_collapsible.simps (2) [OF l0 True]
+
+
+lemma assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l" and v: "v \<notin> set l"
+    and c: "ordered_m_collapsible m (v # l) K"
+  shows "ordered_m_collapsible m (hd l # v # tl l) K"
+  using K d c proof (induct "length l" arbitrary: l K rule: less_induct)
+  case less
+  have l0: "0 < length (hd l # v # tl l)" using less.prems(3) by auto
+  show ?case
+  proof (cases "cone_peak (set l) K (hd l)")
+    case True note cone = True
+    show ?thesis
+    proof (cases "m = 0")
+      case True
+      show ?thesis
+        unfolding ordered_m_collapsible.simps (2) [OF l0 True[symmetric]]
+        unfolding ordered_zero_collapsible.simps (2) [OF l0]
+        using cone l0 less.prems(1,2) unfolding list.sel(1)
+        by (smt (verit, del_insts) Diff_insert_absorb Pow_mono cone_is_one cone_peak_def distinct.simps(2) distinct_length_2_or_more insert_absorb list.exhaust_sel list.simps(15) ordered_non_evasive.simps(1) powerset_def set_subset_Cons subset_trans)
+    next
+      case False
+      hence m: "0 < m" by simp
+      show ?thesis
+        unfolding ordered_m_collapsible.simps (3) [OF l0 m]
+        using cone l0 less.prems(1,2) unfolding list.sel(1)
+        by (smt (verit, del_insts) Diff_insert_absorb Pow_mono cone_is_one cone_peak_def distinct.simps(2) distinct_length_2_or_more insert_absorb list.exhaust_sel list.simps(15) ordered_non_evasive.simps(1) powerset_def set_subset_Cons subset_trans)
+    qed
+  next
+    case False
+    show ?thesis
+    proof (cases "0 = m")
+      case True
+      have l0': "0 < length (v # tl l)" by simp
+      have "ordered_zero_collapsible (tl (hd l # v # tl l)) (cost (hd (hd l # v # tl l)) (set (hd l # v # tl l)) K)"
+        unfolding list.sel
+        unfolding ordered_zero_collapsible.simps (2) [OF l0'] using False
+         using less.hyps False
+      show ?thesis
+        unfolding ordered_m_collapsible.simps (2) [OF l0 True]
+        
+        
+  proof (cases "cone_peak K V ")
+  
+  then  sorry
 qed
 
 section\<open>Main Theorem.\<close>
