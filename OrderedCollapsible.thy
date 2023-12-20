@@ -540,7 +540,7 @@ corollary ordered_non_evasive_ordered_m_collapsible:
   shows "\<exists>m. ordered_m_collapsible m l K"
   by (rule exI [of _ "length l"], rule ordered_non_evasive_ordered_m_collapsible_length [OF K d c])
 
-lemma not_cone_outer_vertex:
+lemma not_cone_outer_vertex_insert:
   assumes K: "K \<subseteq> powerset V" and v: "v \<in> V" and w: "w \<notin> V" and nc: "\<not> cone_peak V K v"
   shows "\<not> cone_peak (insert w V) K v"
 proof (rule)
@@ -550,7 +550,40 @@ proof (rule)
   from K and w and B and Kd have "B \<subseteq> powerset (V - {v})" unfolding powerset_def by auto
   with nc and Kd and v show False unfolding cone_peak_def by auto
 qed
-  
+
+lemma not_cone_outer_vertex: assumes v: "v \<notin> (set l)"
+  shows "\<not> cone_peak (set l) K v"
+  using v unfolding cone_peak_def by simp
+
+lemma assumes v: "v \<notin> set l" and l: "l \<noteq> []" and K: "K \<subseteq> powerset (set l)"
+    and o: "ordered_zero_collapsible (v # l) K"
+  shows "ordered_zero_collapsible ((hd l) # v # tl l) K"
+  using v l K o proof (induct l arbitrary: K)
+  case Nil
+  have False using Nil.prems (2) by simp thus ?case by simp
+next
+  case (Cons a l)
+  show ?case
+  proof (cases "l = []")
+    case True have "v \<noteq> a" using Cons.prems (1) by simp
+    have lg: "0 < length [v, a]" by simp
+    from Cons.prems (4) have "ordered_zero_collapsible (tl [v, a]) (cost (hd [v, a]) (set [v, a]) K) \<and>
+  cone_peak (set (tl [v, a])) (link_ext (hd [v, a]) (set [v, a]) K) (hd [v, a])" 
+      unfolding True
+      unfolding ordered_zero_collapsible.simps (2) [OF lg]
+      using not_cone_outer_vertex
+    then show ?thesis using Cons.prems unfolding True list.sel
+      using ordered_zero_collapsible.simps using not_cone_outer_vertex apply auto
+         apply (metis Diff_insert_absorb cone_peak_cost_cone_eq insertCI insert_absorb insert_commute singleton_insert_inj_eq)
+      unfolding cone_peak_def powerset_def link_ext_def
+      try
+  next
+    case False
+    then show ?thesis sorry
+  qed
+    
+qed
+
 lemma assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l" and v: "v \<notin> set l" 
     and l: "2 \<le> length l" and c: "ordered_zero_collapsible (v # hd l # tl l) K"
   shows "ordered_zero_collapsible (hd l # v # tl l) K"
@@ -579,7 +612,7 @@ lemma assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l" and v: "v 
     qed
     have "ordered_zero_collapsible (tl (hd l # v # tl l)) (cost (hd (hd l # v # tl l)) (set (hd l # v # tl l)) K)"
       unfolding list.sel
-      using less.hyps
+      using less.hyps [of "tl l" "cost (hd l) (set (hd l # v # tl l)) K"]
         moreover have "cone_peak (set (tl (hd l # v # tl l))) (link_ext (hd (hd l # v # tl l)) (set (hd l # v # tl l)) K)
      (hd (hd l # v # tl l))"
       show ?thesis
