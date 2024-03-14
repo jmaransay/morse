@@ -565,8 +565,18 @@ next
   case (Cons a l)
   show ?case
   proof (cases "l = []")
-    case True have "v \<noteq> a" using Cons.prems (1) by simp
+    case True have vna: "v \<noteq> a" using Cons.prems (1) by simp
     have lg: "0 < length [v, a]" by simp
+    have "ordered_zero_collapsible ([a, v]) K"
+      using Cons.prems (4) using Cons.prems (3) unfolding True using vna apply auto
+         apply (metis Diff_insert_absorb cone_peak_cost_cone_eq insertCI insert_absorb insert_commute singleton_insert_inj_eq)
+      using cone_peak_link_ext_cone_eq [of v "{a,v}" K a] vna try
+    show ?thesis  using Cons.prems (4) unfolding True  unfolding
+    have "\<not> cone_peak (set [v, a]) K (hd [v, a])" apply (rule not_cone_outer_vertex) try
+      using Cons.prems (4)
+      unfolding True
+      unfolding ordered_zero_collapsible.simps (2) [OF lg]
+      using not_cone_outer_vertex try
     from Cons.prems (4) have "ordered_zero_collapsible (tl [v, a]) (cost (hd [v, a]) (set [v, a]) K) \<and>
   cone_peak (set (tl [v, a])) (link_ext (hd [v, a]) (set [v, a]) K) (hd [v, a])" 
       unfolding True
