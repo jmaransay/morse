@@ -558,12 +558,28 @@ lemma not_cone_outer_vertex: assumes v: "v \<notin> (set l)"
 lemma assumes v: "v \<notin> set l" and l: "l \<noteq> []" and K: "K \<subseteq> powerset (set l)"
     and o: "ordered_zero_collapsible (v # l) K"
   shows "ordered_zero_collapsible ((hd l) # v # tl l) K"
-  using v l K o proof (induct l arbitrary: K)
-  case Nil
-  have False using Nil.prems (2) by simp thus ?case by simp
-next
-  case (Cons a l)
-  show ?case
+proof -
+  from l obtain a l' where l: "l = a # l'"
+    using min_list.cases by blast
+    show ?thesis
+    proof -
+      have lval: "0 < length (v # a # l')" by simp
+      consider (cp) "cone_peak (set (v # a # l')) K a" | (cnp) "\<not> cone_peak (set (v # a # l')) K a" 
+      by auto
+      then show ?thesis
+      proof (cases)
+        case cp
+        then have "cone_peak (set (hd (a # l') # v # tl (a # l'))) K a"
+          by (simp add: insert_commute)
+        thus ?thesis using l by simp
+    next
+      case cnp
+      from o have "ordered_zero_collapsible l' (cost a (set l') K)" 
+        unfolding l
+        using ordered_zero_collapsible.simps (2) [OF lval] using cnp try
+      then show ?thesis sorry
+    qed
+    using ordered_zero_collapsible.simps
   proof (cases "l = []")
     case True have vna: "v \<noteq> a" using Cons.prems (1) by simp
     have lg: "0 < length [v, a]" by simp
