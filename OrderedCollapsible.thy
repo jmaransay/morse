@@ -558,28 +558,62 @@ lemma not_cone_outer_vertex: assumes v: "v \<notin> (set l)"
 lemma assumes v: "v \<notin> set l" and l: "l \<noteq> []" and K: "K \<subseteq> powerset (set l)"
     and o: "ordered_zero_collapsible (v # l) K"
   shows "ordered_zero_collapsible ((hd l) # v # tl l) K"
-proof -
+proof (cases "K = {}")
+  case True
+  then show ?thesis
+    by (simp add: cost_eq_link_ext_cone_peak)
+next
+  case False note Kne = False
   from l obtain a l' where l: "l = a # l'"
     using min_list.cases by blast
-    show ?thesis
-    proof -
-      have lval: "0 < length (v # l)" by simp
-      consider (cp) "cone_peak (set (v # a # l')) K a" | (cnp) "\<not> cone_peak (set (v # a # l')) K a" 
-      by auto
-      then show ?thesis
-      proof (cases)
-        case cp
-        then have "cone_peak (set (hd (a # l') # v # tl (a # l'))) K a"
-          by (simp add: insert_commute)
-        thus ?thesis using l by simp
+  show ?thesis
+  proof -
+    have lval: "0 < length (v # l)" by simp
+    consider (cp) "cone_peak (set (v # a # l')) K a" | (cnp) "\<not> cone_peak (set (v # a # l')) K a" 
+      by auto    
+    then show ?thesis
+    proof (cases)
+      case cp then have "cone_peak (set (hd (a # l') # v # tl (a # l'))) K a"
+        by (simp add: insert_commute)
+      thus ?thesis using l by simp
     next
       case cnp
-      from v have "\<not> cone_peak (set l) K v" unfolding l cone_peak_def by simp
-      then have "\<not> cone_peak (set (v # l)) K (hd (v # l))" using K v unfolding powerset_def cone_peak_def apply auto try
-      have "cost v (set l) K = K" using v K unfolding cost_def powerset_def by auto
-      have "link_ext v (set l) K = {}" using v K unfolding link_ext_def powerset_def by auto
-      have "ordered_zero_collapsible l K" using o unfolding ordered_zero_collapsible.simps (2) [OF lval]
+      (*from v have "\<not> cone_peak (set l) K v" unfolding l cone_peak_def by simp*)
+      have "\<not> (\<exists>B\<subseteq>powerset (set l). K = B \<union> {s. \<exists>b\<in>B. s = insert v b})"
+        using Kne K v unfolding powerset_def by auto
+      hence not_cone_peak: "\<not> cone_peak (set (v # l)) K (hd (v # l))"
+        using K v unfolding cone_peak_def by auto
 
+      have False
+        using cone_peak_def not_cone_peak o v by auto
+      thus ?thesis
+        by simp
+    qed
+  qed
+qed
+      have cost: "cost v (set (v # l)) K = K"
+        using v K unfolding cost_def powerset_def by auto
+      have link_ext: "link_ext v (set (v # l)) K = {}" 
+        using v K unfolding link_ext_def powerset_def by auto
+      have "ordered_zero_collapsible (tl (v # l)) (cost (hd (v # l)) (set (v # l)) K)"
+        using o unfolding ordered_zero_collapsible.simps (2) [OF lval]
+        using not_cone_peak by simp
+      hence ozc_lk: "ordered_zero_collapsible l K" using cost by simp
+      have lal': "0 < length (a # l')" by simp
+      have "\<not> cone_peak (set (a # l')) K a"
+        using o cnp v l K Kne
+        unfolding powerset_def
+        using cone_peak_def o by auto
+      hence "ordered_zero_collapsible (tl (a # l')) (cost (hd (a # l')) (set (a # l')) K)"
+        and "cone_peak (set (tl (a # l'))) (link_ext (hd (a # l')) (set (a # l')) K) (hd (a # l'))"
+        using ozc_lk unfolding l unfolding ordered_zero_collapsible.simps (2) [OF lal', of K] by simp_all
+      hence "ordered_zero_collapsible l' (cost a (set (a # l')) K)"
+         and "cone_peak (set l') (link_ext a (set (a # l')) K) a" by simp_all
+      have False
+        using cone_peak_def not_cone_peak o v by auto
+        by (metis (no_types, lifting) cone_peak_def list.sel(1) list.sel(3) lval not_cone_peak o ordered_zero_collapsible.simps(2) v)
+      have llvl: "0 < length (hd l # v # tl l)" by simp
+      unfolding ordered_zero_collapsible.simps (2) [OF llvl, of K] unfolding l
 
       from o have "ordered_zero_collapsible l' (cost a (set l') K)" 
         unfolding l
