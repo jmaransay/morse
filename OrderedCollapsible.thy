@@ -563,7 +563,7 @@ proof -
     using min_list.cases by blast
     show ?thesis
     proof -
-      have lval: "0 < length (v # a # l')" by simp
+      have lval: "0 < length (v # l)" by simp
       consider (cp) "cone_peak (set (v # a # l')) K a" | (cnp) "\<not> cone_peak (set (v # a # l')) K a" 
       by auto
       then show ?thesis
@@ -574,10 +574,17 @@ proof -
         thus ?thesis using l by simp
     next
       case cnp
+      from v have "\<not> cone_peak (set l) K v" unfolding l cone_peak_def by simp
+      then have "\<not> cone_peak (set (v # l)) K (hd (v # l))" using K v unfolding powerset_def cone_peak_def apply auto try
+      have "cost v (set l) K = K" using v K unfolding cost_def powerset_def by auto
+      have "link_ext v (set l) K = {}" using v K unfolding link_ext_def powerset_def by auto
+      have "ordered_zero_collapsible l K" using o unfolding ordered_zero_collapsible.simps (2) [OF lval]
+
+
       from o have "ordered_zero_collapsible l' (cost a (set l') K)" 
         unfolding l
         using ordered_zero_collapsible.simps (2) [OF lval] using cnp try
-      then show ?thesis sorry
+      then  sorry
     qed
     using ordered_zero_collapsible.simps
   proof (cases "l = []")
