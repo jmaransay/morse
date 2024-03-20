@@ -557,18 +557,18 @@ lemma not_cone_outer_vertex: assumes v: "v \<notin> (set l)"
 
 lemma assumes v: "v \<notin> set l" and l: "l \<noteq> []" and K: "K \<subseteq> powerset (set l)"
     and o: "ordered_zero_collapsible (v # l) K"
-  shows "ordered_zero_collapsible ((hd l) # v # tl l) K"
+  shows "ordered_zero_collapsible (hd l # v # tl l) K"
 proof (cases "K = {}")
   case True
   then show ?thesis
     by (simp add: cost_eq_link_ext_cone_peak)
 next
   case False note Kne = False
-  from l obtain a l' where l: "l = a # l'"
-    using min_list.cases by blast
+  (*from l obtain a l' where l: "l = a # l'"
+    using min_list.cases by blast*)
   show ?thesis
   proof -
-    have lval: "0 < length (v # l)" by simp
+    (*have lval: "0 < length (v # l)" by simp
     consider (cp) "cone_peak (set (v # a # l')) K a" | (cnp) "\<not> cone_peak (set (v # a # l')) K a" 
       by auto    
     then show ?thesis
@@ -577,20 +577,89 @@ next
         by (simp add: insert_commute)
       thus ?thesis using l by simp
     next
-      case cnp
-      (*from v have "\<not> cone_peak (set l) K v" unfolding l cone_peak_def by simp*)
-      have "\<not> (\<exists>B\<subseteq>powerset (set l). K = B \<union> {s. \<exists>b\<in>B. s = insert v b})"
-        using Kne K v unfolding powerset_def by auto
-      hence not_cone_peak: "\<not> cone_peak (set (v # l)) K (hd (v # l))"
-        using K v unfolding cone_peak_def by auto
+      case cnp*)
+    have l: "0 < length (v # l)" by simp
+    have le: "link_ext (hd (v # l)) (set (v # l)) K = {}"
+      using K Kne v unfolding powerset_def link_ext_def by auto
+      
+    have "\<not> (\<exists>B\<subseteq>powerset (set l). K = B \<union> {s. \<exists>b\<in>B. s = insert v b})"
+      using Kne K v unfolding powerset_def by auto
+    hence not_cone_peak: "\<not> cone_peak (set (v # l)) K v"
+      using K v unfolding cone_peak_def by auto
 
-      have False
-        using cone_peak_def not_cone_peak o v by auto
-      thus ?thesis
-        by simp
-    qed
+    moreover have "cone_peak (set (v # l)) K v"
+      using o
+      unfolding ordered_zero_collapsible.simps (2) [OF l] unfolding le
+      using not_cone_outer_vertex [OF v, of "{}"] by auto
+      
+    ultimately have False by simp
+
+    thus ?thesis by (rule ccontr)
   qed
 qed
+
+lemma assumes v: "v \<notin> set l" and l: "l \<noteq> []" and K: "K \<subseteq> powerset (set l)"
+    and o: "ordered_zero_collapsible (hd l # v # tl l) K"
+  shows "ordered_zero_collapsible (v # l) K"
+proof (cases "K = {}")
+  case True
+  then show ?thesis
+    by (simp add: cost_eq_link_ext_cone_peak)
+next
+  case False note Kne = False
+  (*from l obtain a l' where l: "l = a # l'"
+    using min_list.cases by blast*)
+  show ?thesis
+  proof -
+    have lval: "0 < length (v # l)" by simp
+    consider (cp) "cone_peak (set (hd l # v # tl l)) K (hd l)" 
+              | (cnp) "\<not> cone_peak (set (hd l # v # tl l)) K (hd l)" by auto
+    then show ?thesis
+    proof (cases)
+      case cp
+      have "ordered_zero_collapsible (tl (v # l)) (cost (hd (v # l)) (set (v # l)) K)"
+      proof (cases "l = []")
+        case True
+        then show ?thesis using cp o try
+      next
+        case False
+        then show ?thesis sorry
+      qed
+        
+        have c: "cost (hd (v # l)) (set (v # l)) K = K" using v K unfolding powerset_def cost_def by auto
+        show ?thesis unfolding c using ordered_zero_collapsible.simps
+
+        moreover have "cone_peak (set (tl (v # l))) (link_ext (hd (v # l)) (set (v # l)) K) (hd (v # l))"
+      
+      then have "cone_peak (set (hd l # v # tl l)) K (hd l)"
+        by (simp add: insert_commute)
+       [OF lval]using l by simp
+    next
+      case cnp*)
+    have l: "0 < length (hd l # v # tl l)" by simp
+    have le: "link_ext (hd (v # l)) (set (v # l)) K = {}"
+      using K Kne v unfolding powerset_def link_ext_def by auto
+      
+    have "\<not> (\<exists>B\<subseteq>powerset (set l). K = B \<union> {s. \<exists>b\<in>B. s = insert v b})"
+      using Kne K v unfolding powerset_def by auto
+    hence not_cone_peak: "\<not> cone_peak (set (hd l # v # tl l)) K (hd l)"
+      using K v unfolding cone_peak_def by auto
+
+    moreover have "cone_peak (set (hd l # v # tl l)) K v"
+      using o
+      unfolding ordered_zero_collapsible.simps (2) [OF l] unfolding le
+      using not_cone_outer_vertex [OF v, of "{}"] by auto
+      
+    ultimately have False by simp
+
+    thus ?thesis by (rule ccontr)
+  qed
+qed
+
+
+
+
+(*qed
       have cost: "cost v (set (v # l)) K = K"
         using v K unfolding cost_def powerset_def by auto
       have link_ext: "link_ext v (set (v # l)) K = {}" 
@@ -619,37 +688,7 @@ qed
         unfolding l
         using ordered_zero_collapsible.simps (2) [OF lval] using cnp try
       then  sorry
-    qed
-    using ordered_zero_collapsible.simps
-  proof (cases "l = []")
-    case True have vna: "v \<noteq> a" using Cons.prems (1) by simp
-    have lg: "0 < length [v, a]" by simp
-    have "ordered_zero_collapsible ([a, v]) K"
-      using Cons.prems (4) using Cons.prems (3) unfolding True using vna apply auto
-         apply (metis Diff_insert_absorb cone_peak_cost_cone_eq insertCI insert_absorb insert_commute singleton_insert_inj_eq)
-      using cone_peak_link_ext_cone_eq [of v "{a,v}" K a] vna try
-    show ?thesis  using Cons.prems (4) unfolding True  unfolding
-    have "\<not> cone_peak (set [v, a]) K (hd [v, a])" apply (rule not_cone_outer_vertex) try
-      using Cons.prems (4)
-      unfolding True
-      unfolding ordered_zero_collapsible.simps (2) [OF lg]
-      using not_cone_outer_vertex try
-    from Cons.prems (4) have "ordered_zero_collapsible (tl [v, a]) (cost (hd [v, a]) (set [v, a]) K) \<and>
-  cone_peak (set (tl [v, a])) (link_ext (hd [v, a]) (set [v, a]) K) (hd [v, a])" 
-      unfolding True
-      unfolding ordered_zero_collapsible.simps (2) [OF lg]
-      using not_cone_outer_vertex
-    then show ?thesis using Cons.prems unfolding True list.sel
-      using ordered_zero_collapsible.simps using not_cone_outer_vertex apply auto
-         apply (metis Diff_insert_absorb cone_peak_cost_cone_eq insertCI insert_absorb insert_commute singleton_insert_inj_eq)
-      unfolding cone_peak_def powerset_def link_ext_def
-      try
-  next
-    case False
-    then show ?thesis sorry
-  qed
-    
-qed
+    qed*)
 
 lemma assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l" and v: "v \<notin> set l" 
     and l: "2 \<le> length l" and c: "ordered_zero_collapsible (v # hd l # tl l) K"
