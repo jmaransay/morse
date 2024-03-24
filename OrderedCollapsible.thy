@@ -551,9 +551,92 @@ proof (rule)
   with nc and Kd and v show False unfolding cone_peak_def by auto
 qed
 
+definition vertex_of_simpl_complex :: "nat set set \<Rightarrow> nat set"
+  where "vertex_of_simpl_complex K = {v. {v} \<in> K}"
+
+lemma "vertex_of_simpl_complex {} = {}" unfolding vertex_of_simpl_complex_def by simp
+
+lemma "vertex_of_simpl_complex {{}} = {}" unfolding vertex_of_simpl_complex_def by simp
+
+lemma "vertex_of_simpl_complex {{v}} = {v}" unfolding vertex_of_simpl_complex_def by simp
+
+text\<open>Beware that when we are dealing with subsets not closed by subset relation
+    the previous definition does not work nicely:\<close>
+
+lemma assumes v: "v \<noteq> w" shows "vertex_of_simpl_complex {{v,w}} = {}" 
+  using v unfolding vertex_of_simpl_complex_def by simp
+
 lemma not_cone_outer_vertex: assumes v: "v \<notin> (set l)"
   shows "\<not> cone_peak (set l) K v"
   using v unfolding cone_peak_def by simp
+
+lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []" 
+    and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
+    and o: "ordered_zero_collapsible (v # l) K"
+  shows "ordered_zero_collapsible (hd l # v # tl l) K"
+proof (cases "K = {}")
+  case True
+  then show ?thesis
+    by (simp add: cost_eq_link_ext_cone_peak)
+next
+  case False note Kne = False
+  (*from l obtain a l' where l: "l = a # l'"
+    using min_list.cases by blast*)
+  show ?thesis
+  proof -
+    (*have lval: "0 < length (v # l)" by simp
+    consider (cp) "cone_peak (set (v # a # l')) K a" | (cnp) "\<not> cone_peak (set (v # a # l')) K a" 
+      by auto    
+    then show ?thesis
+    proof (cases)
+      case cp then have "cone_peak (set (hd (a # l') # v # tl (a # l'))) K a"
+        by (simp add: insert_commute)
+      thus ?thesis using l by simp
+    next
+      case cnp*)
+    have l: "0 < length (v # l)" by simp
+    have le: "link_ext (hd (v # l)) (set (v # l)) K = {}"
+      using K Kne v cs 
+      unfolding powerset_def link_ext_def vertex_of_simpl_complex_def closed_subset_def by auto
+      
+    have "\<not> (\<exists>B\<subseteq>powerset (set l). K = B \<union> {s. \<exists>b\<in>B. s = insert v b})"
+      using Kne K v cs
+      unfolding powerset_def vertex_of_simpl_complex_def closed_subset_def apply auto
+       by (smt (verit, ccfv_threshold) Collect_mem_eq Collect_mono_iff empty_subsetI insert_not_empty sup_ge1)+
+    
+    hence not_cone_peak: "\<not> cone_peak (set (v # l)) K v"
+      using K v unfolding cone_peak_def by auto
+
+    moreover have "cone_peak (set (v # l)) K v"
+    proof (cases "v \<in> (set l)")
+      case True
+      hence s: "set (v # l) = set l" by auto
+      show ?thesis unfolding s using v cs 
+        unfolding vertex_of_simpl_complex_def cone_peak_def powerset_def closed_subset_def 
+        using True apply simp try
+    next
+      case False
+      show ?thesis using o
+      unfolding ordered_zero_collapsible.simps (2) [OF l] unfolding le
+      using not_cone_outer_vertex [OF False, of "{}"] by simp
+    qed
+
+    
+    using o
+      unfolding ordered_zero_collapsible.simps (2) [OF l] unfolding le
+      using not_cone_outer_vertex [of _ _ "{}"] v cs
+      unfolding powerset_def vertex_of_simpl_complex_def closed_subset_def apply auto try
+      by auto
+      
+    ultimately have False by simp
+
+    thus ?thesis by (rule ccontr)
+  qed
+qed
+
+
+
+
 
 lemma assumes v: "v \<notin> set l" and l: "l \<noteq> []" and K: "K \<subseteq> powerset (set l)"
     and o: "ordered_zero_collapsible (v # l) K"
