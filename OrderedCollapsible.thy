@@ -573,11 +573,9 @@ lemma not_cone_outer_vertex: assumes v: "v \<notin> (set l)"
 lemma not_cone_outer_vertex_simpl_complex: assumes v: "v \<notin> vertex_of_simpl_complex K"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" and Kne: "K \<noteq> {}"
   shows "\<not> cone_peak (set l) K v"
-  using K Kne v cs 
-  unfolding vertex_of_simpl_complex_def cone_peak_def powerset_def closed_subset_def
-  by auto+
-
-
+  using K Kne v cs
+  unfolding vertex_of_simpl_complex_def cone_peak_def powerset_def closed_subset_def by auto (auto)
+ 
 lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
     and o: "ordered_zero_collapsible (v # l) K"
@@ -594,7 +592,7 @@ next
   proof (cases)
     case cp
     have c: "cost (hd (v # l)) (set (v # l)) K = K" 
-      using v K cs 
+      using v K cs
       unfolding powerset_def cost_def closed_subset_def vertex_of_simpl_complex_def 
       by auto
     show ?thesis unfolding c using ordered_zero_collapsible.simps
@@ -602,7 +600,31 @@ next
   next
     case cnp
     have lval: "0 < length (v # l)" by simp
-    have not_cone_peak: "\<not> cone_peak (set (v # l)) K (hd (v # l))" 
+    hence lvl_ne: "0 < length (hd l # v # tl l)" by simp
+    have cnp2: "\<not> cone_peak (set (v # l)) K (hd l)" using cnp
+      by (metis hd_Cons_tl insert_commute l list.simps(15))
+    have cnpv: " \<not> cone_peak (set (v # l)) K v" 
+      using v Kne cs
+      unfolding cone_peak_def vertex_of_simpl_complex_def powerset_def closed_subset_def by auto
+    have "ordered_zero_collapsible (v # tl l) (cost (hd l) (set (hd l # v # tl l)) K)"
+    proof -
+      have "ordered_zero_collapsible (tl l) (cost v (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K))" 
+        using o cnpv
+        unfolding list.sel (1,3) using cost_commute [of "hd l" "set (hd l # v # tl l)" "v" K]
+        sorry
+      moreover have "cone_peak (set (tl (v # tl l))) (link_ext (hd (v # tl l)) (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K))
+    (hd (v # tl l))" sorry
+      ultimately show ?thesis by simp
+
+    using ordered_zero_collapsible.simps (2) [of "v # tl l" "cost (hd l) (set (hd l # v # tl l)) K"]
+    moreover have "cone_peak (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K) (hd l)" sorry
+    ultimately show ?thesis by simp
+
+
+
+    show ?thesis using ordered_zero_collapsible.simps (2) [of "(hd l # v # tl l)" "K"]
+    have lval: "0 < length (v # l)" by simp
+    have not_cone_peak: "\<not> cone_peak (set (v # l)) K (hd (v # l))"
       apply (rule not_cone_outer_vertex_simpl_complex) apply (auto simp add: v cs Kne)
       using K powerset_def by auto      
     have cost: "cost v (set (v # l)) K = K" and link_ext: "link_ext v (set (v # l)) K = {}"
@@ -625,11 +647,17 @@ next
       and "cone_peak (set l') (link_ext a (set (a # l')) K) a" by simp_all
     have hdvtl: "0 < length (hd l # v # tl l)" by simp
     have vtl : "0 < length (v # tl l)" by simp
+    show ?thesis 
+      apply (subst cost [symmetric])
+      unfolding ordered_zero_collapsible.simps (2) [OF hdvtl] 
+      unfolding list.sel (1,3)
+      try
     have "ordered_zero_collapsible (v # tl l) (cost (hd l) (set (hd l # v # tl l)) K)"
-      unfolding ordered_zero_collapsible.simps (2) [OF vtl] 
+      unfolding ordered_zero_collapsible.simps (2) [OF vtl]
       unfolding lcons
       unfolding list.sel (1,3)
-    
+    proof (rule)
+      show "cone_peak (set (v # l')) (cost a (set (a # v # l')) K) v" try
     moreover have "cone_peak (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K) (hd l)" sorry
     ultimately show ?thesis by simp
     
