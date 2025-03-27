@@ -603,15 +603,43 @@ next
     hence lvl_ne: "0 < length (hd l # v # tl l)" by simp
     have cnp2: "\<not> cone_peak (set (v # l)) K (hd l)" using cnp
       by (metis hd_Cons_tl insert_commute l list.simps(15))
-    have cnpv: " \<not> cone_peak (set (v # l)) K v" 
+    have cnpv: " \<not> cone_peak (set (v # l)) K v"
       using v Kne cs
       unfolding cone_peak_def vertex_of_simpl_complex_def powerset_def closed_subset_def by auto
     have "ordered_zero_collapsible (v # tl l) (cost (hd l) (set (hd l # v # tl l)) K)"
     proof -
-      have "ordered_zero_collapsible (tl l) (cost v (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K))" 
-        using o cnpv
-        unfolding list.sel (1,3) using cost_commute [of "hd l" "set (hd l # v # tl l)" "v" K]
-        sorry
+      have "ordered_zero_collapsible (tl l) (cost (hd l) (set (hd l # tl l)) (cost v (set (hd l # v # tl l)) K))"
+      proof -
+        have "ordered_zero_collapsible (tl (v # l)) (cost (hd (v # l)) (set (v # l)) K)"
+          using o using ordered_zero_collapsible.simps [of "v # l" K]
+          using cnpv by fastforce
+        then have ozc: "ordered_zero_collapsible l (cost v (set (v # l)) K)" by simp
+        then have ozc2: "ordered_zero_collapsible (tl l) (cost (hd l) (set l) (cost (hd (v # l)) (set (v # l)) K))"
+        proof -
+          have "\<not> cone_peak (set l) (cost (hd (v # l)) (set (v # l)) K) (hd l)" 
+            using cnp2 unfolding cone_peak_def powerset_def cost_def
+            sorry
+          then show "ordered_zero_collapsible (tl l) (cost (hd l) (set l) (cost (hd (v # l)) (set (v # l)) K))"
+              using ordered_zero_collapsible.simps [of "l" "cost (hd (v # l)) (set (v # l)) K"] l
+              using ozc by auto
+        qed
+        then have "ordered_zero_collapsible (tl l) (cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K))"
+        proof -
+          have "cost (hd l) (set (v # l) - {v}) (cost v (set (v # l)) K) = 
+            cost v (set (v # l) - {hd l}) (cost (hd l) (set (v # l)) K)"
+            by (rule cost_commute [symmetric, of "hd l" "set (v # l)" "v" K], auto simp add: l)
+          also have "... = (cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K))"
+          proof -
+            have "set (v # l) - {hd l} = set (v # tl l)" using l apply auto
+              apply (metis list.collapse set_ConsD) using v K 
+              unfolding vertex_of_simpl_complex_def powerset_def try
+            using l try
+            then show "ordered_zero_collapsible (tl l) (cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K))"
+            using ozc2 l try
+            using o cnpv
+            unfolding list.sel (1,3)
+            using cost_commute [of "hd l" "set (v # l)" "v" K] try
+          sorry
       moreover have "cone_peak (set (tl (v # tl l))) (link_ext (hd (v # tl l)) (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K))
     (hd (v # tl l))" sorry
       ultimately show ?thesis by simp
