@@ -184,6 +184,16 @@ function ordered_zero_collapsible :: "nat list \<Rightarrow> nat set set \<Right
   by auto
 termination by (relation "Wellfounded.measure (\<lambda>(l,K). length l)", auto)
 
+lemma ordered_zero_collapsible_intro1 [intro]: "l = [] \<Longrightarrow> ordered_zero_collapsible l K = False" using ordered_zero_collapsible.simps (1) .
+
+lemma ordered_zero_collapsible_intro2 [intro]: "0 < length l \<Longrightarrow> cone_peak (set l) K (hd l) \<Longrightarrow> ordered_zero_collapsible l K" 
+  using ordered_zero_collapsible.simps (2) by simp
+
+lemma ordered_zero_collapsible_intro3 [intro]: "0 < length l 
+    \<Longrightarrow> (ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) 
+          \<and> cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd l)) \<Longrightarrow> ordered_zero_collapsible l K" 
+  using ordered_zero_collapsible.simps (2) by simp
+
 function ordered_m_collapsible :: "nat \<Rightarrow> nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
   "l = [] \<Longrightarrow> ordered_m_collapsible m l K = False"
@@ -576,7 +586,8 @@ lemma not_cone_outer_vertex_simpl_complex: assumes v: "v \<notin> vertex_of_simp
   using K Kne v cs
   unfolding vertex_of_simpl_complex_def cone_peak_def powerset_def closed_subset_def by auto (auto)
  
-lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []"
+lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []" 
+    and d: "distinct l" and vnl: "v \<notin> set l"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
     and o: "ordered_zero_collapsible (v # l) K"
   shows "ordered_zero_collapsible (hd l # v # tl l) K"
@@ -600,40 +611,123 @@ next
   next
     case cnp
     have lval: "0 < length (v # l)" by simp
-    hence lvl_ne: "0 < length (hd l # v # tl l)" by simp
-    have cnp2: "\<not> cone_peak (set (v # l)) K (hd l)" using cnp
-      by (metis hd_Cons_tl insert_commute l list.simps(15))
-    have cnpv: " \<not> cone_peak (set (v # l)) K v"
-      using v Kne cs
-      unfolding cone_peak_def vertex_of_simpl_complex_def powerset_def closed_subset_def by auto
-    have "ordered_zero_collapsible (v # tl l) (cost (hd l) (set (hd l # v # tl l)) K)"
+    have cnpv: "\<not> cone_peak (set (v # l)) K v" 
+    proof (rule not_cone_outer_vertex_simpl_complex)
+      show "v \<notin> vertex_of_simpl_complex K" using v.
+      show "K \<subseteq> powerset (set (v # l))" using K unfolding powerset_def by auto
+      show "closed_subset K" using cs .
+      show "K \<noteq> {}" using Kne .
+    qed
+    have cnplink: "\<not> cone_peak (set l) (link_ext (hd (v # l)) (set (v # l)) K) v"
+      by (rule not_cone_outer_vertex [OF vnl, of "(link_ext (hd (v # l)) (set (v # l)) K)"])
+    have "\<not> ordered_zero_collapsible (v # l) K"
     proof -
-      have "ordered_zero_collapsible (tl l) (cost (hd l) (set (hd l # tl l)) (cost v (set (hd l # v # tl l)) K))"
+      from o have "cone_peak (set (v # l)) K v \<or> cone_peak (set l) (link_ext (hd (v # l)) (set (v # l)) K) v"
+        unfolding ordered_zero_collapsible.simps (2) [OF lval] by auto
+      hence False using cnpv and cnplink by fast
+      thus "\<not> ordered_zero_collapsible (v # l) K" by (rule ccontr)
+    qed
+    with o have False by simp
+    thus ?thesis by fast
+  qed
+qed
+
+(*    using cnpv
+      using not_cone_outer_vertex [OF vnl, of "(link_ext (hd (v # l)) (set (v # l)) K)"]
+      using o
+      unfolding ordered_zero_collapsible.simps (2) [OF lval]
+      
+      apply auto
+    show ?thesis
+      using cnpv cnp2 not_cone_outer_vertex [OF vnl, of ] o by auto
+  qed
+qed
+
+  have  "ordered_zero_collapsible (v # tl l) (cost (hd l) (set (hd l # v # tl l)) K)"
+    proof -
+      have ozcc: "ordered_zero_collapsible (tl l) (cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K))"
+      (*have "ordered_zero_collapsible (tl l) (cost (hd l) (set (hd l # tl l)) (cost v (set (hd l # v # tl l)) K))"*)
       proof -
         have "ordered_zero_collapsible (tl (v # l)) (cost (hd (v # l)) (set (v # l)) K)"
           using o using ordered_zero_collapsible.simps [of "v # l" K]
           using cnpv by fastforce
         then have ozc: "ordered_zero_collapsible l (cost v (set (v # l)) K)" by simp
+        then have ozc2: "ordered_zero_collapsible (tl l) (cost (hd l) (set l) (cost v (set (v # l)) K))"
+        proof -
+          have "\<not> cone_peak (set l) (cost (hd (v # l)) (set (v # l)) K) (hd l)"
+          (*proof (rule not_cone_outer_vertex_simpl_complex)? ? ?*)
+            using cnp2 unfolding cone_peak_def powerset_def cost_def
+            sorry
+          then show "ordered_zero_collapsible (tl l) (cost (hd l) (set l) (cost v (set (v # l)) K))"
+            using ordered_zero_collapsible.simps [of "l" "cost (hd (v # l)) (set (v # l)) K"] l
+              using ozc by auto
+        qed
+        thus "ordered_zero_collapsible (tl l) (cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K))"
+        proof -
+          have "(cost (hd l) (set l) (cost (hd (v # l)) (set (v # l)) K)) = 
+              cost (hd l) (set (v # l) - {v}) (cost v (set (v # l)) K)" using vnl by simp
+          also have "... =
+            cost v (set (v # l) - {hd l}) (cost (hd l) (set (v # l)) K)"
+            by (rule cost_commute [symmetric, of "hd l" "set (v # l)" "v" K], auto simp add: l)
+          also have "... = (cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K))"
+          proof -
+            have "set (v # l) - {hd l} = set (v # tl l)"
+              using l d vnl
+              using cnpv not_cone_outer_vertex o by force
+            then show "cost v (set (v # l) - {hd l}) (cost (hd l) (set (v # l)) K) = cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K)"
+              by simp
+          qed
+          finally show ?thesis using ozc2 by simp
+        qed
+      qed
+      show "ordered_zero_collapsible (v # tl l) (cost (hd l) (set (hd l # v # tl l)) K)"
+      proof (rule ordered_zero_collapsible_intro3)
+        show "0 < length (v # tl l)" by simp
+        show "ordered_zero_collapsible (tl (v # tl l))
+          (cost (hd (v # tl l)) (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K)) \<and>
+          cone_peak (set (tl (v # tl l))) (link_ext (hd (v # tl l)) (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K))
+          (hd (v # tl l))"
+        proof (rule conjI)
+          show "ordered_zero_collapsible (tl (v # tl l)) (cost (hd (v # tl l)) (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K))"
+            using ozcc l vnl
+            by (metis insert_commute list.collapse list.sel(1,3) list.simps(15))
+          show "cone_peak (set (tl (v # tl l))) (link_ext (hd (v # tl l)) (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K))
+          (hd (v # tl l))" try
+          proof -
+            have "(link_ext (hd (v # tl l)) (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K)) = {}"
+              using v l d K vnl unfolding link_ext_def cost_def powerset_def by auto
+            show ?thesis try
+          using ordered_zero_collapsible.simps (2) [of "v # tl l" "(cost (hd l) (set (hd l # v # tl l)) K)"]
+
+
         then have ozc2: "ordered_zero_collapsible (tl l) (cost (hd l) (set l) (cost (hd (v # l)) (set (v # l)) K))"
         proof -
-          have "\<not> cone_peak (set l) (cost (hd (v # l)) (set (v # l)) K) (hd l)" 
+          have "\<not> cone_peak (set l) (cost (hd (v # l)) (set (v # l)) K) (hd l)"
+          (*proof (rule not_cone_outer_vertex_simpl_complex)? ? ?*)
             using cnp2 unfolding cone_peak_def powerset_def cost_def
             sorry
           then show "ordered_zero_collapsible (tl l) (cost (hd l) (set l) (cost (hd (v # l)) (set (v # l)) K))"
               using ordered_zero_collapsible.simps [of "l" "cost (hd (v # l)) (set (v # l)) K"] l
               using ozc by auto
-        qed
+          qed
         then have "ordered_zero_collapsible (tl l) (cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K))"
         proof -
-          have "cost (hd l) (set (v # l) - {v}) (cost v (set (v # l)) K) = 
+          have "(cost (hd l) (set l) (cost (hd (v # l)) (set (v # l)) K)) = 
+              cost (hd l) (set (v # l) - {v}) (cost v (set (v # l)) K)" using vnl by simp
+          also have "... =
             cost v (set (v # l) - {hd l}) (cost (hd l) (set (v # l)) K)"
             by (rule cost_commute [symmetric, of "hd l" "set (v # l)" "v" K], auto simp add: l)
           also have "... = (cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K))"
           proof -
-            have "set (v # l) - {hd l} = set (v # tl l)" using l apply auto
-              apply (metis list.collapse set_ConsD) using v K 
-              unfolding vertex_of_simpl_complex_def powerset_def try
-            using l try
+            have "set (v # l) - {hd l} = set (v # tl l)"
+              using l d vnl
+              using cnpv not_cone_outer_vertex o by force
+            then show "cost v (set (v # l) - {hd l}) (cost (hd l) (set (v # l)) K) = cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K)"
+              by simp
+          qed
+          finally show ?thesis using ozc2 by argo
+        qed
+      qed
             then show "ordered_zero_collapsible (tl l) (cost v (set (v # tl l)) (cost (hd l) (set (v # l)) K))"
             using ozc2 l try
             using o cnpv
@@ -721,7 +815,7 @@ next
 
 
 
-    (*have lval: "0 < length (v # l)" by simp
+    have lval: "0 < length (v # l)" by simp
     consider (cp) "cone_peak (set (v # a # l')) K a" | (cnp) "\<not> cone_peak (set (v # a # l')) K a" 
       by auto    
     then show ?thesis
@@ -730,7 +824,7 @@ next
         by (simp add: insert_commute)
       thus ?thesis using l by simp
     next
-      case cnp*)
+      case cnp
     have l: "0 < length (v # l)" by simp
     have le: "link_ext (hd (v # l)) (set (v # l)) K = {}"
       using K Kne v cs 
@@ -770,10 +864,7 @@ next
     thus ?thesis by (rule ccontr)
   qed
 qed
-
-
-
-
+*)
 
 lemma assumes v: "v \<notin> set l" and l: "l \<noteq> []" and K: "K \<subseteq> powerset (set l)"
     and o: "ordered_zero_collapsible (v # l) K"
