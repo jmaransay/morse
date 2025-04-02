@@ -437,58 +437,51 @@ using K c d proof (induct "length l" arbitrary: l K rule: less_induct)
   next
     case False
     hence l0: "0 < length l" by auto
-    from less.prems (2) and ordered_zero_collapsible.simps
-  have ei: "(cone_peak (set l) K (hd l) \<or>
-     ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and>
-    cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd l))" by simp
-  show ?case
-  proof (cases "length l \<le> 2")
-    case False note l2 = False
     show ?thesis
-    proof (cases "cone_peak (set l) K (hd l)")
+    proof (cases "1 = length l")
       case True
-      show ?thesis using ordered_non_evasive.simps (2) [OF l0] using True by simp
-      next
-      case False
-      hence cost: "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K)" 
-        and link: "cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd l)" 
-        using ei False by simp_all
-      have "ordered_non_evasive (tl l) (cost (hd l) (set l) K)"
-      proof (rule less.hyps)
-        show "length (tl l) < length l" using l0 by simp
-        show "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))"
-          using less.prems (1) l0 unfolding powerset_def cost_def
-          by (smt (verit, del_insts) Diff_insert_absorb insert_absorb length_greater_0_conv list.exhaust_sel list.simps(15) mem_Collect_eq subset_iff)
-        show "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K)" using cost by simp
-        show "distinct (tl l)" by (simp add: distinct_tl less.prems(3))
-      qed
-      moreover have "ordered_non_evasive (tl l) (link_ext (hd l) (set l) K)"
-      proof (rule cone_is_one [of _ _ "hd (tl l)"])
-        show "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
-          using less.prems(2) less.prems(3) link
-          unfolding link_ext_def powerset_def cone_peak_def by auto
-        show "hd (tl l) \<in> set (tl l)" using l2
-          using cost list.set_sel(1) ordered_zero_collapsible.simps(1) by blast
-        show "distinct (tl l)" using less.prems (3) by (rule distinct_tl)
-        show "cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))"
-          using link less.prems (3)
-          by (metis Nil_tl cone_peak_def distinct.simps(2) list.exhaust_sel)
-      qed
-      ultimately show ?thesis unfolding ordered_m_collapsible.simps (2) [OF l0] using l0 by fastforce
-    qed
-  next
-    case True note le2 = True
-    show ?thesis
-    proof (cases "length l = 1")
-      case True
-      show ?thesis
-        using ei True
-        unfolding cone_peak_def using l0 ei
-        by (metis diff_is_0_eq' le_numeral_extra(4) length_tl less_numeral_extra(3) ordered_non_evasive.elims(1) ordered_zero_collapsible.simps(1))
+      from less.prems (2) and ordered_zero_collapsible.simps (2) [OF True]
+      have ei: "cone_peak (set l) K (hd l)" by simp
+      thus ?thesis using ordered_non_evasive.simps (2) [OF l0] by simp
     next
-      case False hence l2: "length l = 2" using le2 l0 by linarith
-      show ?thesis using l2 ei
-        by (metis cone_peak_def distinct.simps(2) l0 less.prems(2) less.prems(3) list.exhaust_sel ordered_non_evasive.simps(2) ordered_zero_collapsible.simps(1))
+      case False hence l2: "2 \<le> length l" using l0 by linarith
+      hence tl_ne: "[] \<noteq> tl l" using False l0
+        by (metis One_nat_def Suc_pred length_tl list.size(3))
+      show ?thesis
+      proof (cases "cone_peak (set l) K (hd l)")
+        case True
+        show ?thesis using ordered_non_evasive.simps (2) [OF l0] using True by simp
+       next
+        case False
+        hence cost: "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K)" 
+          and link: "cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))"
+          using l2 using less.prems (2) by simp_all
+        have "ordered_non_evasive (tl l) (cost (hd l) (set l) K)"
+        proof (rule less.hyps)
+          show "length (tl l) < length l" using l0 by simp
+          have "cost (hd l) (set l) K \<subseteq> powerset (set l - {hd l})" 
+            by (rule cost_closed, intro less.prems (1))
+          thus "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
+            using l0 less.prems (3)
+            by (metis length_greater_0_conv list.collapse remove1_head set_remove1_eq)
+          show "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K)" using cost by simp
+          show "distinct (tl l)" by (simp add: distinct_tl less.prems(3))
+        qed
+        moreover have "ordered_non_evasive (tl l) (link_ext (hd l) (set l) K)"
+        proof (rule cone_is_one [of _ _ "hd (tl l)"])
+          have "link_ext (hd l) (set l) K \<subseteq> powerset (set l - {hd l})" 
+            by (rule link_ext_closed, intro less.prems (1))
+          thus "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))"
+            using l0 less.prems(3)
+            by (metis length_greater_0_conv list.collapse remove1_head set_remove1_eq)
+          show "hd (tl l) \<in> set (tl l)" using tl_ne by simp
+          show "distinct (tl l)" using less.prems (3) by (rule distinct_tl)
+          show "cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))"
+            using link .
+      qed
+      ultimately show ?thesis 
+        unfolding ordered_m_collapsible.simps (2) [OF l0] using l0 by fastforce
+      qed
     qed
   qed
 qed
@@ -502,35 +495,44 @@ lemma ordered_m_collapsible_ordered_non_evasive:
   note f = less.prems (1)
   show ?case using K d f proof (induct "length l" arbitrary: l K m rule: less_induct)
     case less
-    from less.prems (3) have l0: "0 < length l" by auto
     show ?case
-    proof (cases "cone_peak (set l) K (hd l)")
-      case True thus ?thesis using ordered_non_evasive.simps (2) [OF l0] by simp
+    proof (cases "l = []")
+      case True
+      thus ?thesis by simp
     next
-      case False note notcone = False
+      case False
+      hence l0: "0 < length l" by auto
       show ?thesis
-      proof (cases "m = 0")
-        case False note mn0 = False
-        from less.prems (3) and ordered_m_collapsible.simps (3) [OF l0, of m K]
-        have cost: "ordered_m_collapsible m (tl l) (cost (hd l) (set l) K)" 
-          and link: "ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)"
+      proof (cases "cone_peak (set l) K (hd l)")
+        case True thus ?thesis using ordered_non_evasive.simps (2) [OF l0] by simp
+      next
+        case False note notcone = False
+        show ?thesis
+        proof (cases "m = 0")
+          case False note mn0 = False
+          from less.prems (3) and ordered_m_collapsible.simps (3) [OF l0, of m K]
+          have cost: "ordered_m_collapsible m (tl l) (cost (hd l) (set l) K)" 
+            and link: "ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)"
           using notcone False by blast+
-        have "ordered_non_evasive (tl l) (cost (hd l) (set l) K)"
-        proof (rule less.hyps)
-          show "length (tl l) < length l" using l0 by simp
-          show "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
-            using less.prems (1) l0 unfolding cost_def powerset_def
-            by (smt (verit, del_insts) Diff_insert_absorb insert_absorb length_greater_0_conv list.exhaust_sel list.simps(15) mem_Collect_eq subset_iff)
+          have "ordered_non_evasive (tl l) (cost (hd l) (set l) K)"
+          proof (rule less.hyps)
+            show "length (tl l) < length l" using l0 by simp
+            have "cost (hd l) (set l) K \<subseteq> powerset (set l - {hd l})" 
+              by (rule cost_closed, intro less.prems (1))
+            thus "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
+              using l0 less.prems (2)
+              by (metis length_greater_0_conv list.collapse remove1_head set_remove1_eq)
           show "distinct (tl l)" using distinct_tl [OF less.prems (2)] .
           show "ordered_m_collapsible m (tl l) (cost (hd l) (set l) K)" using cost .
         qed
         moreover have "ordered_non_evasive (tl l) (link_ext (hd l) (set l) K)"
         proof (rule less.hyps)
           show "length (tl l) < length l" using l0 by simp
-          show "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))"
-            using l0 less.prems unfolding link_ext_def powerset_def cone_peak_def
-            apply auto using notcone
-            by (metis in_mono list.exhaust_sel set_ConsD)
+          have "link_ext (hd l) (set l) K \<subseteq> powerset (set l - {hd l})" 
+            by (rule link_ext_closed, intro less.prems (1))
+          thus "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))"
+            using l0 less.prems (2)
+            by (metis length_greater_0_conv  list.collapse remove1_head set_remove1_eq)
           show "distinct (tl l)" using distinct_tl [OF less.prems (2)] .
           show "ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)"
             using link .
@@ -541,9 +543,10 @@ lemma ordered_m_collapsible_ordered_non_evasive:
         show ?thesis using less.prems unfolding True
           using l0 notcone ordered_m_collapsible.simps(2)
           using ordered_zero_collapsible_ordered_non_evasive by blast
+        qed
+      qed
     qed
   qed
- qed
 qed
 
 lemma ordered_non_evasive_ordered_m_collapsible_length:
@@ -552,24 +555,32 @@ lemma ordered_non_evasive_ordered_m_collapsible_length:
   shows "ordered_m_collapsible (length l) l K"
   using K d c proof (induct "length l" arbitrary: l K rule: less_induct)
   case less
-  have l0: "0 < length l" using less.prems(3) by auto
   show ?case
-  proof (cases "cone_peak (set l) K (hd l)")
+  proof (cases "[] = l")
     case True
-    show ?thesis using ordered_m_collapsible.simps (3) [OF l0, of "length l", of K]
-      using True l0 by blast
+    thus ?thesis by simp
   next
     case False
-    from less.prems (3)
-    have cost: "ordered_non_evasive (tl l) (cost (hd l) (set l) K)" and
-     link: "ordered_non_evasive (tl l) (link_ext (hd l) (set l) K)" 
+    hence l0: "0 < length l" by auto
+    show ?thesis
+    proof (cases "cone_peak (set l) K (hd l)")
+      case True
+      show ?thesis using ordered_m_collapsible.simps (3) [OF l0, of "length l", of K]
+      using True l0 by blast
+    next
+      case False
+      from less.prems (3)
+      have cost: "ordered_non_evasive (tl l) (cost (hd l) (set l) K)" and
+        link: "ordered_non_evasive (tl l) (link_ext (hd l) (set l) K)" 
       using ordered_non_evasive.simps (2) [OF l0, of K] False by simp_all
     have cost_minus_one: "ordered_m_collapsible (length (tl l)) (tl l) (cost (hd l) (set l) K)"
     proof (rule less.hyps)
       show "length (tl l) < length l" using l0 by simp
-      show "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))"
-        using less.prems (1) l0 unfolding cost_def powerset_def
-        by (metis (full_types) Collect_subset Diff_cancel Diff_eq_empty_iff Diff_insert2 Pow_mono hd_Cons_tl link list.sel(2) list.simps(15) ordered_non_evasive.simps(1) subset_trans)
+      have "cost (hd l) (set l) K \<subseteq> powerset (set l - {hd l})" 
+        by (rule cost_closed, intro less.prems (1))
+      thus "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))"
+        using less.prems (2) l0
+        by (metis length_greater_0_conv list.collapse remove1_head set_remove1_eq)
       show "distinct (tl l)"
         using distinct_tl less.prems(2) by auto
       show "ordered_non_evasive (tl l) (cost (hd l) (set l) K)"
@@ -577,9 +588,11 @@ lemma ordered_non_evasive_ordered_m_collapsible_length:
     qed
     have cost: "ordered_m_collapsible (length (tl l) + 1) (tl l) (cost (hd l) (set l) K)"
     proof (rule ordered_m_collapsible_suc)
-      show "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
-        using less.prems (1,2,3)
-        by (metis Diff_insert_absorb cost_closed distinct.simps(2) list.exhaust_sel list.simps(15) ordered_non_evasive.simps(1))
+      have "cost (hd l) (set l) K \<subseteq> powerset (set l - {hd l})" 
+        by (rule cost_closed, intro less.prems (1))
+      thus "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
+        using less.prems (2) l0
+        by (metis length_greater_0_conv list.collapse remove1_head set_remove1_eq)
       show "distinct (tl l)"
         using distinct_tl less.prems(2) by auto
       show "ordered_m_collapsible (length (tl l)) (tl l) (cost (hd l) (set l) K)"
@@ -588,9 +601,11 @@ lemma ordered_non_evasive_ordered_m_collapsible_length:
     moreover have link: "ordered_m_collapsible (length (tl l)) (tl l) (link_ext (hd l) (set l) K)"
     proof (rule less.hyps)
       show "length (tl l) < length l" using l0 by simp
-      show "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))"
-        using less.prems (1,2,3) l0 unfolding link_def powerset_def
-        by (metis Diff_insert_absorb distinct.simps(2) link_ext_closed list.exhaust_sel list.simps(15) ordered_non_evasive.simps(1) powerset_def)
+      have "link_ext (hd l) (set l) K \<subseteq> powerset (set l - {hd l})" 
+        by(rule link_ext_closed, intro less.prems (1)) 
+      thus "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))"
+        using less.prems (2) l0
+        by (metis length_greater_0_conv list.collapse remove1_head set_remove1_eq)
       show "distinct (tl l)"
         using distinct_tl less.prems(2) by auto
       show "ordered_non_evasive (tl l) (link_ext (hd l) (set l) K)"
@@ -598,6 +613,7 @@ lemma ordered_non_evasive_ordered_m_collapsible_length:
     qed
     ultimately show ?thesis using ordered_m_collapsible.simps (3) [OF l0, of "length l", of K] l0
       by simp
+    qed
   qed
 qed
 
@@ -643,7 +659,7 @@ lemma not_cone_outer_vertex_simpl_complex: assumes v: "v \<notin> vertex_of_simp
   using K Kne v cs
   unfolding vertex_of_simpl_complex_def cone_peak_def powerset_def closed_subset_def by auto (auto)
  
-lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []" 
+lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []"
     and d: "distinct l" and vnl: "v \<notin> set l"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
     and o: "ordered_zero_collapsible (v # l) K"
@@ -654,7 +670,7 @@ proof (cases "K = {}")
     by (simp add: cost_eq_link_ext_cone_peak)
 next
   case False note Kne = False
-  consider (cp) "cone_peak (set (hd l # v # tl l)) K (hd l)" 
+  consider (cp) "cone_peak (set (hd l # v # tl l)) K (hd l)"
               | (cnp) "\<not> cone_peak (set (hd l # v # tl l)) K (hd l)" by auto
   then show ?thesis
   proof (cases)
@@ -675,6 +691,14 @@ next
       show "closed_subset K" using cs .
       show "K \<noteq> {}" using Kne .
     qed
+    show ?thesis
+    proof (cases "l = []")
+      case False 
+      hence vl: "1 < length (v # l)" and lvl: "1 < length (hd l # v # tl l)" by simp_all
+      show ?thesis
+        using ordered_zero_collapsible.simps (3) [OF vl]
+        
+        using True o apply auto
     have cnplink: "\<not> cone_peak (set l) (link_ext (hd (v # l)) (set (v # l)) K) v"
       by (rule not_cone_outer_vertex [OF vnl, of "(link_ext (hd (v # l)) (set (v # l)) K)"])
     have "\<not> ordered_zero_collapsible (v # l) K"
