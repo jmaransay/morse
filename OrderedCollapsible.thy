@@ -80,7 +80,7 @@ section\<open>Definition of \emph{ordered-no-evasive}\<close>
 
 function ordered_non_evasive :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
-  "l = [] \<Longrightarrow> ordered_non_evasive l K = False"
+  "l = [] \<Longrightarrow> ordered_non_evasive l K = True"
   | "0 < length l \<Longrightarrow> ordered_non_evasive l K = ((cone_peak (set l) K (hd l))
       | (ordered_non_evasive (tl l) (cost (hd l) (set l) K) \<and>
           ordered_non_evasive (tl l) (link_ext (hd l) (set l) K)))"
@@ -177,26 +177,37 @@ qed
 
 function ordered_zero_collapsible :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
+  "l = [] \<Longrightarrow> ordered_zero_collapsible l K = True"
+  | "1 = length l \<Longrightarrow> ordered_zero_collapsible l K = cone_peak (set l) K (hd l)" (*It might be rewritten as True?*) 
+  | "1 < length l \<Longrightarrow> ordered_zero_collapsible l K = ((cone_peak (set l) K (hd l))
+      | (ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and>
+          cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))))" 
+  by auto (metis One_nat_def length_0_conv less_one linorder_neqE_nat)
+termination by (relation "Wellfounded.measure (\<lambda>(l,K). length l)", auto)
+
+(*function ordered_zero_collapsible :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool"
+  where
   "l = [] \<Longrightarrow> ordered_zero_collapsible l K = False"
   | "0 < length l \<Longrightarrow> ordered_zero_collapsible l K = ((cone_peak (set l) K (hd l))
       | (ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and>
-          cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd l)))"
+          cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))))"
   by auto
-termination by (relation "Wellfounded.measure (\<lambda>(l,K). length l)", auto)
+termination by (relation "Wellfounded.measure (\<lambda>(l,K). length l)", auto)*)
 
-lemma ordered_zero_collapsible_intro1 [intro]: "l = [] \<Longrightarrow> ordered_zero_collapsible l K = False" using ordered_zero_collapsible.simps (1) .
+lemma ordered_zero_collapsible_intro1 [intro]: "l = [] \<Longrightarrow> ordered_zero_collapsible l K = True" 
+  using ordered_zero_collapsible.simps (1) .
 
-lemma ordered_zero_collapsible_intro2 [intro]: "0 < length l \<Longrightarrow> cone_peak (set l) K (hd l) \<Longrightarrow> ordered_zero_collapsible l K" 
+lemma ordered_zero_collapsible_intro2 [intro]: "1 = length l \<Longrightarrow> cone_peak (set l) K (hd l) \<Longrightarrow> ordered_zero_collapsible l K" 
   using ordered_zero_collapsible.simps (2) by simp
 
-lemma ordered_zero_collapsible_intro3 [intro]: "0 < length l 
+lemma ordered_zero_collapsible_intro3 [intro]: "1 < length l 
     \<Longrightarrow> (ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) 
-          \<and> cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd l)) \<Longrightarrow> ordered_zero_collapsible l K" 
+          \<and> cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))) \<Longrightarrow> ordered_zero_collapsible l K" 
   using ordered_zero_collapsible.simps (2) by simp
 
 function ordered_m_collapsible :: "nat \<Rightarrow> nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
-  "l = [] \<Longrightarrow> ordered_m_collapsible m l K = False"
+  "l = [] \<Longrightarrow> ordered_m_collapsible m l K = True"
   | "0 < length l \<Longrightarrow> 0 = m \<Longrightarrow> ordered_m_collapsible m l K = ordered_zero_collapsible l K"
   | "0 < length l \<Longrightarrow> 0 < m \<Longrightarrow> ordered_m_collapsible m l K = ((cone_peak (set l) K (hd l))
       | (ordered_m_collapsible m (tl l) (cost (hd l) (set l) K) \<and>
@@ -211,7 +222,18 @@ lemma cone_is_ordered_zero_collapsible:
     and c: "cone_peak (set l) K v" shows "ordered_zero_collapsible l K"
 proof -
   from v have ll: "0 < length l" by simp
-  show ?thesis using ordered_zero_collapsible.simps(2) [OF ll] using c v by simp
+  consider (l0) "0 = length l" | (l1) "1 = length l" | (lg1) "1 < length l" by linarith
+  then show ?thesis
+  proof (cases)
+    case l0
+    show ?thesis using l0 ll by simp
+  next
+    case l1
+    show ?thesis using ordered_zero_collapsible.simps(2) [OF l1] c v by simp
+  next
+    case lg1
+    show ?thesis  using ordered_zero_collapsible.simps(3) [OF lg1] c v by simp
+  qed
 qed
 
 lemma cone_is_ordered_m_collapsible:
@@ -222,7 +244,10 @@ proof -
   show ?thesis
   proof (induct n)
     case 0
-    then show ?case using ordered_m_collapsible.simps(2) [OF ll] using c v by simp
+    have "ordered_zero_collapsible l K"
+      by (rule cone_is_ordered_zero_collapsible, intro K, rule v, rule d, rule c)
+    then show ?case using ordered_m_collapsible.simps(2) [OF ll, of n K]
+      using ll ordered_m_collapsible.simps(2) by blast
   next
     case (Suc n)
     show ?case using ordered_m_collapsible.simps(2) [OF ll, of "Suc n" K] using c v by simp
@@ -245,61 +270,78 @@ lemma ordered_zero_collapsible_ordered_one_collapsible:
   assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l"
     and c: "ordered_zero_collapsible l K"
   shows "ordered_m_collapsible 1 l K"
-using K c d proof (induct "length l" arbitrary: l K rule: less_induct)
-  case less
-  from less.prems (2) have l0: "0 < length l" by auto
-  from less.prems (2) and ordered_zero_collapsible.simps (2) [OF l0, of K]
-  have ei: "(cone_peak (set l) K (hd l) \<or>
-     ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and>
-    cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd l))" by simp
-  show ?case
-  proof (cases "length l \<le> 2")
-    case False note l2 = False
-    show ?thesis
-    proof (cases "cone_peak (set l) K (hd l)")
-      case True
-      show ?thesis using ordered_m_collapsible.simps (3) [OF l0, of "1"] using True by simp
-      next
-      case False
-      hence cost: "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K)" 
-        and link: "cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd l)" 
-        using ei False by simp_all
-      have "ordered_m_collapsible 1 (tl l) (cost (hd l) (set l) K)"
-      proof (rule less.hyps)
-        show "length (tl l) < length l" using l0 by simp
-        show "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))"
-          using less.prems (1) l0 unfolding powerset_def cost_def
-          by (smt (verit, del_insts) Diff_insert_absorb insert_absorb length_greater_0_conv list.exhaust_sel list.simps(15) mem_Collect_eq subset_iff)
-        show "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K)" using cost by simp
-        show "distinct (tl l)" by (simp add: distinct_tl less.prems(3))
-      qed
-      moreover have "ordered_m_collapsible 0 (tl l) (link_ext (hd l) (set l) K)"
-      proof (rule cone_is_ordered_m_collapsible [of _ _ "hd (tl l)" "tl (tl l)"])
-        show "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
-          using less.prems(2) less.prems(3) link
-          unfolding link_ext_def powerset_def cone_peak_def by auto
-        show "tl l = hd (tl l) # tl (tl l)" using l2
-          by (metis False ei list.exhaust_sel ordered_zero_collapsible.simps(1))
-        show "distinct (tl l)" using less.prems (3) by (rule distinct_tl)
-        show "cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))"
-          using link less.prems (3)
-          by (metis Nil_tl cone_peak_def distinct.simps(2) list.exhaust_sel)
-      qed
-      ultimately show ?thesis unfolding ordered_m_collapsible.simps (2) [OF l0] using l0 by fastforce
-    qed
+proof -
+  consider (l0) "0 = length l" | (l1) "1 = length l" | (lg1) "1 < length l" by linarith
+  then show ?thesis
+  proof (cases)
+    case l0
+    then show ?thesis using ordered_m_collapsible.simps (1) by simp
   next
-    case True note le2 = True
+    case l1 hence l: "0 < length l" by auto
     show ?thesis
-    proof (cases "length l = 1")
-      case True
-      show ?thesis
-        using ei True
-        unfolding cone_peak_def using l0 ei
-        by (metis diff_is_0_eq' le_numeral_extra(4) length_tl less_numeral_extra(3) ordered_m_collapsible.simps(3) ordered_non_evasive.elims(1) ordered_zero_collapsible.simps(1))
-    next
-      case False hence l2: "length l = 2" using le2 l0 by linarith
-      show ?thesis using l2 ei
-        by (metis cone_peak_def distinct.simps(2) l0 less.prems(2) less.prems(3) less_numeral_extra(1) list.exhaust_sel ordered_m_collapsible.simps(3) ordered_zero_collapsible.simps(1))
+      using ordered_m_collapsible.simps (3) [OF l]
+      using ordered_zero_collapsible.simps (2) [OF l1]
+      using c less_one by presburger
+  next
+    case lg1 hence l: "0 < length l" by auto
+    show ?thesis
+      using K c d lg1 proof (induct "length l" arbitrary: l K rule: less_induct)
+      case less
+      from less.prems (4) have l1: "1 < length l" and l0: "0 < length l" by auto
+      from ordered_zero_collapsible.simps (3) [OF l1, of K] and less.prems (2)
+      have ei: "(cone_peak (set l) K (hd l) \<or>
+        ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and>
+          cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l)))" by simp
+      show ?case
+      proof (cases "length l \<le> 2")
+        case False note l2 = False
+        show ?thesis
+        proof (cases "cone_peak (set l) K (hd l)")
+          case True
+          show ?thesis using ordered_m_collapsible.simps (3) [OF l0, of "1"] using True by simp
+        next
+          case False
+          hence cost: "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K)" 
+            and link: "cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))" 
+            using ei False by simp_all
+          have "ordered_m_collapsible 1 (tl l) (cost (hd l) (set l) K)"
+          proof (rule less.hyps)
+            show "length (tl l) < length l" using l0 by simp
+            show "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))"
+              using less.prems (1) l0 unfolding powerset_def cost_def
+              by (smt (verit, del_insts) Diff_insert_absorb insert_absorb length_greater_0_conv list.exhaust_sel list.simps(15) mem_Collect_eq subset_iff)
+            show "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K)" using cost by simp
+            show "distinct (tl l)" by (simp add: distinct_tl less.prems(3))
+            show "1 < length (tl l)" using l2 by simp
+          qed
+          moreover have "ordered_m_collapsible 0 (tl l) (link_ext (hd l) (set l) K)"
+          proof (rule cone_is_ordered_m_collapsible [of _ _ "hd (tl l)" "tl (tl l)"])
+            have "link_ext (hd l) (set l) K \<subseteq> powerset (set l - {hd l})"
+              by (rule link_ext_closed [OF less.prems (1)])
+            thus "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
+              using l1 less.prems (3)
+              by (metis hd_Cons_tl list.size(3) not_less_zero remove1_head set_remove1_eq)
+            show "tl l = hd (tl l) # tl (tl l)" using l1
+              by (metis diff_less_mono dual_order.refl length_tl list.collapse list.size(3) not_less_zero)
+            show "distinct (tl l)" using less.prems (3) by (rule distinct_tl)
+            show "cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))"
+              using link .
+          qed
+          ultimately show ?thesis unfolding ordered_m_collapsible.simps (2) [OF l0] using l0 by fastforce
+        qed
+      next
+        case True note le2 = True
+        show ?thesis
+        proof (cases "length l = 1")
+          case True hence l0: "0 < length l" and zl: "0 < (1::nat)" by simp_all
+          show ?thesis unfolding ordered_m_collapsible.simps(3) [OF l0 zl] 
+            using ei True
+            unfolding cone_peak_def using l1 l0 ei by linarith
+          next
+            case False hence l2: "length l = 2" using le2 l0 by linarith
+            show ?thesis using l2 ei by auto
+        qed
+      qed
     qed
   qed
 qed
@@ -309,11 +351,11 @@ lemma ordered_m_collapsible_0_ordered_m_collapsible_one:
     and c: "ordered_m_collapsible 0 l K"
   shows "ordered_m_collapsible 1 l K"
 proof (cases "l = []")
-  case True with c have False by simp
-  thus ?thesis by (rule ccontr)
+  case True
+  thus ?thesis by force
 next
   case False hence l0: "0 < length l" by auto
-  show ?thesis 
+  show ?thesis
     using c 
     using ordered_m_collapsible.simps (2) [OF l0, of "0"]
     using ordered_m_collapsible.simps (3) [OF l0, of "1"]
@@ -329,48 +371,57 @@ lemma ordered_m_collapsible_suc:
   note f = less.prems (1)
   show ?case using K d f proof (induct "length l" arbitrary: l K m rule: less_induct)
     case less
-    from less.prems (3) have l0: "0 < length l" by auto
     show ?case
-    proof (cases "cone_peak (set l) K (hd l)")
-      case True thus ?thesis using ordered_m_collapsible.simps (3) [OF l0, of "m + 1"] by simp
+    proof (cases "l = []")
+      case True
+      then show ?thesis using ordered_m_collapsible.simps (1) [OF True, of "m + 1"] by simp
     next
-      case False note notcone = False
+      case False hence l0: "0 < length l" by auto
       show ?thesis
-      proof (cases "m = 0")
-        case False note mn0 = False
-        from less.prems (3) and ordered_m_collapsible.simps (3) [OF l0, of m K]
-        have cost: "ordered_m_collapsible m (tl l) (cost (hd l) (set l) K)" 
-          and link: "ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)"
-          using notcone False by blast+
-        have "ordered_m_collapsible (m + 1) (tl l) (cost (hd l) (set l) K)"
-        proof (rule less.hyps)
-          show "length (tl l) < length l" using l0 by simp
-          show "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
-            using less.prems (1) l0 unfolding cost_def powerset_def
-            by (smt (verit, del_insts) Diff_insert_absorb insert_absorb length_greater_0_conv list.exhaust_sel list.simps(15) mem_Collect_eq subset_iff)
-          show "distinct (tl l)" using distinct_tl [OF less.prems (2)] .
-          show "ordered_m_collapsible m (tl l) (cost (hd l) (set l) K)" using cost .
-        qed
-        moreover have "ordered_m_collapsible (m - 1 + 1) (tl l) (link_ext (hd l) (set l) K)"
-        proof (rule less.hyps)
-          show "length (tl l) < length l" using l0 by simp
-          show "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))"
-            using l0 less.prems unfolding link_ext_def powerset_def cone_peak_def
-            apply auto using notcone
-            by (metis in_mono list.exhaust_sel set_ConsD)
-          show "distinct (tl l)" using distinct_tl [OF less.prems (2)] .
-          show "ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)"
-            using link .
-        qed
-        ultimately show ?thesis using mn0 using ordered_m_collapsible.simps (3) [OF l0] by simp
+      proof (cases "cone_peak (set l) K (hd l)")
+        case True thus ?thesis using ordered_m_collapsible.simps (3) [OF l0, of "m + 1"] by simp
       next
-        case True
-        show ?thesis using less.prems unfolding True 
-          using l0 notcone ordered_m_collapsible.simps(2)
-          by (metis add_cancel_left_left ordered_m_collapsible_0_ordered_m_collapsible_one)
+        case False note notcone = False
+        show ?thesis
+        proof (cases "m = 0")
+          case False note mn0 = False
+          from less.prems (3) and ordered_m_collapsible.simps (3) [OF l0, of m K]
+          have cost: "ordered_m_collapsible m (tl l) (cost (hd l) (set l) K)" 
+            and link: "ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)"
+            using notcone False by blast+
+          have "ordered_m_collapsible (m + 1) (tl l) (cost (hd l) (set l) K)"
+          proof (rule less.hyps)
+            show "length (tl l) < length l" using l0 by simp
+            have "cost (hd l) (set l) K \<subseteq> powerset (set l - {hd l})" 
+              by (rule cost_closed, intro less.prems (1))
+            thus "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
+              using l0 less.prems (2)
+              by (metis length_greater_0_conv list.collapse remove1_head set_remove1_eq)
+            show "distinct (tl l)" using distinct_tl [OF less.prems (2)] .
+            show "ordered_m_collapsible m (tl l) (cost (hd l) (set l) K)" using cost .
+          qed
+          moreover have "ordered_m_collapsible (m - 1 + 1) (tl l) (link_ext (hd l) (set l) K)"
+          proof (rule less.hyps)
+            show "length (tl l) < length l" using l0 by simp
+            have "link_ext (hd l) (set l) K \<subseteq> powerset (set l - {hd l})"
+              by (rule link_ext_closed, intro less.prems (1))
+            thus "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))"
+              using l0 less.prems (2)
+              by (metis length_greater_0_conv list.collapse remove1_head set_remove1_eq)
+            show "distinct (tl l)" using distinct_tl [OF less.prems (2)] .
+            show "ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)"
+              using link .
+          qed
+        ultimately show ?thesis using mn0 using ordered_m_collapsible.simps (3) [OF l0] by simp
+        next
+          case True
+          show ?thesis using less.prems unfolding True
+            using l0 notcone ordered_m_collapsible.simps(2)
+            by (metis add_cancel_left_left ordered_m_collapsible_0_ordered_m_collapsible_one)
+        qed
+      qed
     qed
   qed
- qed
 qed
 
 lemma ordered_zero_collapsible_ordered_non_evasive:
@@ -379,8 +430,14 @@ lemma ordered_zero_collapsible_ordered_non_evasive:
   shows "ordered_non_evasive l K"
 using K c d proof (induct "length l" arbitrary: l K rule: less_induct)
   case less
-  from less.prems (2) have l0: "0 < length l" by auto
-  from less.prems (2) and ordered_zero_collapsible.simps (2) [OF l0, of K]
+  show ?case
+  proof (cases "l = []")
+    case True
+    then show ?thesis by simp
+  next
+    case False
+    hence l0: "0 < length l" by auto
+    from less.prems (2) and ordered_zero_collapsible.simps
   have ei: "(cone_peak (set l) K (hd l) \<or>
      ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and>
     cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd l))" by simp
