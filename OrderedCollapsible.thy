@@ -707,7 +707,7 @@ next
             by (metis length_greater_0_conv length_tl zero_less_diff)
           from o1 have "ordered_zero_collapsible l (cost v (set (v # l)) K)"
             unfolding list.sel (1,3) .
-          have "ordered_zero_collapsible (tl (v # tl l))
+          have rw: "ordered_zero_collapsible (tl (v # tl l))
             (cost (hd (v # tl l)) (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K)) = 
             ordered_zero_collapsible (tl (v # tl l))
             (cost (hd l) (set (hd l # tl l)) (cost v (set (v # l)) K))"
@@ -735,9 +735,19 @@ next
                   cost (hd l) (set (hd l # tl l)) (cost v (set (v # l)) K)" by simp
             thus ?thesis by simp
           qed
-          have "ordered_zero_collapsible (tl (v # tl l)) (cost (hd l) (set l) (cost v (set (v # l)) K))"
+          have "\<not> cone_peak (set l) (cost v (set (v # l)) K) (hd l)" 
+            using v unfolding vertex_of_simpl_complex_def unfolding cone_peak_def powerset_def cost_def using d l try
+            apply (rule not_cone_outer_vertex)
+            using cnp unfolding cone_peak_def unfolding powerset_def cost_def sorry
+          then have "ordered_zero_collapsible (tl (v # tl l)) (cost (hd l) (set l) (cost v (set (v # l)) K))"
             using o1 unfolding list.sel (1,3) using cnp
-            unfolding ordered_zero_collapsible.simps (3) [OF l1l] try
+            unfolding ordered_zero_collapsible.simps (3) [OF l1l] by simp
+          then have ozc_cost_cost: "ordered_zero_collapsible (tl (v # tl l)) (cost (hd l) (set (hd l # tl l)) (cost v (set (v # l)) K))"
+            using l by simp
+          have "ordered_zero_collapsible (tl (v # tl l)) (cost (hd (v # tl l)) (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K))"
+            unfolding rw
+            using ozc_cost_cost .
+          show ?thesis unfolding ordered_zero_collapsible.simps (3) [OF l1] 
             sorry
           moreover have
               "cone_peak (set (tl (v # tl l)))
