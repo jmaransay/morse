@@ -679,8 +679,9 @@ next
       using cp by force
   next
     case cnp
-    have lval: "0 < length (v # l)" by simp
-    have cnpv: "\<not> cone_peak (set (v # l)) K v" 
+    have lval: "1 < length (v # l)" using l by simp
+    have llval: "1 < length (hd l # v # tl l)" using l by simp
+    have cnpv: "\<not> cone_peak (set (v # l)) K v"
     proof (rule not_cone_outer_vertex_simpl_complex)
       show "v \<notin> vertex_of_simpl_complex K" using v.
       show "K \<subseteq> powerset (set (v # l))" using K unfolding powerset_def by auto
@@ -695,7 +696,112 @@ next
       unfolding link_ext_def powerset_def by auto
     consider (le) "l = []" | (lone) "1 = length l" | (lgone) "1 < length l"
       using nat_neq_iff by fastforce
-    then have "ordered_zero_collapsible l (cost v (set l) K)"
+    from o and cnpv have c: "(
+     ordered_zero_collapsible (tl (v # l)) (cost (hd (v # l)) (set (v # l)) K) \<and>
+     cone_peak (set (tl (v # l))) (link_ext (hd (v # l)) (set (v # l)) K) (hd (tl (v # l))))" 
+      using ordered_zero_collapsible.simps (3) [OF lval, of K] by simp
+    then have ozcl: "ordered_zero_collapsible l (cost v (set (v # l)) K)" and
+          cpl: "cone_peak (set  l) (link_ext v (set (v # l)) K) (hd  l)" by simp_all
+    from ozcl have "cone_peak (set l) (cost v (set (v # l)) K) (hd l) \<or>
+     ordered_zero_collapsible (tl l) (cost (hd l) (set l) (cost v (set (v # l)) K)) \<and>
+     cone_peak (set (tl l)) (link_ext (hd l) (set l) (cost v (set (v # l)) K)) (hd (tl l))" 
+      using ordered_zero_collapsible.simps (2) [of "l" "cost v (set (v # l)) K"]  
+      using ordered_zero_collapsible.simps (3) [of "l" "cost v (set (v # l)) K"] 
+      using l
+      using \<open>\<And>thesis. (l = [] \<Longrightarrow> thesis) \<Longrightarrow> (1 = length l \<Longrightarrow> thesis) \<Longrightarrow> (1 < length l \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close>
+      by argo
+    then consider (cp) "cone_peak (set l) (cost v (set (v # l)) K) (hd l)" |
+     (ozc) "ordered_zero_collapsible (tl l) (cost (hd l) (set l) (cost v (set (v # l)) K)) \<and>
+     cone_peak (set (tl l)) (link_ext (hd l) (set l) (cost v (set (v # l)) K)) (hd (tl l))" by auto
+    then show ?thesis
+    proof (cases)
+      case cp
+      have c_eq: "cost v (set (v # l)) K = cost v (set l) K" unfolding cost_def powerset_def by simp
+      have "cone_peak (set (hd l # v # tl l)) K (hd (hd l # v # tl l))"
+      proof (unfold cone_peak_def, intro conjI)
+        show "hd (hd l # v # tl l) \<in> set (hd l # v # tl l)" by simp
+        show "\<exists>B\<subseteq>powerset (set (hd l # v # tl l) - {hd (hd l # v # tl l)}). K = B \<union> {s. \<exists>b\<in>B. s = insert (hd (hd l # v # tl l)) b}"
+        proof -
+          from cp obtain B where B1: "B\<subseteq>powerset (set l - {hd l})"
+            and B2: "cost v (set (v # l)) K = B \<union> {s. \<exists>b\<in>B. s = insert (hd l) b}" 
+            unfolding cone_peak_def by auto
+          show ?thesis 
+          proof (rule exI [of _ B], intro conjI)
+            show "B \<subseteq> powerset (set (hd l # v # tl l) - {hd (hd l # v # tl l)})" 
+              using B1 unfolding powerset_def using l d vnl apply auto
+              by (metis Diff_insert0 PowD in_mono list.exhaust_sel set_ConsD subset_Diff_insert)
+            show "K = B \<union> {s. \<exists>b\<in>B. s = insert (hd (hd l # v # tl l)) b}"
+              using B2 c_eq cK unfolding list.sel (1) by simp
+          qed
+        qed
+      qed
+      thus ?thesis by simp
+    next
+      case ozc
+      have "ordered_zero_collapsible (v # tl l) (cost (hd l) (set (hd l # v # tl l)) K)" 
+        using ozc
+      show ?thesis unfolding ordered_zero_collapsible.simps (3) [OF llval] unfolding list.sel (1,3)
+      have "ordered_zero_collapsible (v # tl l) (cost v (set (v # l)) K)"
+        using ordered_zero_collapsible.simps (2) []
+      
+
+
+        using cK cp c_eq using l unfolding cost_def cone_peak_def powerset_def try
+        show ?thesis unfolding ordered_zero_collapsible.simps (3) [OF llval] using cK try
+    next
+      case ozc
+      then show ?thesis sorry
+    qed
+
+    show ?thesis
+    proof (cases "cone_peak (set (hd l # v # tl l)) K (hd (hd l # v # tl l))")
+      case True
+      then show ?thesis by simp
+    next
+      case False
+      have "ordered_zero_collapsible (tl (hd l # v # tl l)) (cost (hd (hd l # v # tl l)) (set (hd l # v # tl l)) K)" 
+      proof (cases "tl l = []")
+        case True
+        then have f: "1 = length (v # tl l)" by simp 
+        show ?thesis
+          unfolding list.sel (1,3)
+          unfolding ordered_zero_collapsible.simps (2) [OF f, of "(cost (hd l) (set (hd l # v # tl l)) K)"]
+          unfolding list.sel (1,3) unfolding cone_peak_def
+        proof (rule conjI)
+          show "v \<in> set (v # tl l)" by simp
+          show "\<exists>B\<subseteq>powerset (set (v # tl l) - {v}). cost (hd l) (set (hd l # v # tl l)) K = B \<union> {s. \<exists>b\<in>B. s = insert v b}"
+          proof (rule exI [of _ "cost v (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K)"], rule conjI)
+            show "cost v (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K) \<subseteq> powerset (set (v # tl l) - {v})"
+              unfolding cost_def powerset_def by auto
+            show "cost (hd l) (set (hd l # v # tl l)) K =
+                    cost v (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K) \<union>
+                       {s. \<exists>b\<in>cost v (set (v # tl l)) (cost (hd l) (set (hd l # v # tl l)) K). s = insert v b}"
+              unfolding cost_def powerset_def find_theorems (100) "cost _"
+              show "\<exists>B\<subseteq>Pow (set (v # tl l) - {v}). {s \<in> Pow (set (hd l # v # tl l) - {hd l}). s \<in> K} = B \<union> {s. \<exists>b\<in>B. s = insert v b}"
+          
+        show ?thesis sorry
+      next
+        case False
+        then show ?thesis sorry
+      qed
+        from ozcl show ?thesis
+      moreover have "cone_peak (set (tl (hd l # v # tl l))) (link_ext (hd (hd l # v # tl l)) (set (hd l # v # tl l)) K)
+    (hd (tl (hd l # v # tl l)))"
+        sorry
+      
+      ultimately show ?thesis by simp
+    qed
+        unfolding ordered_zero_collapsible.simps (3) [OF llval, of K]
+        using ozc try
+    
+    then "ordered_zero_collapsible l (cost v (set l) K)"
+    proof (rule cone_is_ordered_zero_collapsible [of _ _ "hd l" "tl l"])
+      show "cost v (set l) K \<subseteq> powerset (set l)"
+        using K unfolding cost_def powerset_def by auto
+      show "l = hd l # tl l" using l by simp
+      show "distinct l" using d .
+      show "cone_peak (set l) (cost v (set l) K) (hd l)" using cnp cK 
+        unfolding cone_peak_def powerset_def cost_def try
     proof (cases)
       case le
       show ?thesis using l le by simp
