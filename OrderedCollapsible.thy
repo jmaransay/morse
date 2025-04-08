@@ -687,6 +687,72 @@ next
       show "closed_subset K" using cs .
       show "K \<noteq> {}" using Kne .
     qed
+    have cK: "cost v (set l) K = K"
+      using vnl K
+      unfolding cost_def powerset_def by auto
+    have lK: "link_ext v (set l) K = {}"
+      using vnl K
+      unfolding link_ext_def powerset_def by auto
+    consider (le) "l = []" | (lone) "1 = length l" | (lgone) "1 < length l"
+      using nat_neq_iff by fastforce
+    then have "ordered_zero_collapsible l (cost v (set l) K)"
+    proof (cases)
+      case le
+      show ?thesis using l le by simp
+    next
+      case lgone
+      show ?thesis using ordered_zero_collapsible.simps (3) [OF lgone, of "cost v (set l) K"] using cnp
+      have "ordered_zero_collapsible (tl l) (cost (hd l) (set l) (cost v (set l) K))"
+        unfolding cK
+        moreover have "cone_peak (set (tl l)) (link_ext (hd l) (set l) (cost v (set l) K)) (hd (tl l))"
+    
+      show ?thesis
+        unfolding ordered_zero_collapsible.simps (3) [OF lgone] using cK
+      case lone
+      then obtain x where lx: "l = [x]" and hx: "hd l = x"
+        by (metis diff_self_eq_0 l length_0_conv length_tl list.exhaust_sel)
+      hence sl: "set l = {x}" by simp
+      from K and cs have K_cases: "K = {} \<or> K = {{}} \<or> K = {{},{x}}" 
+        unfolding sl
+        using powerset_singleton_cases [of K x]
+        unfolding closed_subset_def by auto
+      show ?thesis
+        unfolding ordered_zero_collapsible.simps (2) [OF lone] 
+        using cnp using cK unfolding cone_peak_def powerset_def cost_def try
+        unfolding cone_peak_def
+      proof (intro conjI)
+          show "hd l \<in> set l" by (rule hd_in_set, intro l)
+          show "\<exists>B\<subseteq>powerset (set l - {hd l}). cost v (set l) K = B \<union> {s. \<exists>b\<in>B. s = insert (hd l) b}"
+          proof (rule exI [of _ "{}"], rule conjI)
+            have rw: "set l - {hd l} = {}" using lone
+              by (metis Diff_cancel l length_greater_0_conv length_tl less_numeral_extra(4) 
+                    list.exhaust_sel list.set(1) list.simps(15) zero_less_diff)
+            show "{} \<subseteq> powerset (set l - {hd l})" by simp
+            consider "K = {}" | "K = {{}}" | "K = {{},{x}}" using K_cases by auto
+            then show "cost v (set l) K = {} \<union> {s. \<exists>b\<in>{}. s = insert (hd l) b}"
+            proof (cases)
+              case 1
+              show ?thesis unfolding cost_def powerset_def using 1 by simp
+            next
+              case 2
+              show ?thesis unfolding cost_def powerset_def using 2 sorry
+            next
+              case 3
+              then show ?thesis unfolding cost_def powerset_def using sl vnl v 
+                unfolding vertex_of_simpl_complex_def try
+            qed
+              using cK v vnl K unfolding sl
+              unfolding cost_def powerset_def vertex_of_simpl_complex_def using K_cases
+    next
+      case lgone
+      then show ?thesis sorry
+    qed
+      using ordered_zero_collapsible.simps
+    have "ordered_zero_collapsible (tl l) (cost v (set l) K)"
+      using o using ordered_zero_collapsible.simps
+
+
+
     show ?thesis
     proof (cases "l = []")
       case True with l have False by simp
