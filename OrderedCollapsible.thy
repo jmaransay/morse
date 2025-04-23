@@ -16,6 +16,17 @@ lemma "cone {} K = False"
 
 lemma cone_peak_empty: "cone_peak {} K v = False" by (simp add: cone_peak_def)
 
+lemma assumes l: "l \<noteq> []" 
+  shows "cone_peak (set l) {} (hd l)"
+  using l
+  unfolding cone_peak_def by simp
+
+(*lemma assumes l: "l \<noteq> []" 
+  shows "cone_peak (set l) {{}} (hd l) = True"
+  using l
+  unfolding cone_peak_def try *)
+
+
 text\<open>Proposition 1 in the paper\<close>
 
 lemma cone_peak_cost_eq_link_ext: 
@@ -658,7 +669,56 @@ lemma not_cone_outer_vertex_simpl_complex: assumes v: "v \<notin> vertex_of_simp
   shows "\<not> cone_peak (set l) K v"
   using K Kne v cs
   unfolding vertex_of_simpl_complex_def cone_peak_def powerset_def closed_subset_def by auto (auto)
- 
+
+lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []" and tl: "tl l \<noteq> []"
+    and d: "distinct l" and vnl: "v \<notin> set l"
+    and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
+    and o: "ordered_zero_collapsible (v # l) K"
+  shows "ordered_zero_collapsible (hd l # v # tl l) K"
+proof (cases "K = {}")
+  case True
+  then show ?thesis
+    by (simp add: cost_eq_link_ext_cone_peak)
+next
+  case False note Kne = False
+  consider (cp) "cone_peak (set (v # l)) K v"
+              | (cnp) "\<not> cone_peak (set (v # l)) K v" by auto
+  then show ?thesis
+  proof (cases)
+    case cp
+    have cnp_v: "\<not> cone_peak (set (v # l)) K v"
+    proof (rule not_cone_outer_vertex_simpl_complex)
+      show "v \<notin> vertex_of_simpl_complex K" using v.
+      show "K \<subseteq> powerset (set (v # l))" using K unfolding powerset_def by auto
+      show "closed_subset K" using cs .
+      show "K \<noteq> {}" using Kne .
+    qed
+    with cp have False by simp 
+    thus ?thesis by simp
+  next
+    case cnp
+    have lvl: "1 < length (v # l)" using l tl by simp
+    have cK: "cost v (set l) K = K" and clK: "cost v (set (v # l)) K = K"
+      using vnl K
+      unfolding cost_def powerset_def by auto
+    from o and cnp have ozc_c: "ordered_zero_collapsible l (cost v (set (v # l)) K)"
+     and cp_l: "cone_peak (set  l) (link_ext v (set (v # l)) K) (hd l)" 
+      using ordered_zero_collapsible.simps (3) [OF lvl, of K] by simp_all
+    from ozc_c have ozc_K: "ordered_zero_collapsible l K" using clK by simp
+     
+    have "ordered_zero_collapsible (v # tl l) (cost (hd l) (set (hd l # v # tl l)) K)" sorry
+    moreover have "cone_peak (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K) v" sorry
+    ultimately show ?thesis using ordered_zero_collapsible.simps (3) [of "hd l # v # tl l" K] by simp
+
+
+
+
+
+
+
+
+
+
 lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []" and tl: "tl l \<noteq> []"
     and d: "distinct l" and vnl: "v \<notin> set l"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
