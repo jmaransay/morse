@@ -667,8 +667,8 @@ lemma not_cone_outer_vertex: assumes v: "v \<notin> (set l)"
 lemma not_cone_outer_vertex_simpl_complex: assumes v: "v \<notin> vertex_of_simpl_complex K"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" and Kne: "K \<noteq> {}"
   shows "\<not> cone_peak (set l) K v"
-  using K Kne v cs
-  unfolding vertex_of_simpl_complex_def cone_peak_def powerset_def closed_subset_def by auto (auto)
+    using K Kne v cs
+    unfolding vertex_of_simpl_complex_def cone_peak_def powerset_def closed_subset_def by auto (auto)
 
 lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []" and tl: "tl l \<noteq> []"
     and d: "distinct l" and vnl: "v \<notin> set l"
@@ -752,14 +752,28 @@ next
         ultimately show ?thesis
           unfolding ordered_zero_collapsible.simps (3) [OF lvtl] by simp
       qed
-      moreover have "cone_peak (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K) v" 
-        using l tl d vnl cp
+      moreover have "cone_peak (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K) v"
+      proof (rule cost_eq_link_ext_cone_peak)
+        show "v \<in> set (v # tl l)" by simp
+        show "link_ext (hd l) (set (hd l # v # tl l)) K \<subseteq> powerset (set (v # tl l))"
+          using K unfolding powerset_def link_ext_def by auto
+        show "cost v (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K) =
+              link_ext v (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K)"
+        proof -
+          have "cost v (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K) = (link_ext (hd l) (set (hd l # v # tl l)) K)"
+            using K vnl unfolding cost_def link_ext_def powerset_def by auto
+          moreover have "link_ext v (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K) = {}"
+            using K vnl unfolding cost_def link_ext_def powerset_def by auto
+          ultimately show ?thesis try
+          find_theorems (78) "cone_peak"
+        (*using l tl d vnl cp
         unfolding cone_peak_def link_ext_def powerset_def try
         using cp
       proof -
         have "\<not> cone_peak (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K) v"
         proof (rule not_cone_outer_vertex_simpl_complex)
-        using cp sorry
+        using cp sorry*)
+        qed
       ultimately show ?thesis using ordered_zero_collapsible.simps (3) [of "hd l # v # tl l" K] by simp
     qed
   qed
