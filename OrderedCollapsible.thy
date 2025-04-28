@@ -682,7 +682,8 @@ lemma not_cone_outer_vertex: assumes v: "v \<notin> (set l)"
   shows "\<not> cone_peak (set l) K v"
   using v unfolding cone_peak_def by simp
 
-lemma not_cone_outer_vertex_simpl_complex: assumes v: "v \<notin> vertex_of_simpl_complex K"
+lemma not_cone_outer_vertex_simpl_complex: 
+  assumes v: "v \<notin> vertex_of_simpl_complex K"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" and Kne: "K \<noteq> {}"
   shows "\<not> cone_peak (set l) K v"
 proof (rule ccontr, simp)
@@ -698,13 +699,12 @@ qed
 lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []" and tl: "tl l \<noteq> []"
     and d: "distinct l" and vnl: "v \<notin> set l"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
-    and o: "ordered_m_collapsible m (v # l) K" and m: "0 < m" and m1: "1 < m"
+    and o: "ordered_m_collapsible m (v # l) K" and m: "0 < m"
   shows "ordered_m_collapsible m (hd l # v # tl l) K"
 proof (cases "K = {}")
   case True
   then show ?thesis using l vnl
-    by (metis cone_is_ordered_m_collapsible cost_empty d distinct.simps(2) distinct_length_2_or_more empty_subsetI link_ext_empty
-        list.collapse proposition_1)
+    by (simp add: ordered_m_collapsible_cc_empty)
 next
   case False note Kne = False
   consider (cp) "cone_peak (set (v # l)) K v"
@@ -726,7 +726,10 @@ next
     have lvl: "0 < length (v # l)" using l tl by simp
     have llvl: "0 < length (hd l # v # tl l)" using l tl by simp
     have ll: "0 < length l" using l tl by simp
+    have ltl: "0 < length (tl l)" using tl by blast
     have lvtl: "0 < length (v # tl l)" using l tl by (simp add: Nitpick.size_list_simp(2))
+    have lvtl1: "1 < length (v # tl l)" using tl
+      by (metis One_nat_def Suc_less_eq length_Cons length_greater_0_conv)
     have cK: "cost v (set l) K = K" and clK: "cost v (set (v # l)) K = K"
       using vnl K
       unfolding cost_def powerset_def by auto
@@ -781,21 +784,34 @@ next
       qed
       moreover have "ordered_m_collapsible (m - 1) (tl (hd l # v # tl l)) (link_ext (hd (hd l # v # tl l)) (set (hd l # v # tl l)) K)"
       proof (cases "cone_peak (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K) (hd (v # tl l))")
-        case True
-        have m10: "0 < m - 1" using m1 by simp
-        show ?thesis using True
-          using ordered_m_collapsible.simps (3) [OF lvtl m10 , of "(link_ext (hd l) (set (hd l # v # tl l)) K)"] by simp
+        case True note cpl = True
+        show ?thesis
+        proof (cases "m = 1")
+          case False
+          have m10: "0 < m - 1" using False m by simp
+          show ?thesis using True
+            using ordered_m_collapsible.simps (3) [OF lvtl m10 , of "(link_ext (hd l) (set (hd l # v # tl l)) K)"] by simp
+        next
+          case True
+          have m10: "0 = m - 1" using m True by simp
+          show ?thesis 
+            using cpl ordered_m_collapsible.simps (2) [OF lvtl m10, of "(link_ext (hd l) (set (hd l # v # tl l)) K)"]
+            unfolding ordered_zero_collapsible.simps (3) [OF lvtl1] by simp
+        qed
       next
-        case False
-        have m10: "0 < m - 1" using m1 by simp
-        have "ordered_m_collapsible (m - 1) (tl (v # tl l)) (cost (hd (v # tl l)) (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K))"
-        proof -
-          have cl: "(cost (hd (v # tl l)) (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K)) = 
-          (link_ext (hd l) (set (hd l # v # tl l)) K)"
+        case False note ncpl = False
+        show ?thesis
+        proof (cases "1 = m")
+          case False
+          hence m10: "0 < m - 1" using m by simp
+          have "ordered_m_collapsible (m - 1) (tl (v # tl l)) (cost (hd (v # tl l)) (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K))"
+          proof -
+            have cl: "(cost (hd (v # tl l)) (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K)) = 
+              (link_ext (hd l) (set (hd l # v # tl l)) K)"
              using vnl l d K
              unfolding cost_def link_ext_def powerset_def by auto
-           show ?thesis
-           proof -
+            show ?thesis
+            proof -
              have ll: "(link_ext (hd l) (set l) K) = (link_ext (hd l) (set (hd l # v # tl l)) K)"
                using vnl K l
                unfolding link_ext_def powerset_def
@@ -813,6 +829,33 @@ next
          qed
         ultimately show ?thesis
           using ordered_m_collapsible.simps (3) [OF lvtl m10 , of "(link_ext (hd l) (set (hd l # v # tl l)) K)"] by simp
+      next
+        case True
+        hence m10: "0 = m - 1" using m by simp
+        have "ordered_zero_collapsible (tl l) (cost v (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K))"
+        proof -
+          have cl: "(cost v (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K)) = 
+          (link_ext (hd l) (set (hd l # v # tl l)) K)"
+             using vnl l d K
+             unfolding cost_def link_ext_def powerset_def by auto
+          have ll: "(link_ext (hd l) (set l) K) = (link_ext (hd l) (set (hd l # v # tl l)) K)"
+            using vnl K l
+            unfolding link_ext_def powerset_def by auto (metis list.exhaust_sel set_ConsD subset_iff)
+          show ?thesis unfolding cl unfolding ll [symmetric] 
+            using cp using ordered_m_collapsible.simps (2) [OF ltl m10] by simp
+        qed
+        moreover have "cone_peak (set (tl l)) (link_ext v (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K)) (hd (tl l))" 
+        proof -
+          have "(link_ext (hd (v # tl l)) (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K)) = {}"
+             using vnl K unfolding link_ext_def powerset_def by auto
+           thus ?thesis
+             using cone_peak_cc_empty [OF tl] by simp
+       qed
+       ultimately show ?thesis
+          unfolding list.sel (1,3)
+           unfolding ordered_m_collapsible.simps (2) [OF lvtl m10]
+           unfolding ordered_zero_collapsible.simps (3) [OF lvtl1] by simp
+       qed
       qed
       ultimately show ?thesis 
         using ordered_m_collapsible.simps (3) [OF llvl m, of K] by simp
