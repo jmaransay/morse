@@ -16,10 +16,8 @@ lemma "cone {} K = False"
 
 lemma cone_peak_empty: "cone_peak {} K v = False" by (simp add: cone_peak_def)
 
-lemma assumes l: "l \<noteq> []" 
-  shows "cone_peak (set l) {} (hd l)"
-  using l
-  unfolding cone_peak_def by simp
+lemma cone_peak_cc_empty: assumes l: "l \<noteq> []" shows "cone_peak (set l) {} (hd l)"
+  using l unfolding cone_peak_def by simp
 
 (*lemma assumes l: "l \<noteq> []" 
   shows "cone_peak (set l) {{}} (hd l) = True"
@@ -76,16 +74,21 @@ qed
 
 corollary proposition_1:
   assumes v: "v \<in> V" and K: "K \<subseteq> powerset V" shows "cone_peak V K v \<equiv> (cost v V K = link_ext v V K)"
-  using cone_peak_cost_eq_link_ext [OF v] 
-  using cost_eq_link_ext_cone_peak [OF v K] by (smt (verit))
+  using cone_peak_cost_eq_link_ext [OF v, of K]
+  using cost_eq_link_ext_cone_peak [OF v K] by argo
 
 text\<open>Proposition 2 in our paper.\<close>
 
-lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K"
+lemma proposition_2: 
+  assumes K: "K \<subseteq> powerset V" and c: "closed_subset K"
   shows "K = cost v V K \<union> join_vertex v (link_ext v V K)"
-  using complex_decomposition [OF K c] 
-  using cc_s_link_eq_link_ext [of V K v] using K c using cc_s.intros
-  by (smt (verit, best) CollectD Diff_empty Diff_insert0 Diff_insert_absorb bot.extremum_uniqueI insert_Diff_single link_ext_def link_ext_empty_vertex link_intro link_subset_link_ext singletonI subsetD)
+proof -
+  have "K = cost v V K \<union> join_vertex v (link v V K)" using complex_decomposition [OF K c] .
+  moreover have "link v V K = link_ext v V K"
+    using K c 
+    unfolding link_def link_ext_def powerset_def closed_subset_def by auto
+  ultimately show ?thesis by simp
+qed
 
 section\<open>Definition of \emph{ordered-no-evasive}\<close>
 
@@ -97,6 +100,16 @@ function ordered_non_evasive :: "nat list \<Rightarrow> nat set set \<Rightarrow
           ordered_non_evasive (tl l) (link_ext (hd l) (set l) K)))"
   by auto
 termination by (relation "Wellfounded.measure (\<lambda>(l,K). length l)", auto)
+
+lemma ordered_non_evasive_empty_cc: "ordered_non_evasive l {}" 
+proof (cases l)
+  case Nil
+  show ?thesis using ordered_non_evasive.simps (1) [OF Nil, of "{}"] by fast
+next
+  case (Cons a list)
+  have "cone_peak (set l) {} (hd l)" by (rule cone_peak_cc_empty, simp add: Cons)
+  thus ?thesis using ordered_non_evasive.simps (2) Cons by simp
+qed
 
 section\<open>Lemmas about @{term cone_peak}.\<close>
 
@@ -216,6 +229,10 @@ lemma ordered_zero_collapsible_intro3 [intro]: "1 < length l
           \<and> cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))) \<Longrightarrow> ordered_zero_collapsible l K" 
   using ordered_zero_collapsible.simps (2) by simp
 
+lemma ordered_zero_collapsible_cc_empty: "ordered_zero_collapsible l {}"
+  by (metis cone_peak_cc_empty length_0_conv less_one linorder_neq_iff ordered_zero_collapsible.simps(3) ordered_zero_collapsible_intro1
+      ordered_zero_collapsible_intro2)
+
 function ordered_m_collapsible :: "nat \<Rightarrow> nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
   "l = [] \<Longrightarrow> ordered_m_collapsible m l K = True"
@@ -225,6 +242,9 @@ function ordered_m_collapsible :: "nat \<Rightarrow> nat list \<Rightarrow> nat 
          ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)))"
   by (auto+)
 termination by (relation "Wellfounded.measure (\<lambda>(m,l,K). length l)", auto)
+
+lemma ordered_m_collapsible_cc_empty: "ordered_m_collapsible m l {}"
+  by (metis cone_peak_cc_empty length_greater_0_conv neq0_conv ordered_m_collapsible.simps(1,2,3) ordered_zero_collapsible_cc_empty)
 
 text\<open>A cone over a vertex @{term v} is @{term ordered_zero_collapsible}.\<close>
 
@@ -243,7 +263,7 @@ proof -
     show ?thesis using ordered_zero_collapsible.simps(2) [OF l1] c v by simp
   next
     case lg1
-    show ?thesis  using ordered_zero_collapsible.simps(3) [OF lg1] c v by simp
+    show ?thesis using ordered_zero_collapsible.simps(3) [OF lg1] c v by simp
   qed
 qed
 
@@ -498,8 +518,7 @@ using K c d proof (induct "length l" arbitrary: l K rule: less_induct)
 qed
 
 lemma ordered_m_collapsible_ordered_non_evasive:
-  assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l"
-    and c: "ordered_m_collapsible m l K" 
+  assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l" and c: "ordered_m_collapsible m l K" 
   shows "ordered_non_evasive l K"
   using c proof (induct m rule: less_induct)
   case (less m)
@@ -561,8 +580,7 @@ lemma ordered_m_collapsible_ordered_non_evasive:
 qed
 
 lemma ordered_non_evasive_ordered_m_collapsible_length:
-  assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l"
-    and c: "ordered_non_evasive l K"
+  assumes K: "K \<subseteq> powerset (set l)" and d: "distinct l" and c: "ordered_non_evasive l K"
   shows "ordered_m_collapsible (length l) l K"
   using K d c proof (induct "length l" arbitrary: l K rule: less_induct)
   case less
@@ -667,8 +685,15 @@ lemma not_cone_outer_vertex: assumes v: "v \<notin> (set l)"
 lemma not_cone_outer_vertex_simpl_complex: assumes v: "v \<notin> vertex_of_simpl_complex K"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" and Kne: "K \<noteq> {}"
   shows "\<not> cone_peak (set l) K v"
-    using K Kne v cs
-    unfolding vertex_of_simpl_complex_def cone_peak_def powerset_def closed_subset_def by auto (auto)
+proof (rule ccontr, simp)
+  assume c: "cone_peak (set l) K v"
+  hence "{v} \<in> K" using Kne K cs unfolding powerset_def cone_peak_def closed_subset_def
+    by (smt (verit, del_insts) Un_iff empty_subsetI ex_in_conv insert_mono mem_Collect_eq)
+  thus False using v unfolding vertex_of_simpl_complex_def by simp
+qed
+  (*using K Kne v cs
+    unfolding vertex_of_simpl_complex_def cone_peak_def powerset_def closed_subset_def apply auto
+    by auto (auto)*)
 
 lemma assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []" and tl: "tl l \<noteq> []"
     and d: "distinct l" and vnl: "v \<notin> set l"
@@ -783,9 +808,8 @@ next
          proof -
            have "(link_ext (hd (v # tl l)) (set (v # tl l)) (link_ext (hd l) (set (hd l # v # tl l)) K)) = {}"
              using vnl K unfolding link_ext_def powerset_def by auto
-           thus ?thesis using tl
-             by (smt (verit) cost_empty empty_subsetI hd_in_set link_ext_empty list.sel(3) ordered_m_collapsible.elims(1)
-                 ordered_m_collapsible.simps(3) ordered_zero_collapsible.elims(3) proposition_1 tl)
+           thus ?thesis
+             using tl ordered_m_collapsible_cc_empty by presburger
          qed
         ultimately show ?thesis
           using ordered_m_collapsible.simps (3) [OF lvtl m10 , of "(link_ext (hd l) (set (hd l # v # tl l)) K)"] by simp
