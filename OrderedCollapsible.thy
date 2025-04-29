@@ -141,36 +141,15 @@ proof (induct l)
   then show ?case using ordered_non_evasive.simps (1) by simp
 next
   case (Cons a l)
-  assume "ordered_non_evasive l {{}}" and tl: "0 < length (tl l)"
-  have "ordered_non_evasive (tl (a # l)) (cost (hd (a # l)) (set (a # l)) {{}})" sorry
-  moreover have "ordered_non_evasive (tl (a # l)) (link_ext (hd (a # l)) (set (a # l)) {{}})" sorry
-  ultimately have ?case using ordered_non_evasive.simps (1) [OF] ordered_non_evasive.simps (2) [OF tl] by simp
+  assume one: "ordered_non_evasive l {{}}"
+  have c: "cost (hd (a # l)) (set (a # l)) {{}} = {{}}" unfolding cost_def powerset_def by auto
+  have l: "link_ext (hd (a # l)) (set (a # l)) {{}} = {}" unfolding link_ext_def powerset_def list.sel by auto
+  have "ordered_non_evasive (tl (a # l)) (cost (hd (a # l)) (set (a # l)) {{}})"
+    unfolding c unfolding list.sel using one . 
+  moreover have "ordered_non_evasive (tl (a # l)) (link_ext (hd (a # l)) (set (a # l)) {{}})"
+    unfolding l unfolding list.sel using ordered_non_evasive_empty_cc .
+  ultimately show ?case by simp
 qed
-  have "\<not> cone_peak (set l) {{}} (hd l)" using not_cone_peak_cc_empty .
-  moreover have "\<not> ordered_non_evasive (tl l) (cost (hd l) (set l) {{}})"
-  proof -
-    have ce: "(cost (hd l) (set l) {{}}) = {{}}" unfolding cost_def powerset_def by auto
-    show ?thesis using ordered_non_evasive.simps (2) [of "tl l" "(cost (hd l) (set l) {{}})"]
-      unfolding ce
-    proof -
-      have "\<not> cone_peak (set (tl l)) {{}} (hd (tl l))" using not_cone_peak_cc_empty .
-      show ?thesis
-
-
-lemma not_ordered_non_evasive_cc_empty:
-  assumes "0 < length l" shows "\<not> ordered_non_evasive l {{}}"
-proof -
-  have "\<not> cone_peak (set l) {{}} (hd l)" using not_cone_peak_cc_empty .
-  moreover have "\<not> ordered_non_evasive (tl l) (cost (hd l) (set l) {{}})"
-  proof -
-    have ce: "(cost (hd l) (set l) {{}}) = {{}}" unfolding cost_def powerset_def by auto
-    show ?thesis using ordered_non_evasive.simps (2) [of "tl l" "(cost (hd l) (set l) {{}})"]
-      unfolding ce
-    proof -
-      have "\<not> cone_peak (set (tl l)) {{}} (hd (tl l))" using not_cone_peak_cc_empty .
-      show ?thesis
-
-  show ?thesis using ordered
 
 section\<open>Lemmas about @{term cone_peak}.\<close>
 
@@ -294,6 +273,46 @@ lemma ordered_zero_collapsible_cc_empty: "ordered_zero_collapsible l {}"
   by (metis cone_peak_cc_empty length_0_conv less_one linorder_neq_iff ordered_zero_collapsible.simps(3) ordered_zero_collapsible_intro1
       ordered_zero_collapsible_intro2)
 
+lemma ordered_zero_collapsible_empty: "ordered_zero_collapsible [] {{}}" by simp
+
+lemma not_ordered_zero_collapsible_not_empty: 
+  assumes l0: "0 < length l" shows "\<not> ordered_zero_collapsible l {{}}"
+proof (cases "1 = length l")
+  case True show "\<not> ordered_zero_collapsible l {{}}"
+    unfolding ordered_zero_collapsible.simps (2) [OF True, of "{{}}"]
+    using not_cone_peak_cc_empty .
+next
+  case False hence l: "1 < length l" using l0 by linarith
+  show ?thesis
+    using l proof (induct "length l" arbitrary: l)
+    case 0 then have False by simp thus ?case by simp
+  next
+    case (Suc x)
+    have le: "link_ext (hd l) (set l) {{}} = {}" unfolding link_ext_def powerset_def by simp
+    have ce: "cost (hd l) (set l) {{}} = {{}}" unfolding cost_def powerset_def by auto
+    have c1: "\<not> cone_peak (set l) {{}} (hd l)" using not_cone_peak_cc_empty [of "l"] .
+    moreover have c2: "cone_peak (set (tl l)) (link_ext (hd l) (set l) {{}}) (hd (tl l))"
+      unfolding le using cone_peak_cc_empty using Suc.prems
+      by (metis Nitpick.size_list_simp(2) One_nat_def not_less_iff_gr_or_eq zero_less_Suc)
+    moreover have "\<not> ordered_zero_collapsible (tl l) (cost (hd l) (set l) {{}})" 
+      unfolding ce
+    proof (cases "1 = length (tl l)")
+      case True
+      then show "\<not> ordered_zero_collapsible (tl l) {{}}"
+        using not_cone_peak_cc_empty ordered_zero_collapsible.simps(2) by blast
+    next
+      case False
+      show "\<not> ordered_zero_collapsible (tl l) {{}}"
+      proof (rule Suc.hyps(1))
+        show "x = length (tl l)" using Suc.hyps (2) by simp
+        show "1 < length (tl l)" using False Suc.prems by simp
+      qed
+    qed
+    ultimately show "\<not> ordered_zero_collapsible l {{}}" 
+      using ordered_zero_collapsible.simps (3) [OF Suc.prems(1), of "{{}}"] by simp
+  qed
+qed
+
 function ordered_m_collapsible :: "nat \<Rightarrow> nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
   "l = [] \<Longrightarrow> ordered_m_collapsible m l K = True"
@@ -306,6 +325,13 @@ termination by (relation "Wellfounded.measure (\<lambda>(m,l,K). length l)", aut
 
 lemma ordered_m_collapsible_cc_empty: "ordered_m_collapsible m l {}"
   by (metis cone_peak_cc_empty length_greater_0_conv neq0_conv ordered_m_collapsible.simps(1,2,3) ordered_zero_collapsible_cc_empty)
+
+lemma ordered_m_collapsible_empty: "ordered_m_collapsible m [] {{}}" by simp
+
+lemma not_ordered_m_collapsible_not_empty:
+  assumes l0: "0 < length l" shows "\<not> ordered_m_collapsible 0 l {{}}"
+  using ordered_m_collapsible.simps (2) [OF l0, of 0 "{{}}"]
+  using l0 not_ordered_zero_collapsible_not_empty by blast
 
 text\<open>A cone over a vertex @{term v} is @{term ordered_zero_collapsible}.\<close>
 
