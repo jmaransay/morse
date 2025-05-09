@@ -1191,7 +1191,72 @@ next
   qed
 qed
 
+text\<open>Beware that when we are dealing with subsets not closed by subset relation
+    the previous definition does not work nicely:\<close>
+
+text\<open>Lemma 4.1 as stated in our paper in DML. We split it into four different lemmas\<close>
+
+lemma cost_cost_commute:
+  assumes l: "2 \<le> length l" and d: "distinct l"
+    and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" 
+  shows "cost (hd l) (set (tl (tl l))) (cost (hd (tl l)) (set l - {hd (tl l)}) K) = 
+          cost (hd (tl l)) (set (tl (tl l))) (cost (hd l) (set (tl l)) K)"
+  using l d K cs unfolding powerset_def cost_def closed_subset_def
+  by auto (metis DiffD1 in_mono list.sel(2) list.set_sel(2))
+
+lemma cost_link_ext_commute:
+  assumes l: "2 \<le> length l" and d: "distinct l"
+    and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" 
+  shows "cost (hd l) (set (tl (tl l))) (link_ext (hd (tl l)) (set l - {hd (tl l)}) K) = 
+          link_ext (hd (tl l)) (set (tl (tl l))) (cost (hd l) (set (tl l)) K)"
+  using l d K cs unfolding powerset_def cost_def link_ext_def closed_subset_def
+  apply auto
+  apply (metis One_nat_def Suc_pred bot_nat_0.extremum_unique diff_is_0_eq length_greater_0_conv length_tl lessI less_numeral_extra(4) list.set_sel(1) list.size(3)
+      numeral_2_eq_2 zero_less_Suc)
+  apply (metis One_nat_def Suc_pred bot_nat_0.extremum_unique diff_is_0_eq distinct.simps(2) length_greater_0_conv length_tl lessI less_numeral_extra(4)
+      list.collapse list.set_sel(1) list.size(3) numeral_2_eq_2 zero_less_Suc)
+  by (metis Diff_empty diff_shunt empty_set list.collapse set_ConsD subset_Diff_insert subset_iff)
+
+lemma link_ext_cost_commute:
+  assumes l: "2 \<le> length l" and d: "distinct l"
+    and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" 
+  shows "link_ext (hd l) (set (tl (tl l))) (cost (hd (tl l)) (set l - {hd (tl l)}) K) = 
+          cost (hd (tl l)) (set (tl (tl l))) (link_ext (hd l) (set (tl l)) K)"
+  using l d K cs unfolding powerset_def cost_def link_ext_def closed_subset_def
+  apply auto
+  apply (metis list.sel(2) list.set_sel(2) subset_iff)
+  by (metis One_nat_def Suc_pred bot_nat_0.extremum_unique diff_is_0_eq distinct.simps(2) length_greater_0_conv length_tl lessI less_numeral_extra(4) list.collapse
+      list.set_sel(1) list.size(3) numeral_2_eq_2 zero_less_Suc)
+
+lemma link_ext_link_ext_commute:
+  assumes l: "2 \<le> length l" and d: "distinct l"
+    and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" 
+  shows "link_ext (hd l) (set (tl (tl l))) (link_ext (hd (tl l)) (set l - {hd (tl l)}) K) = 
+          link_ext (hd (tl l)) (set (tl (tl l))) (link_ext (hd l) (set (tl l)) K)"
+  using l d K cs unfolding powerset_def link_ext_def closed_subset_def
+  apply auto
+  apply (metis One_nat_def Suc_pred diff_is_0_eq length_greater_0_conv length_tl lessI less_numeral_extra(4) list.set_sel(1) list.size(3) numeral_2_eq_2
+      zero_less_Suc)
+  apply (metis in_mono list.sel(2) list.set_sel(2))
+  by (metis insert_commute)+
+
+text\<open>Lemma 4.2 as stated in our paper in DML\<close>
+
+lemma ordered_m_collapsible_swap_main:
+  assumes l: "2 \<le> length l" and d: "distinct l"
+    and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
+    and m: "0 < m" 
+    and o: "ordered_m_collapsible m l K"
+    and ncp: "\<not> cone_peak (set (tl l)) K (hd l)"
+    and ncp_cost: "\<not> cone_peak (set (tl (tl l))) (cost (hd l) (set (tl l)) K) (hd (tl l))"
+    and ncp_link: "\<not> cone_peak (set (tl (tl l))) (link_ext (hd l) (set (tl l)) K) (hd (tl l))"
+  shows "ordered_m_collapsible m ((hd (tl l)) # (hd l) # (tl (tl l))) K"
+
+
 section\<open>Main Theorem.\<close>
+
+text\<open>Theorem 4.1 as stated in our paper in DML\<close>
+
 
 theorem
   assumes"ordered_m_collapsible m l K" and "distinct l" and "K \<subseteq> powerset (set l)" and "closed_subset K"
