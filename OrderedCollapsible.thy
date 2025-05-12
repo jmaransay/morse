@@ -316,6 +316,27 @@ next
   qed
 qed
 
+text\<open>A cone over a vertex @{term v} is @{term ordered_zero_collapsible}.\<close>
+
+lemma cone_is_ordered_zero_collapsible:
+  assumes K: "K \<subseteq> powerset (set l)" and v: "l = v # l'" and d: "distinct l"
+    and c: "cone_peak (set l) K v" shows "ordered_zero_collapsible l K"
+proof -
+  from v have ll: "0 < length l" by simp
+  consider (l0) "0 = length l" | (l1) "1 = length l" | (lg1) "1 < length l" by linarith
+  then show ?thesis
+  proof (cases)
+    case l0
+    show ?thesis using l0 ll by simp
+  next
+    case l1
+    show ?thesis using ordered_zero_collapsible.simps(2) [OF l1] c v by simp
+  next
+    case lg1
+    show ?thesis using ordered_zero_collapsible.simps(3) [OF lg1] c v by simp
+  qed
+qed
+
 function ordered_m_collapsible :: "nat \<Rightarrow> nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
   "l = [] \<Longrightarrow> ordered_m_collapsible m l K = False"
@@ -337,26 +358,7 @@ lemma not_ordered_m_collapsible_not_empty:
   using ordered_m_collapsible.simps (2) [OF l0, of 0 "{{}}"]
   using l0 not_ordered_zero_collapsible_not_empty by blast
 
-text\<open>A cone over a vertex @{term v} is @{term ordered_zero_collapsible}.\<close>
-
-lemma cone_is_ordered_zero_collapsible:
-  assumes K: "K \<subseteq> powerset (set l)" and v: "l = v # l'" and d: "distinct l"
-    and c: "cone_peak (set l) K v" shows "ordered_zero_collapsible l K"
-proof -
-  from v have ll: "0 < length l" by simp
-  consider (l0) "0 = length l" | (l1) "1 = length l" | (lg1) "1 < length l" by linarith
-  then show ?thesis
-  proof (cases)
-    case l0
-    show ?thesis using l0 ll by simp
-  next
-    case l1
-    show ?thesis using ordered_zero_collapsible.simps(2) [OF l1] c v by simp
-  next
-    case lg1
-    show ?thesis using ordered_zero_collapsible.simps(3) [OF lg1] c v by simp
-  qed
-qed
+text\<open>A cone over a vertex @{term v} is @{term ordered_m_collapsible}.\<close>
 
 lemma cone_is_ordered_m_collapsible:
   assumes K: "K \<subseteq> powerset (set l)" and v: "l = v # l'" and d: "distinct l"
@@ -1196,49 +1198,36 @@ text\<open>Beware that when we are dealing with subsets not closed by subset rel
 
 text\<open>Lemma 4.1 as stated in our paper in DML. We split it into four different lemmas\<close>
 
-lemma cost_cost_commute:
+lemma cost_cost_commute_length_ge2:
   assumes l: "2 \<le> length l" and d: "distinct l"
-    and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" 
-  shows "cost (hd l) (set (tl (tl l))) (cost (hd (tl l)) (set l - {hd (tl l)}) K) = 
-          cost (hd (tl l)) (set (tl (tl l))) (cost (hd l) (set (tl l)) K)"
-  using l d K cs unfolding powerset_def cost_def closed_subset_def
-  by auto (metis DiffD1 in_mono list.sel(2) list.set_sel(2))
+    and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
+  shows "cost (hd l) (set l - {hd (tl l)}) (cost (hd (tl l)) (set l) K) = 
+          cost (hd (tl l)) (set l - {hd l}) (cost (hd l) (set l) K)"
+  using l d K cs unfolding powerset_def cost_def closed_subset_def by auto
 
-lemma cost_link_ext_commute:
+lemma cost_link_ext_commute_length_ge2:
   assumes l: "2 \<le> length l" and d: "distinct l"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" 
-  shows "cost (hd l) (set (tl (tl l))) (link_ext (hd (tl l)) (set l - {hd (tl l)}) K) = 
-          link_ext (hd (tl l)) (set (tl (tl l))) (cost (hd l) (set (tl l)) K)"
+  shows "cost (hd l) (set l - {hd (tl l)}) (link_ext (hd (tl l)) (set l) K) = 
+          link_ext (hd (tl l)) (set l - {hd l}) (cost (hd l) (set l) K)"
   using l d K cs unfolding powerset_def cost_def link_ext_def closed_subset_def
-  apply auto
-  apply (metis One_nat_def Suc_pred bot_nat_0.extremum_unique diff_is_0_eq length_greater_0_conv length_tl lessI less_numeral_extra(4) list.set_sel(1) list.size(3)
-      numeral_2_eq_2 zero_less_Suc)
-  apply (metis One_nat_def Suc_pred bot_nat_0.extremum_unique diff_is_0_eq distinct.simps(2) length_greater_0_conv length_tl lessI less_numeral_extra(4)
-      list.collapse list.set_sel(1) list.size(3) numeral_2_eq_2 zero_less_Suc)
-  by (metis Diff_empty diff_shunt empty_set list.collapse set_ConsD subset_Diff_insert subset_iff)
+  by auto (metis Nitpick.size_list_simp(2) One_nat_def distinct_length_2_or_more list.exhaust_sel not_numeral_le_zero numeral_le_one_iff semiring_norm(69))
 
-lemma link_ext_cost_commute:
+lemma link_ext_cost_commute_length_ge2:
   assumes l: "2 \<le> length l" and d: "distinct l"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" 
-  shows "link_ext (hd l) (set (tl (tl l))) (cost (hd (tl l)) (set l - {hd (tl l)}) K) = 
-          cost (hd (tl l)) (set (tl (tl l))) (link_ext (hd l) (set (tl l)) K)"
+  shows "link_ext (hd l) (set l - {hd (tl l)}) (cost (hd (tl l)) (set l) K) = 
+          cost (hd (tl l)) (set l - {hd l}) (link_ext (hd l) (set l) K)"
   using l d K cs unfolding powerset_def cost_def link_ext_def closed_subset_def
-  apply auto
-  apply (metis list.sel(2) list.set_sel(2) subset_iff)
-  by (metis One_nat_def Suc_pred bot_nat_0.extremum_unique diff_is_0_eq distinct.simps(2) length_greater_0_conv length_tl lessI less_numeral_extra(4) list.collapse
-      list.set_sel(1) list.size(3) numeral_2_eq_2 zero_less_Suc)
+  by auto (metis Nitpick.size_list_simp(2) One_nat_def distinct_length_2_or_more list.exhaust_sel not_numeral_le_zero numeral_le_one_iff semiring_norm(69))
 
-lemma link_ext_link_ext_commute:
+lemma link_ext_link_ext_commute_length_ge2:
   assumes l: "2 \<le> length l" and d: "distinct l"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K" 
-  shows "link_ext (hd l) (set (tl (tl l))) (link_ext (hd (tl l)) (set l - {hd (tl l)}) K) = 
-          link_ext (hd (tl l)) (set (tl (tl l))) (link_ext (hd l) (set (tl l)) K)"
+  shows "link_ext (hd l) (set l - {hd (tl l)}) (link_ext (hd (tl l)) (set l) K) = 
+          link_ext (hd (tl l)) (set l - {hd l}) (link_ext (hd l) (set l) K)"
   using l d K cs unfolding powerset_def link_ext_def closed_subset_def
-  apply auto
-  apply (metis One_nat_def Suc_pred diff_is_0_eq length_greater_0_conv length_tl lessI less_numeral_extra(4) list.set_sel(1) list.size(3) numeral_2_eq_2
-      zero_less_Suc)
-  apply (metis in_mono list.sel(2) list.set_sel(2))
-  by (metis insert_commute)+
+  by auto (metis insert_commute)+
 
 text\<open>Lemma 4.2 as stated in our paper in DML\<close>
 
@@ -1247,11 +1236,170 @@ lemma ordered_m_collapsible_swap_main:
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
     and m: "0 < m" 
     and o: "ordered_m_collapsible m l K"
-    and ncp: "\<not> cone_peak (set (tl l)) K (hd l)"
-    and ncp_cost: "\<not> cone_peak (set (tl (tl l))) (cost (hd l) (set (tl l)) K) (hd (tl l))"
-    and ncp_link: "\<not> cone_peak (set (tl (tl l))) (link_ext (hd l) (set (tl l)) K) (hd (tl l))"
+    and ncp: "\<not> cone_peak (set l) K (hd l)"
+    and ncp_cost: "\<not> cone_peak (set (tl l)) (cost (hd l) (set l) K) (hd (tl l))"
+    and ncp_link: "\<not> cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))"
   shows "ordered_m_collapsible m ((hd (tl l)) # (hd l) # (tl (tl l))) K"
-
+proof -
+  have l_ss_c: "link_ext (hd l) (set l) K \<subset> cost (hd l) (set l) K"
+    by (metis K closed_subset_link_eq_link_ext cone_peak_cc_empty cone_peak_empty cost_eq_link_ext_cone_peak cs hd_in_set link_subset_cost ncp o
+        order_less_le ordered_m_collapsible.simps(1))
+  have l_ne: "link_ext (hd l) (set l) K \<noteq> {}"
+    by (metis cone_peak_cc_empty length_greater_0_conv m ncp ncp_link o ordered_m_collapsible.simps(1,3))
+  have o_m_c: "ordered_m_collapsible m (tl l) (cost (hd l) (set l) K)" 
+    using o ncp
+    by (metis length_greater_0_conv m ordered_m_collapsible.simps(1,3))
+  have o_m_1_l: "ordered_m_collapsible (m - 1) (tl l) (link_ext (hd l) (set l) K)" 
+    using o ncp
+    by (metis length_greater_0_conv m ordered_m_collapsible.simps(1,3))
+  have o_m_c_c: "ordered_m_collapsible m (tl (tl l)) (cost (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K))"
+    using o_m_c ncp_cost
+    by (metis length_greater_0_conv m ordered_m_collapsible.simps(1,3))
+  have o_m_c_l: "ordered_m_collapsible (m - 1) (tl (tl l)) (cost (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K))"
+    using o_m_1_l ncp_link
+    by (smt (verit, best) Nitpick.size_list_simp(2) One_nat_def less_numeral_extra(4) ordered_m_collapsible.elims(2,3) ordered_m_collapsible.simps(1,3)
+        ordered_zero_collapsible.elims(2))
+  have o_m_l_c: "ordered_m_collapsible (m - 1) (tl (tl l)) (link_ext (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K))"
+    using o_m_c ncp_cost
+    by (metis length_greater_0_conv m ordered_m_collapsible.simps(1,3))
+  have o_m_l_l: "ordered_m_collapsible (m - 1 - 1) (tl (tl l)) (link_ext (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K))"
+    using o_m_1_l ncp_link
+    by (smt (verit, del_insts) K add_diff_inverse_nat cancel_comm_monoid_add_class.diff_cancel d diff_add_inverse2 diff_is_0_eq l length_tl less_one nat_1_add_1
+        ncp not_gr_zero o order.strict_trans2 ordered_m_collapsible.simps(3) ordered_m_collapsible_suc zero_diff)
+  (*have lc_cc_ne: "link_ext (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K) \<subset> cost (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K)"
+    using ncp_cost
+    by (metis K closed_subset_cost closed_subset_link_eq_link_ext cost_closed cost_eq_link_ext_cone_peak cs d empty_iff hd_in_set link_subset_cost
+        list.collapse list.sel(2) o_m_c_c ordered_m_collapsible.simps(1) psubsetI remove1_head set_remove1_eq)
+  have ll_cl_ne: "link_ext (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K) \<subset> cost (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K)"
+    using ncp_link o_m_c_l sorry*)
+  have one: "hd (tl l) \<in> set l" using l
+    by (metis Nitpick.size_list_simp(2) One_nat_def list.set_sel(1,2) not_numeral_le_zero numeral_le_one_iff semiring_norm(69))
+  have two: "hd l \<in> set l" using l
+    by (metis hd_in_set list.sel(2) one)
+  have three: "set l - {hd (tl l)} = set (hd l # tl (tl l))" 
+    using l d apply auto
+        apply (metis list.sel(1,3) list.set_cases)
+        apply (metis list.set_sel(1) list.size(3) not_numeral_le_zero)
+        apply (metis Nitpick.size_list_simp(2) One_nat_def distinct_length_2_or_more list.collapse not_numeral_le_zero numeral_le_one_iff semiring_norm(69))
+      apply (metis list.sel(2) list.set_sel(2))
+    by (metis distinct.simps(2) empty_iff empty_set list.collapse list.sel(2))
+  have four: "set l = set (hd (tl l) # hd l # tl (tl l))" using l three
+    by (metis hd_in_set insert_Diff list.collapse list.set_intros(2) list.simps(15) o_m_c_c ordered_m_collapsible.simps(1) tl_Nil)
+  have five: "set l - {hd l} = set (tl l)" using l d
+    by (metis empty_iff empty_set list.collapse remove1_head set_remove1_eq two)
+  show ?thesis
+  proof (cases "link_ext (hd (tl l)) (set l) K = {}")
+    case True note l_e = True
+    hence c_K: "cost (hd (tl l)) (set l) K = K"
+      by (metis K Un_empty_left all_not_in_conv closed_subset_def cost_empty cs empty_subsetI link_ext_empty proposition_2 sup_bot_right)
+    show ?thesis 
+    proof (rule ordered_m_collapsible_swap_rev)
+      show f: "hd (tl l) \<notin> vertex_of_simpl_complex K" using l_e
+        unfolding link_ext_def vertex_of_simpl_complex_def powerset_def by auto
+      show "hd l # tl (tl l) \<noteq> []" by simp
+      show "distinct (hd l # tl (tl l))" using d
+        by (metis distinct_length_2_or_more distinct_singleton list.collapse tl_Nil)
+      show "hd (tl l) \<notin> set (hd l # tl (tl l))" using d l o_m_c
+        by (metis distinct.simps(2) distinct_tl l_e l_ne list.collapse ordered_m_collapsible.simps(1) set_ConsD)
+      show "K \<subseteq> powerset (set (hd l # tl (tl l)))" using K f cs
+        unfolding powerset_def vertex_of_simpl_complex_def closed_subset_def
+        by (smt (verit) Diff_insert_absorb \<open>hd (tl l) \<notin> set (hd l # tl (tl l))\<close> c_K cost_closed insert_commute list.exhaust_sel list.simps(15) o_m_c_c
+            ordered_m_collapsible.simps(1) powerset_def tl_Nil)
+      show "closed_subset K" using cs .
+      show "ordered_m_collapsible m (hd (hd l # tl (tl l)) # hd (tl l) # tl (hd l # tl (tl l))) K" using o l
+        by (metis list.collapse list.sel(1,3) o_m_c ordered_m_collapsible.simps(1))
+      show "0 < m" using m .
+    qed
+  next
+    case False
+    have "ordered_m_collapsible m (tl (hd (tl l) # hd l # tl (tl l))) (cost (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K)"
+    proof -
+      have "ordered_m_collapsible m (hd l # tl (tl l)) (cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K)"
+      proof (cases "cone_peak (set (hd (tl l) # hd l # tl (tl l))) (cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K) (hd l)")
+        case True
+        show ?thesis 
+        proof (rule cone_is_ordered_m_collapsible [of _ _ "hd l"])
+          show "cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K \<subseteq> powerset (set (hd l # tl (tl l)))"
+            using K unfolding cost_def powerset_def by auto
+          show "hd l # tl (tl l) = hd l # tl (tl l)" ..
+          show "distinct (hd l # tl (tl l))" using d l
+            by (metis distinct_length_2_or_more distinct_singleton list.collapse list.sel(2))
+          from True obtain B where Bp: "B\<subseteq>powerset (set (hd (tl l) # hd l # tl (tl l)) - {hd l})" 
+             and c: "cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K = B \<union> {s. \<exists>b\<in>B. s = insert (hd l) b}" unfolding cone_peak_def by auto
+          show "cone_peak (set (hd l # tl (tl l))) (cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K) (hd l)"
+          proof (unfold cone_peak_def, intro conjI)
+            show "hd l \<in> set (hd l # tl (tl l))" by simp
+            show "\<exists>B\<subseteq>powerset (set (hd l # tl (tl l)) - {hd l}). cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K = B \<union> {s. \<exists>b\<in>B. s = insert (hd l) b}"
+            proof (intro exI [of _ B], intro conjI)
+              show "B \<subseteq> powerset (set (hd l # tl (tl l)) - {hd l})" 
+                using Bp c unfolding cost_def powerset_def by auto
+              show "cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K = B \<union> {s. \<exists>b\<in>B. s = insert (hd l) b}"
+                using c .
+            qed
+          qed
+        qed
+      next
+        case False
+        have c_reduce: "cost (hd (hd l # tl (tl l))) (set (hd l # tl (tl l))) (cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K) =
+                cost (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K)"
+          unfolding list.sel unfolding three [symmetric] four [symmetric] five [symmetric]
+            by (rule cost_cost_commute_length_ge2, intro l, intro d, intro K, intro cs)
+        have "ordered_m_collapsible m (tl (hd l # tl (tl l)))
+          (cost (hd (hd l # tl (tl l))) (set (hd l # tl (tl l))) (cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K))"
+          unfolding c_reduce
+          unfolding list.sel using o_m_c_c .
+        moreover have "ordered_m_collapsible (m - 1) (tl (hd l # tl (tl l)))
+          (link_ext (hd (hd l # tl (tl l))) (set (hd l # tl (tl l))) (cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K))"
+        proof -
+          have lccl: "link_ext (hd (hd l # tl (tl l))) (set (hd l # tl (tl l))) (cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K) =
+                  cost (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K)" 
+            unfolding list.sel unfolding three [symmetric] four [symmetric] five [symmetric]
+            by (rule link_ext_cost_commute_length_ge2, intro l, intro d, intro K, intro cs)
+          show ?thesis unfolding lccl using o_m_c_l by simp
+        qed
+        ultimately show ?thesis using ordered_m_collapsible.simps (3) [ of "hd l # tl (tl l)", OF _ m] by simp
+      qed
+      thus ?thesis by simp
+    qed      
+    moreover have "ordered_m_collapsible (m - 1) (tl (hd (tl l) # hd l # tl (tl l))) (link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K)"
+    proof (cases "0 = m - 1")
+      case True
+      then show ?thesis unfolding list.sel using o_m_1_l unfolding four [symmetric] using ordered_m_collapsible.simps sorry
+    next
+      case False
+      hence m1: "0 < m - 1" using m by linarith
+      have "ordered_m_collapsible (m - 1) (tl (tl (hd (tl l) # hd l # tl (tl l))))
+      (cost (hd (tl (hd (tl l) # hd l # tl (tl l)))) (set (tl (hd (tl l) # hd l # tl (tl l))))
+        (link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K))"
+      proof -
+        have c: "cost (hd (tl (hd (tl l) # hd l # tl (tl l)))) (set (tl (hd (tl l) # hd l # tl (tl l))))
+        (link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K) = 
+          link_ext (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K)"
+          unfolding list.sel unfolding three [symmetric] four [symmetric] five [symmetric]
+          by (rule cost_link_ext_commute_length_ge2 [OF l d K cs])
+        show ?thesis 
+          unfolding c unfolding list.sel using o_m_l_c .
+      qed
+      moreover have
+     "ordered_m_collapsible (m - 1 - 1) (tl (tl (hd (tl l) # hd l # tl (tl l))))
+      (link_ext (hd (tl (hd (tl l) # hd l # tl (tl l)))) (set (tl (hd (tl l) # hd l # tl (tl l))))
+        (link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K))"
+      proof -
+        have llll: "link_ext (hd (tl (hd (tl l) # hd l # tl (tl l)))) (set (tl (hd (tl l) # hd l # tl (tl l))))
+        (link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K) = 
+          link_ext (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K)" 
+          unfolding list.sel unfolding three [symmetric] four [symmetric] five [symmetric]
+          by (rule link_ext_link_ext_commute_length_ge2 [OF l d K cs])
+        show ?thesis
+          unfolding llll unfolding list.sel using o_m_l_l .
+       qed
+      ultimately show ?thesis 
+        using ordered_m_collapsible.simps (3) [OF _ m1, of "tl (hd (tl l) # hd l # tl (tl l))" "link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K"]
+        by simp
+    qed  
+    ultimately show ?thesis using ordered_m_collapsible.simps (3) [of "hd (tl l) # hd l # tl (tl l)", OF _ m] by simp
+  qed
+qed
 
 section\<open>Main Theorem.\<close>
 
