@@ -1349,14 +1349,8 @@ proof -
           unfolding c_reduce
           unfolding list.sel using o_m_c_c .
         moreover have "ordered_m_collapsible (m - 1) (tl (hd l # tl (tl l)))
-          (link_ext (hd (hd l # tl (tl l))) (set (hd l # tl (tl l))) (cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K))"
-        proof -
-          have lccl: "link_ext (hd (hd l # tl (tl l))) (set (hd l # tl (tl l))) (cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K) =
-                  cost (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K)" 
-            unfolding list.sel unfolding three [symmetric] four [symmetric] five [symmetric]
-            by (rule link_ext_cost_commute_length_ge2, intro l, intro d, intro K, intro cs)
-          show ?thesis unfolding lccl using o_m_c_l by simp
-        qed
+          (link_ext (hd (hd l # tl (tl l))) (set (hd l # tl (tl l))) (cost (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K))" 
+          by (metis five four link_ext_cost_commute list.sel(1,3) o_m_c_l o_m_l_c one three two)
         ultimately show ?thesis using ordered_m_collapsible.simps (3) [ of "hd l # tl (tl l)", OF _ m] by simp
       qed
       thus ?thesis by simp
@@ -1364,39 +1358,43 @@ proof -
     moreover have "ordered_m_collapsible (m - 1) (tl (hd (tl l) # hd l # tl (tl l))) (link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K)"
     proof (cases "0 = m - 1")
       case True
-      then show ?thesis unfolding list.sel using o_m_1_l unfolding four [symmetric] using ordered_m_collapsible.simps sorry
+      have length1: "1 < length (hd l # tl (tl l))" and lengthhdtl0: "0 < length (hd l # tl (tl l))"  
+        by (metis length_0_conv length_Suc_conv less_one not_less_eq o_m_l_c ordered_m_collapsible.simps(1)) auto
+      hence ltltl0: "0 < length ((tl (tl l)))" by simp
+      hence ltl1: "1 < length (tl l)" by simp
+      from o_m_1_l have "ordered_zero_collapsible (tl l) (link_ext (hd l) (set l) K)" 
+        using ordered_m_collapsible.simps (2) [OF _ True, of "tl l"] by fastforce
+      then have ozc: "ordered_zero_collapsible (tl (tl l)) (cost (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K))" 
+        and cp: "cone_peak (set (tl (tl l))) (link_ext (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K)) (hd (tl (tl l)))" 
+        using ordered_zero_collapsible.simps (3) [OF ltl1, of "link_ext (hd l) (set l) K"]
+        using ncp_link by simp_all
+      have "ordered_zero_collapsible (tl (hd l # tl (tl l)))
+     (cost (hd (hd l # tl (tl l))) (set (hd l # tl (tl l))) (link_ext (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K))"
+        using ozc unfolding list.sel
+        by (metis K True cost_link_ext_commute_length_ge2 cs d five four l ltltl0 o_m_l_c ordered_m_collapsible.simps(2) three)
+      moreover have "cone_peak (set (tl (hd l # tl (tl l))))
+     (link_ext (hd (hd l # tl (tl l))) (set (hd l # tl (tl l))) (link_ext (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K)) (hd (tl (hd l # tl (tl l))))"
+        using cp unfolding list.sel
+        by (metis five four link_ext_commute one three two)
+      ultimately have "ordered_zero_collapsible (hd l # tl (tl l)) (link_ext (hd (tl l)) (set (hd (tl l) # hd l # tl (tl l))) K)"
+        unfolding ordered_zero_collapsible.simps (3) [OF length1] by simp
+      thus ?thesis using ordered_m_collapsible.simps (2) [OF _ True] by simp
     next
       case False
       hence m1: "0 < m - 1" using m by linarith
       have "ordered_m_collapsible (m - 1) (tl (tl (hd (tl l) # hd l # tl (tl l))))
       (cost (hd (tl (hd (tl l) # hd l # tl (tl l)))) (set (tl (hd (tl l) # hd l # tl (tl l))))
         (link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K))"
-      proof -
-        have c: "cost (hd (tl (hd (tl l) # hd l # tl (tl l)))) (set (tl (hd (tl l) # hd l # tl (tl l))))
-        (link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K) = 
-          link_ext (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K)"
-          unfolding list.sel unfolding three [symmetric] four [symmetric] five [symmetric]
-          by (rule cost_link_ext_commute_length_ge2 [OF l d K cs])
-        show ?thesis 
-          unfolding c unfolding list.sel using o_m_l_c .
-      qed
+        by (metis K cost_link_ext_commute_length_ge2 cs d five four l list.sel(1,3) o_m_l_c three)
       moreover have
      "ordered_m_collapsible (m - 1 - 1) (tl (tl (hd (tl l) # hd l # tl (tl l))))
       (link_ext (hd (tl (hd (tl l) # hd l # tl (tl l)))) (set (tl (hd (tl l) # hd l # tl (tl l))))
         (link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K))"
-      proof -
-        have llll: "link_ext (hd (tl (hd (tl l) # hd l # tl (tl l)))) (set (tl (hd (tl l) # hd l # tl (tl l))))
-        (link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K) = 
-          link_ext (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K)" 
-          unfolding list.sel unfolding three [symmetric] four [symmetric] five [symmetric]
-          by (rule link_ext_link_ext_commute_length_ge2 [OF l d K cs])
-        show ?thesis
-          unfolding llll unfolding list.sel using o_m_l_l .
-       qed
-      ultimately show ?thesis 
+        by (metis five four link_ext_commute list.sel(1,3) o_m_l_l one three two)
+      ultimately show ?thesis
         using ordered_m_collapsible.simps (3) [OF _ m1, of "tl (hd (tl l) # hd l # tl (tl l))" "link_ext (hd (hd (tl l) # hd l # tl (tl l))) (set (hd (tl l) # hd l # tl (tl l))) K"]
         by simp
-    qed  
+    qed
     ultimately show ?thesis using ordered_m_collapsible.simps (3) [of "hd (tl l) # hd l # tl (tl l)", OF _ m] by simp
   qed
 qed
