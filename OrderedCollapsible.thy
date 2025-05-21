@@ -1403,6 +1403,45 @@ section\<open>Main Theorem.\<close>
 
 text\<open>Theorem 4.1 as stated in our paper in DML\<close>
 
+lemma nat_induct_3 [case_names 0 1 2 Suc, induct type: nat]:
+  fixes n
+  assumes p0: "P 0" and p1: "P 1" and p2: "P 2" and f: "\<forall>n \<ge> 2. P n \<longrightarrow> P (Suc n)"
+  shows "P n"
+proof (induct rule: nat_induct)
+  case 0
+  show ?case using p0 .
+next
+  case (Suc n)
+  then show ?case using p1 p2 f
+    by (metis One_nat_def Suc_1 less_2_cases linorder_not_less)
+qed
+
+lemma
+  assumes ozc: "ordered_zero_collapsible l K" and d: "distinct l" 
+    and lne: "l \<noteq> []"
+    and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
+  shows "(cost (hd l) (set (tl l)) K, link_ext (hd l) (set (tl l)) K) \<in> collapses_rtrancl"
+using ozc d lne K cs proof (induct "length l" rule: nat_induct_3)
+  case 0
+  from "0.prems" (3) and "0.hyps" have False by simp thus ?case by (rule ccontr)
+next
+  case 1
+  then show ?case sorry
+next
+  case 2
+  then show ?case sorry
+next
+  case Suc
+  then show ?case sorry
+qed
+  case 0
+  
+next
+  case (Suc x)
+  then show ?case sorry
+qed
+
+
 
 theorem
   assumes"ordered_m_collapsible m l K" and "distinct l" and "K \<subseteq> powerset (set l)" and "closed_subset K"
