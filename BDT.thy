@@ -228,6 +228,9 @@ definition link_ext :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Ri
 lemma link_ext_empty [simp]: "link_ext x V {} = {}"
   by (simp add: link_ext_def)
 
+lemma link_ext_singleton [simp]: "link_ext x V {{}} = {}"
+  by (simp add: link_ext_def)
+
 lemma link_ext_closed:
   assumes k: "K \<subseteq> powerset V" 
   shows "link_ext v V K \<subseteq> powerset (V - {v})"

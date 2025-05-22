@@ -383,7 +383,7 @@ text\<open>For sets of vertexes of cardinality less or equal to @{term "2::nat"}
 
 lemma cs_card_leq_2: assumes K: "K \<subseteq> powerset V" and c: "V = {v1,v2}" and v1v2: "v1 \<noteq> v2" 
     and sc: "closed_subset K"
-  shows "K = {} \<or> K = {{}} \<or> K = {{v1},{}} \<or> K = {{v2},{}} \<or> K = {{v1},{v2},{}} \<or> K = {{v1,v2},{v1},{v2},{}}"
+  shows "K = {} \<or> K = {{}} \<or> K = {{},{v1}} \<or> K = {{},{v2}} \<or> K = {{},{v1},{v2}} \<or> K = {{},{v1},{v2},{v1,v2}}"
 proof -
   have pV: "powerset V = {{v1,v2},{v1},{v2},{}}" using c unfolding powerset_def by auto
   thus ?thesis using K sc unfolding closed_subset_def
@@ -1421,15 +1421,56 @@ lemma
     and lne: "l \<noteq> []"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
   shows "(cost (hd l) (set (tl l)) K, link_ext (hd l) (set (tl l)) K) \<in> collapses_rtrancl"
-using ozc d lne K cs proof (induct "length l" rule: nat_induct_3)
+using ozc d lne K cs proof (induct "length l" arbitrary: l rule: nat_induct_3)
   case 0
   from "0.prems" (3) and "0.hyps" have False by simp thus ?case by (rule ccontr)
 next
-  case 1
-  then show ?case sorry
+  case (1 l)
+  from "1.hyps" obtain v where lv: "l = [v]" by (metis One_nat_def length_0_conv length_Suc_conv)
+  hence "K = {} | K = {{}} | K = {{}, {v}}"
+    using powerset_singleton_cases [of K "v"] using "1.prems" (4,5) unfolding closed_subset_def by auto
+  then consider (Ke) "K = {}" | (Ks) "K = {{}}" | (Ks1) "K = {{}, {v}}" by auto
+  then show ?case
+  proof (cases)
+    case Ke
+    show ?thesis unfolding Ke unfolding link_ext_empty cost_empty
+      using collapses_rtrancl_def by blast
+  next
+    case Ks hence False using "1.prems" (1,3) unfolding Ks
+      using not_ordered_zero_collapsible_not_empty [of l] by simp
+    thus ?thesis by (rule ccontr)
+  next
+    case Ks1
+    have "cost (hd l) (set (tl l)) K = {{}}" unfolding Ks1 cost_def powerset_def lv list.sel by auto
+    moreover have "link_ext (hd l) (set (tl l)) K = {{}}" unfolding Ks1 link_ext_def powerset_def lv list.sel by auto
+    ultimately show ?thesis by (simp add: collapses_rtrancl_def)
+  qed
 next
   case 2
-  then show ?case sorry
+  from "2.hyps" and "2.prems" (2) obtain v w where lv: "l = [v,w]" and vw: "v \<noteq> w"
+    by (metis One_nat_def Suc_1 diff_Suc_1 distinct_length_2_or_more length_0_conv length_tl list.exhaust_sel nat.simps(3))
+  have "K = {} | K = {{}} | K = {{}, {v}} | K = {{}, {w}} | K = {{}, {v}, {w}} | K = {{}, {v}, {w}, {v,w}}"
+    using cs_card_leq_2 [OF "2.prems" (4) _ vw cs] using lv by simp
+  then consider "K = {}" | "K = {{}}" | "K = {{}, {v}}" | "K = {{}, {w}}" | "K = {{}, {v}, {w}}" | "K = {{}, {v}, {w}, {v,w}}" by fastforce
+  then show ?case proof (cases)
+    case 1
+    then show ?thesis sorry
+  next
+    case 2
+    then show ?thesis sorry
+  next
+    case 3
+    then show ?thesis sorry
+  next
+    case 4
+    then show ?thesis sorry
+  next
+    case 5
+    then show ?thesis sorry
+  next
+    case 6
+    then show ?thesis sorry
+  qed
 next
   case Suc
   then show ?case sorry
