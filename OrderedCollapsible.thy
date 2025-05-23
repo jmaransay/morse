@@ -1454,22 +1454,49 @@ next
   then consider "K = {}" | "K = {{}}" | "K = {{}, {v}}" | "K = {{}, {w}}" | "K = {{}, {v}, {w}}" | "K = {{}, {v}, {w}, {v,w}}" by fastforce
   then show ?case proof (cases)
     case 1
-    then show ?thesis sorry
+    show ?thesis unfolding 1 unfolding link_ext_empty cost_empty
+      using collapses_rtrancl_def by blast
   next
     case 2
-    then show ?thesis sorry
+    hence False using "2.prems" (1,3) unfolding 2
+      using not_ordered_zero_collapsible_not_empty [of l] by simp
+    thus ?thesis by (rule ccontr)
   next
     case 3
-    then show ?thesis sorry
+    have "cost (hd l) (set (tl l)) K = {{}}" unfolding 3 cost_def powerset_def lv list.sel by auto
+    moreover have "link_ext (hd l) (set (tl l)) K = {{}}" unfolding 3 link_ext_def powerset_def lv list.sel by auto
+    ultimately show ?thesis by (simp add: collapses_rtrancl_def)
   next
     case 4
-    then show ?thesis sorry
+    have "cost (hd l) (set (tl l)) K = {{},{w}}"
+      unfolding 4 cost_def powerset_def lv list.sel using vw by auto
+    moreover have "link_ext (hd l) (set (tl l)) K = {}" 
+      unfolding 4 link_ext_def powerset_def lv list.sel using vw by auto
+    ultimately show ?thesis
+      by (metis (no_types, lifting) collapsible_def insert_commute mem_Collect_eq singleton_collapsable)
   next
     case 5
-    then show ?thesis sorry
+    have l1: "1 < length l" using lv by simp
+    have c: "cost v (set [v, w]) {{}, {v}, {w}} = {{},{w}}"
+      unfolding 5 cost_def powerset_def lv list.sel using vw by auto
+    have l: "link_ext v (set [v, w]) {{}, {v}, {w}} = {{}}" 
+      unfolding 5 link_ext_def powerset_def lv list.sel using vw by auto
+    have False using "2.prems" (1) 
+      using ordered_zero_collapsible.simps (3) [OF l1, of K]
+      unfolding 5 unfolding lv list.sel
+      unfolding c l
+      by (metis Diff_insert_absorb c cone_peak_cost_eq_link_ext insert_absorb insert_not_empty l 
+          list.sel(1) list.set_intros(1) not_cone_peak_cc_empty the_elem_eq)
+    thus ?thesis by (rule ccontr)
   next
     case 6
-    then show ?thesis sorry
+    have l1: "1 < length l" using lv by simp
+    have c: "cost v (set [w]) {{}, {v}, {w}, {v,w}} = {{},{w}}"
+      unfolding 6 cost_def powerset_def lv list.sel using vw by auto
+    have l: "link_ext v (set [w]) {{}, {v}, {w}, {v,w}} = {{},{w}}" 
+      unfolding 6 link_ext_def powerset_def lv list.sel using vw by auto
+    show ?thesis unfolding 6 lv list.sel unfolding c l
+      using collapses_rtrancl_def by blast
   qed
 next
   case Suc
