@@ -1416,12 +1416,26 @@ next
     by (metis One_nat_def Suc_1 less_2_cases linorder_not_less)
 qed
 
+lemma nat_induct_30 [case_names 0 1 2 Suc, induct type: nat]:
+  fixes n
+  assumes p0: "P 0" and p1: "P 1" and p2: "P 2" and f: "\<And>n. n \<ge> 2 \<Longrightarrow> P n \<Longrightarrow> P (Suc n)"
+  shows "P n"
+proof (induct rule: nat_induct)
+  case 0
+  show ?case using p0 .
+next
+  case (Suc n)
+  then show ?case using p1 p2 f
+    by (metis One_nat_def Suc_1 less_2_cases linorder_not_less)
+qed
+
+
 lemma
   assumes ozc: "ordered_zero_collapsible l K" and d: "distinct l" 
     and lne: "l \<noteq> []"
     and K: "K \<subseteq> powerset (set l)" and cs: "closed_subset K"
-  shows "(cost (hd l) (set (tl l)) K, link_ext (hd l) (set (tl l)) K) \<in> collapses_rtrancl"
-using ozc d lne K cs proof (induct "length l" arbitrary: l rule: nat_induct_3)
+  shows "(cost (hd l) (set l) K, link_ext (hd l) (set l) K) \<in> collapses_rtrancl"
+using ozc d lne K cs proof (induct "length l" arbitrary: l K rule: nat_induct_30)
   case 0
   from "0.prems" (3) and "0.hyps" have False by simp thus ?case by (rule ccontr)
 next
@@ -1441,8 +1455,8 @@ next
     thus ?thesis by (rule ccontr)
   next
     case Ks1
-    have "cost (hd l) (set (tl l)) K = {{}}" unfolding Ks1 cost_def powerset_def lv list.sel by auto
-    moreover have "link_ext (hd l) (set (tl l)) K = {{}}" unfolding Ks1 link_ext_def powerset_def lv list.sel by auto
+    have "cost (hd l) (set l) K = {{}}" unfolding Ks1 cost_def powerset_def lv list.sel by auto
+    moreover have "link_ext (hd l) (set l) K = {{}}" unfolding Ks1 link_ext_def powerset_def lv list.sel by auto
     ultimately show ?thesis by (simp add: collapses_rtrancl_def)
   qed
 next
@@ -1450,8 +1464,9 @@ next
   from "2.hyps" and "2.prems" (2) obtain v w where lv: "l = [v,w]" and vw: "v \<noteq> w"
     by (metis One_nat_def Suc_1 diff_Suc_1 distinct_length_2_or_more length_0_conv length_tl list.exhaust_sel nat.simps(3))
   have "K = {} | K = {{}} | K = {{}, {v}} | K = {{}, {w}} | K = {{}, {v}, {w}} | K = {{}, {v}, {w}, {v,w}}"
-    using cs_card_leq_2 [OF "2.prems" (4) _ vw cs] using lv by simp
-  then consider "K = {}" | "K = {{}}" | "K = {{}, {v}}" | "K = {{}, {w}}" | "K = {{}, {v}, {w}}" | "K = {{}, {v}, {w}, {v,w}}" by fastforce
+    using cs_card_leq_2 [OF "2.prems" (4) _ vw "2.prems" (5)] using lv by simp
+  then consider "K = {}" | "K = {{}}" | "K = {{}, {v}}" | "K = {{}, {w}}" 
+      | "K = {{}, {v}, {w}}" | "K = {{}, {v}, {w}, {v,w}}" by fastforce
   then show ?case proof (cases)
     case 1
     show ?thesis unfolding 1 unfolding link_ext_empty cost_empty
@@ -1463,14 +1478,14 @@ next
     thus ?thesis by (rule ccontr)
   next
     case 3
-    have "cost (hd l) (set (tl l)) K = {{}}" unfolding 3 cost_def powerset_def lv list.sel by auto
-    moreover have "link_ext (hd l) (set (tl l)) K = {{}}" unfolding 3 link_ext_def powerset_def lv list.sel by auto
+    have "cost (hd l) (set l) K = {{}}" unfolding 3 cost_def powerset_def lv list.sel by auto
+    moreover have "link_ext (hd l) (set l) K = {{}}" unfolding 3 link_ext_def powerset_def lv list.sel by auto
     ultimately show ?thesis by (simp add: collapses_rtrancl_def)
   next
     case 4
-    have "cost (hd l) (set (tl l)) K = {{},{w}}"
+    have "cost (hd l) (set l) K = {{},{w}}"
       unfolding 4 cost_def powerset_def lv list.sel using vw by auto
-    moreover have "link_ext (hd l) (set (tl l)) K = {}" 
+    moreover have "link_ext (hd l) (set l) K = {}" 
       unfolding 4 link_ext_def powerset_def lv list.sel using vw by auto
     ultimately show ?thesis
       by (metis (no_types, lifting) collapsible_def insert_commute mem_Collect_eq singleton_collapsable)
@@ -1481,7 +1496,7 @@ next
       unfolding 5 cost_def powerset_def lv list.sel using vw by auto
     have l: "link_ext v (set [v, w]) {{}, {v}, {w}} = {{}}" 
       unfolding 5 link_ext_def powerset_def lv list.sel using vw by auto
-    have False using "2.prems" (1) 
+    have False using "2.prems" (1)
       using ordered_zero_collapsible.simps (3) [OF l1, of K]
       unfolding 5 unfolding lv list.sel
       unfolding c l
@@ -1491,16 +1506,101 @@ next
   next
     case 6
     have l1: "1 < length l" using lv by simp
-    have c: "cost v (set [w]) {{}, {v}, {w}, {v,w}} = {{},{w}}"
+    have c: "cost v (set [v,w]) {{}, {v}, {w}, {v,w}} = {{},{w}}"
       unfolding 6 cost_def powerset_def lv list.sel using vw by auto
-    have l: "link_ext v (set [w]) {{}, {v}, {w}, {v,w}} = {{},{w}}" 
+    have l: "link_ext v (set [v,w]) {{}, {v}, {w}, {v,w}} = {{},{w}}" 
       unfolding 6 link_ext_def powerset_def lv list.sel using vw by auto
     show ?thesis unfolding 6 lv list.sel unfolding c l
       using collapses_rtrancl_def by blast
   qed
 next
-  case Suc
-  then show ?case sorry
+  case (Suc n l)
+  have l1: "1 < length l" using Suc.hyps(1,3) by auto
+  have l2: "2 \<le> length l" using Suc.hyps(1,3) by auto
+  from Suc.prems (1) 
+  have "(cone_peak (set l) K (hd l) | 
+          ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and> cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l)))" 
+    using ordered_zero_collapsible.simps (3) [OF l1, of K] by simp
+  then consider (cp) "cone_peak (set l) K (hd l)" |
+          (oz) "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and> cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))" by auto
+  then show ?case
+  proof (cases)
+    case cp
+    have "cost (hd l) (set l) K = link_ext (hd l) (set l) K"
+    proof (rule cone_peak_cost_eq_link_ext)
+      show "hd l \<in> set l" using Suc.prems (3) by simp
+      show "cone_peak (set l) K (hd l)" using cp .
+    qed
+    thus ?thesis by (simp add: collapses_rtrancl_def)
+  next
+    case oz
+    hence ozccost: "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K)" 
+      and cplink: "cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))" by simp_all
+
+    have "(cost (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K), link_ext (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K)) \<in> collapses_rtrancl"
+    proof (rule "Suc.hyps" (2))
+      show "n = length (tl l)" by (metis Suc.hyps(3) diff_Suc_1 length_tl)
+      show "ordered_zero_collapsible (tl l) (cost (hd l) (set l) K)" using ozccost .
+      show "distinct (tl l)" by (simp add: Suc.prems(2) distinct_tl)
+      show "tl l \<noteq> []" using Suc.hyps(1) \<open>n = length (tl l)\<close> by force
+      show "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))" 
+        using Suc.prems (2,3,4) unfolding cost_def powerset_def
+        by (metis (no_types, lifting) list.exhaust_sel mem_Collect_eq remove1_head set_remove1_eq subsetI)
+      show "closed_subset (cost (hd l) (set l) K)" 
+        using Suc.prems (5) unfolding closed_subset_def cost_def powerset_def by auto
+    qed
+    
+    have "cost (hd l) (set l) K =
+      cost (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K) \<union> join_vertex (hd (tl l)) (link_ext (hd (tl l)) (set (tl l)) (cost (hd l) (set l) K))"
+    proof (rule proposition_2 [of "cost (hd l) (set l) K" "set (tl l)" "hd (tl l)"])
+      show "cost (hd l) (set l) K \<subseteq> powerset (set (tl l))"
+        using Suc.prems (2,3,4) unfolding powerset_def cost_def
+        by (metis (no_types, lifting) list.exhaust_sel mem_Collect_eq remove1_head set_remove1_eq subsetI)
+      show "closed_subset (cost (hd l) (set l) K)"
+        using Suc.prems (5) unfolding closed_subset_def cost_def powerset_def by auto
+    qed
+
+    have "link_ext (hd l) (set l) K =
+      cost (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K) \<union> join_vertex (hd (tl l)) (link_ext (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K))"
+    proof (rule proposition_2 [of "link_ext (hd l) (set l) K" "set (tl l)" "hd (tl l)"])
+      show "link_ext (hd l) (set l) K \<subseteq> powerset (set (tl l))"
+        using Suc.prems (2,3,4) unfolding powerset_def link_ext_def
+        by (metis (no_types, lifting) Pow_iff list.exhaust_sel list.simps(15) mem_Collect_eq subsetI subset_insert)
+      show "closed_subset (link_ext (hd l) (set l) K)" by (rule link_ext_closed_subset, intro Suc.prems (5))
+    qed
+    have stl: "set l - {hd l} = set (tl l)" using Suc.prems (2,3)
+      by (metis list.collapse remove1_head set_remove1_eq)
+    have "cost (hd (tl l)) (set (tl l)) (link_ext (hd l) (set l) K) = link_ext (hd l) (set l - {hd (tl l)}) (cost (hd (tl l)) (set l) K)"
+      using link_ext_cost_commute_length_ge2 [symmetric, OF l2 "Suc.prems" (2) "Suc.prems" (4) "Suc.prems" (5)]
+      unfolding stl .
+
+
+
+    thm union_join_collapses_twice
+    thm union_join_collapses []
+    find_theorems "join_vertex"
+
+      using Suc.hyps (2) [of "tl l" "cost (hd l) (set l) K"]
+
+    from Suc.prems (1) have False using ordered_zero_collapsible.simps
+      using Suc.prems (3)
+      by (simp add: Suc.prems(3) cone_peak_cost_eq_link_ext)
+      
+      
+      show ?thesis sorry
+  next
+    case False
+    then show ?thesis sorry
+  qed
+   
+  fix n :: nat
+  assume "2 \<le> n"
+  show "\<forall>x. Suc n = length x \<longrightarrow>
+              ordered_zero_collapsible x K \<longrightarrow>
+              distinct x \<longrightarrow>
+              x \<noteq> [] \<longrightarrow> K \<subseteq> powerset (set x) \<longrightarrow> closed_subset K \<longrightarrow> (cost (hd x) (set (tl x)) K, link_ext (hd x) (set (tl x)) K) \<in> collapses_rtrancl"
+  show "(cost (hd l) (set (tl l)) K, link_ext (hd l) (set (tl l)) K) \<in> collapses_rtrancl"
+  proof (cases "cone_peak (set l) K (hd l)")
 qed
   case 0
   

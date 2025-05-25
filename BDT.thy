@@ -314,6 +314,11 @@ next
   qed
 qed
 
+lemma link_ext_closed_subset:
+  assumes c: "closed_subset K" shows "closed_subset (link_ext v V K)" 
+  using c unfolding closed_subset_def link_ext_def powerset_def
+  by auto (meson insert_mono)
+
 lemma link_ext_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" 
   shows "link_ext y (V - {x}) (link_ext x V K) = 
@@ -1746,7 +1751,6 @@ proof -
           using \<open>(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)\<close> .
       qed
       hence "free_face t K" and "free_coface t K = insert v t" by simp_all
-
       show "K \<in> collapsible"
       proof (cases "T = {t}")
         case False note Tnet = False
@@ -1825,7 +1829,6 @@ proof -
        using \<open>(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)\<close> .
   qed
   hence "free_face t K" and "free_coface t K = insert v t" by simp_all
-  
   show "(K, {{v}, {}}) \<in> collapses_rtrancl"
   proof (cases "T = {t}")
     case False note Tnet = False
@@ -2235,7 +2238,6 @@ proof -
         using fsscf t fct v less.prems (3) unfolding powerset_def by auto
       have ivtK1: "insert v t \<notin> K1" and ivfctK1: "insert v (free_coface t T) \<notin> K1"
         using fct t v K1 unfolding powerset_def by auto
-
       have "free_face (insert v t) (K1 \<union> K) \<and> free_coface (insert v t) (K1 \<union> K) = insert v (free_coface t T)"
       proof (rule free_face_and_free_coface, unfold face_def)
         show "insert v (free_coface t T) \<in> K1 \<union> K"
@@ -2271,7 +2273,6 @@ proof -
       hence "free_face (insert v t) (K1 \<union> K)" 
         and free_coface_insert: "free_coface (insert v t) (K1 \<union> K) = insert v (free_coface t T)"
         by simp_all
-
       have "free_face (insert v t) K \<and> free_coface (insert v t) K = insert v (free_coface t T)"
       proof (rule free_face_and_free_coface, unfold face_def)
         show "insert v (free_coface t T) \<in> K"
@@ -2306,8 +2307,6 @@ proof -
       qed
       hence "free_face (insert v t) K" and free_coface_insertK: "free_coface (insert v t) K = insert v (free_coface t T)"
         by simp_all
-
-     
       have fftKminus: "free_face t (K - {insert v t, free_coface (insert v t) K}) \<and> 
           free_coface t (K - {insert v t, free_coface (insert v t) K}) = free_coface t T"
       proof (rule free_face_and_free_coface, unfold face_def)
@@ -2340,7 +2339,6 @@ proof -
       qed
       hence fftKminus: "free_face t (K - {insert v t, free_coface (insert v t) K})" and fftKfftT: "free_coface t (K - {insert v t, free_coface (insert v t) K}) = free_coface t T"
         by simp_all
-
       text\<open>We start here the collapsing process:\<close>
       have "(K1 \<union> K, (K1 \<union> K) - {insert v t, insert v (free_coface t T)}) \<in> collapses"
         unfolding collapses_rtrancl_def collapses_def
@@ -2496,7 +2494,6 @@ next
   hence ffinsert: "free_face (insert v t) (K1 \<union> join_vertex v K2)" 
     and fft'_union: "free_coface (insert v t) (K1 \<union> join_vertex v K2) = insert v (free_coface t K2)"
     by simp_all
-
   show ?case
   proof (cases "K3 = {}")
     case False hence tne: "t \<noteq> {}" using csK3 tniK3 unfolding closed_subset_def by auto
