@@ -916,6 +916,9 @@ lemma shows "join_vertex v {} = {}" unfolding join_vertex_def join_def by auto
 lemma join_vertex_union: "join_vertex v V = V \<union> {w. \<exists>s\<in>V. w = s \<union> {v}}" 
   unfolding join_vertex_def join_def by auto
 
+lemma join_vertex_union_sub: "V \<union> join_vertex v V = join_vertex v V"
+  unfolding join_vertex_def join_def by auto
+
 lemma join_closed_subset: assumes cs: "closed_subset V"
   shows "closed_subset (join_vertex v V)"
   using cs unfolding closed_subset_def join_vertex_def join_def
