@@ -538,7 +538,12 @@ lemma link_subset_cost:
   unfolding link_def cost_def powerset_def by auto
 
 text\<open>The previous result does not hold for @{term link_ext}, 
-  it is only true for @{term link}\<close>
+  it is only true for @{term link}. It holds for @{term link_ext} if @{term closed_subset} holds.}\<close>
+
+lemma link_ext_subset_cost:
+  assumes cs: "closed_subset K"
+  shows "link_ext x V K \<subseteq> cost x V K"
+  using cs unfolding link_ext_def cost_def powerset_def closed_subset_def by auto
 
 lemma link_ext_cost_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
