@@ -96,12 +96,14 @@ proof (unfold cone_peak_def, intro conjI, rule v)
   ultimately show "\<exists>B\<subseteq>powerset (V - {v}). K = B \<union> {s. \<exists>b\<in>B. s = insert v b}" by auto
 qed
 
+text\<open>Proposition 1 in our paper\<close>
+
 corollary proposition_1:
   assumes v: "v \<in> V" and K: "K \<subseteq> powerset V" shows "cone_peak V K v \<equiv> (cost v V K = link_ext v V K)"
   using cone_peak_cost_eq_link_ext [OF v, of K]
   using cost_eq_link_ext_cone_peak [OF v K] by argo
 
-text\<open>Proposition 2 in our paper.\<close>
+text\<open>Proposition 2 in our paper\<close>
 
 lemma proposition_2:
   assumes K: "K \<subseteq> powerset V" and c: "closed_subset K"
@@ -114,7 +116,7 @@ proof -
   ultimately show ?thesis by simp
 qed
 
-section\<open>Definition of \emph{ordered-no-evasive}\<close>
+section\<open>Definition of \<open>ordered-no-evasive\<close>\<close>
 
 function ordered_non_evasive :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
@@ -147,9 +149,7 @@ next
   have l: "link_ext (hd (a # l)) (set (a # l)) {{}} = {}" unfolding link_ext_def powerset_def list.sel by auto
   have "\<not> cone_peak (set (a # l)) {{}} (hd (a # l))" by (rule not_cone_peak_cc_empty)
   moreover have "\<not> ordered_non_evasive (tl (a # l)) (cost (hd (a # l)) (set (a # l)) {{}})"
-    unfolding c unfolding list.sel using one . 
-  (*moreover have "ordered_non_evasive (tl (a # l)) (link_ext (hd (a # l)) (set (a # l)) {{}})"
-    unfolding l unfolding list.sel using ordered_non_evasive_empty_cc .*)
+    unfolding c unfolding list.sel using one .
   ultimately show ?case by simp
 qed
 
@@ -190,6 +190,8 @@ proof -
       by (rule ceq)
   qed
 qed
+
+text\<open>Relationship between @{term cone_peak} and @{term ordered_non_evasive}\<close>
 
 lemma cone_is_one:
   assumes K: "K \<subseteq> powerset (set l)" and v: "v \<in> set l" and d: "distinct l" 
@@ -241,24 +243,17 @@ using K v c d proof (induct "length l" arbitrary: l K rule: less_induct)
  qed
 qed
 
+section\<open>Ordered zero collapsible simplicial complexes\<close>
+
 function ordered_zero_collapsible :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
   "l = [] \<Longrightarrow> ordered_zero_collapsible l K = False"
-  | "1 = length l \<Longrightarrow> ordered_zero_collapsible l K = cone_peak (set l) K (hd l)" (*It might be rewritten as True?*) 
+  | "1 = length l \<Longrightarrow> ordered_zero_collapsible l K = cone_peak (set l) K (hd l)"
   | "1 < length l \<Longrightarrow> ordered_zero_collapsible l K = ((cone_peak (set l) K (hd l))
       | (ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and>
-          cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))))" 
+          cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))))"
   by auto (metis One_nat_def length_0_conv less_one linorder_neqE_nat)
 termination by (relation "Wellfounded.measure (\<lambda>(l,K). length l)", auto)
-
-(*function ordered_zero_collapsible :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool"
-  where
-  "l = [] \<Longrightarrow> ordered_zero_collapsible l K = False"
-  | "0 < length l \<Longrightarrow> ordered_zero_collapsible l K = ((cone_peak (set l) K (hd l))
-      | (ordered_zero_collapsible (tl l) (cost (hd l) (set l) K) \<and>
-          cone_peak (set (tl l)) (link_ext (hd l) (set l) K) (hd (tl l))))"
-  by auto
-termination by (relation "Wellfounded.measure (\<lambda>(l,K). length l)", auto)*)
 
 lemma ordered_zero_collapsible_intro1 [intro]: "l = [] \<Longrightarrow> ordered_zero_collapsible l K = False" 
   using ordered_zero_collapsible.simps (1) .
@@ -336,6 +331,8 @@ proof -
     show ?thesis using ordered_zero_collapsible.simps(3) [OF lg1] c v by simp
   qed
 qed
+
+section\<open>Ordered \<open>m\<close> collapsible simplicial complexes\<close>
 
 function ordered_m_collapsible :: "nat \<Rightarrow> nat list \<Rightarrow> nat set set \<Rightarrow> bool"
   where
