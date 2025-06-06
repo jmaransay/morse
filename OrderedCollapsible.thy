@@ -1,7 +1,7 @@
 
-theory OrderedCollapsible_powerset
+theory OrderedCollapsible
   imports
-    "Nonevasive_powerset"
+    "Nonevasive"
 begin
 
 definition cone_peak :: "nat set \<Rightarrow> nat set set \<Rightarrow> nat \<Rightarrow> bool"

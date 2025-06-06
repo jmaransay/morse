@@ -1,7 +1,7 @@
 
-theory Nonevasive_powerset
+theory Nonevasive
   imports
-    "BDT_powerset"
+    "BDT"
 begin
 
 section\<open>Definition of \emph{non-evasive}\<close>
