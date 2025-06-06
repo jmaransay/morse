@@ -1,7 +1,7 @@
 
-theory Nonevasive
+theory Nonevasive_powerset
   imports
-    "BDT"
+    "BDT_powerset"
 begin
 
 section\<open>Definition of \emph{non-evasive}\<close>
@@ -107,7 +107,7 @@ next
     using two link_ext_empty [of _ V] cost_empty [of _ V] n x by auto
 qed
 
-lemma assumes "V \<noteq> {}"  and f: "finite V" shows "non_evasive V {}"
+lemma assumes "V \<noteq> {}" and f: "finite V" shows "non_evasive V {}"
   using v_ge_2 non_evasive.simps (2) f
   by (metis Suc_leI assms(1) card_1_singleton_iff card_gt_0_iff nle_le not_less_eq_eq numerals(2))
 
@@ -123,7 +123,7 @@ lemma non_evasiveI2:
   unfolding non_evasive.simps (5) [OF v] using k .
 
 lemma assumes c: "cone {x} K" shows "K = {{x},{}} \<or> K = {}"
-  using c unfolding cone_def powerset_def by (cases "K = {}", auto)
+  using c unfolding cone_def by (cases "K = {}", auto)
 
 section\<open>Cone implies \emph{non-evasive}.\<close>
 
@@ -144,7 +144,7 @@ using c f proof (induct "card V" arbitrary: V K)
      case True
      hence "card V = 1" using Suc.hyps (2) by simp
      hence v: "V = {x}" using x using card_1_singletonE [OF `card V = 1`] by auto
-     hence t: "T = {{}} \<or> T = {}" using T unfolding powerset_def by auto
+     hence t: "T = {{}} \<or> T = {}" using T by auto
      show ?thesis
      proof (cases "T = {}")
        case True
@@ -169,9 +169,9 @@ using c f proof (induct "card V" arbitrary: V K)
       using x Suc.prems (2)
       by (metis card_le_Suc0_iff_eq insertE insert_Diff not_less_eq_eq numeral_2_eq_2)
     have lp: "link_ext y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
-      using T unfolding link_ext_def powerset_def by auto
+      using T unfolding link_ext_def by auto
     have cp: "cost y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
-      using T unfolding cost_def powerset_def by auto
+      using T unfolding cost_def by auto
     show ?thesis unfolding non_evasive.simps (5) [OF two]
     proof (rule bexI [OF _ y], rule conjI)
       show "non_evasive (V - {y}) (link_ext y V K)"
@@ -904,17 +904,17 @@ proof
     next
       case False
       hence kv: "k \<in> powerset V" and xk: "x \<in> k" 
-        using kin k unfolding powerset_def by auto
+        using kin k by auto
       then
       have "k - {x} \<in> powerset V" and "x \<notin> k - {x}" 
         and "insert x (k - {x}) \<in> K"
-        using kin unfolding powerset_def
+        using kin
         by auto (simp add: insert_absorb)
       hence "k - {x} \<in> link_ext x V K"
-        unfolding link_ext_def powerset_def by simp
+        unfolding link_ext_def by simp
       hence "k - {x} \<in> link_ext x V K'" using l by simp
       thus ?thesis
-        unfolding link_ext_def powerset_def 
+        unfolding link_ext_def 
         using xk by (simp add: insert_absorb xk)
     qed
   qed
@@ -930,18 +930,17 @@ proof
     next
       case False
       hence kv: "k \<in> powerset V" and xk: "x \<in> k" 
-        using kin k' unfolding powerset_def by auto
+        using kin k' by auto
       then
       have "k - {x} \<in> powerset V" and "x \<notin> k - {x}" 
         and "insert x (k - {x}) \<in> K'"
-        using kin unfolding powerset_def
-        by auto (simp add: insert_absorb)
+        using kin by auto (simp add: insert_absorb)
       hence "k - {x} \<in> link_ext x V K'"
-        unfolding link_ext_def powerset_def by simp
+        unfolding link_ext_def by simp
       hence "k - {x} \<in> link_ext x V K" using l by simp
       thus ?thesis
-        unfolding link_ext_def powerset_def 
-        using xk by (simp add: insert_absorb xk)
+        unfolding link_ext_def
+        using xk by (simp add: insert_absorb)
     qed
   qed
 qed
@@ -953,7 +952,7 @@ lemma evaluation_coherent:
   using e k k' proof (induct l arbitrary: K K')
   case Nil
   then show ?case 
-    unfolding powerset_def using evaluation.simps (1,2)
+    using evaluation.simps (1,2)
     by (metis Pow_empty list.inject list.set(1) subset_singleton_iff)
 next
   case (Cons a l)
@@ -969,18 +968,18 @@ next
     show "evaluation l (link_ext a (set (a # l)) K) = evaluation l (link_ext a (set (a # l)) K')"
       by (rule el)
     show "link_ext a (set (a # l)) K \<subseteq> powerset (set l)" 
-      using Cons.prems (2) unfolding link_ext_def powerset_def by auto
+      using Cons.prems (2) unfolding link_ext_def by auto
     show "link_ext a (set (a # l)) K' \<subseteq> powerset (set l)"
-      using Cons.prems (3) unfolding link_ext_def powerset_def by auto
+      using Cons.prems (3) unfolding link_ext_def by auto
   qed
   have ceq: "(cost a (set (a # l)) K) = (cost a (set (a # l)) K')"
   proof (rule Cons.hyps(1))
     show "evaluation l (cost a (set (a # l)) K) = evaluation l (cost a (set (a # l)) K')"
       by (rule ec)
     show "cost a (set (a # l)) K \<subseteq> powerset (set l)" 
-      using Cons.prems (2) unfolding cost_def powerset_def by auto
+      using Cons.prems (2) unfolding cost_def by auto
     show "cost a (set (a # l)) K' \<subseteq> powerset (set l)"
-      using Cons.prems (3) unfolding cost_def powerset_def by auto
+      using Cons.prems (3) unfolding cost_def by auto
   qed
   show ?case
   proof (rule link_ext_cost_determine_k [of _ "set (a # l)" _ a])
@@ -1082,7 +1081,7 @@ proof -
      qed
      have ne_c: "non_evasive (set l) (cost v (set (v # l)) K)"
      proof (cases "cost v (set (v # l)) K = {}")
-       case True show ?thesis 
+       case True show ?thesis
          unfolding True
          using False cone_non_evasive cone_not_empty by blast
       next
@@ -1126,11 +1125,11 @@ theorem assumes k: "K \<subseteq> powerset V" and f: "finite V"
   and cs: "closed_subset K" and ne: "non_evasive V K" 
   shows "K \<in> collapsible"
 proof (unfold collapsible_def, safe)
-  from f and k have fK: "finite K" by (simp add: finite_subset powerset_def)
+  from f and k have fK: "finite K" by (simp add: finite_subset)
   show "(K, {}) \<in> collapses_rtrancl" 
   proof (cases "card V = 0")
     case True with f have "V = {}" by simp
-    hence "K = {}" using k ne unfolding powerset_def by auto
+    hence "K = {}" using k ne by auto
     thus ?thesis using collapsible_empty unfolding collapsible_def by simp
   next
     case False note vne = False
@@ -1140,7 +1139,7 @@ proof (unfold collapsible_def, safe)
       hence "K = {} | K = {{v},{}}" using ne using non_evasive.simps (2,3,4) [of V]
         by (metis doubleton_eq_iff)
       thus ?thesis
-        using collapsible_empty singleton_collapsable         
+        using collapsible_empty singleton_collapsable
         unfolding collapsible_def by auto
     next
       case False with vne f have v_ge_2: "2 \<le> card V" by linarith
@@ -1162,7 +1161,7 @@ proof (unfold collapsible_def, safe)
             show "finite V" using less.prems (2) using non_evasive.simps(6) by blast
             show "v \<in> V" using v .
             show "join_vertex v (link_ext v V K) \<subseteq> powerset V" using less.prems(1) kdec by auto
-            show "link_ext v V K \<subseteq> powerset (V - {v})" unfolding powerset_def link_ext_def by auto
+            show "link_ext v V K \<subseteq> powerset (V - {v})" unfolding link_ext_def by auto
             show "join_vertex v (link_ext v V K) = join_vertex v (link_ext v V K)" ..
             show "closed_subset (join_vertex v (link_ext v V K))"
               by (rule join_closed_subset, rule closed_subset_link_ext, 

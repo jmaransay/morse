@@ -4,9 +4,7 @@ theory BDT
     "HOL-Library.Tree"
 begin
 
-text\<open>The following file can be processed with Isabelle-2023\<close>
-
-section\<open>BDT\<close>
+section\<open>Binary Decision trees: BDT\<close>
 
 inductive_set bdt :: "(nat set \<times> nat tree) set"
   where "({}, Leaf) \<in> bdt"
@@ -102,15 +100,16 @@ section\<open>Powerset\<close>
 
 text\<open>We use the term ``powerset'' just as a synonym of @{term Pow}.\<close>
 
-definition powerset :: "nat set \<Rightarrow> nat set set"
-  where "powerset A = Pow A"
+abbreviation "powerset == Pow"
 
-lemma "powerset {} = {{}}" unfolding powerset_def by simp
+(*definition powerset :: "nat set \<Rightarrow> nat set set"
+  where "powerset A = Pow A"*)
 
-lemma powerset_singleton: "powerset {x} = {{},{x}}" unfolding powerset_def by auto
+lemma "powerset {} = {{}}" by simp
 
-lemma
-  powerset_singleton_cases:
+lemma powerset_singleton: "powerset {x} = {{},{x}}" by auto
+
+lemma powerset_singleton_cases:
   assumes K: "K \<subseteq> powerset {x}"
   shows "K = {} \<or> K = {{}} \<or> K = {{x}} \<or> K = {{},{x}}" 
   using K
@@ -148,7 +147,7 @@ lemma cc_s_simplices:
 proof (cases "V = {}")
   case True hence k: "K = {}" using cc_s
     by (simp add: cc_s.simps)
-  show ?thesis unfolding True powerset_def using x k
+  show ?thesis unfolding True using x k
     by simp
 next
   case False note V = False
@@ -161,7 +160,7 @@ next
     then show ?thesis 
       using V False  
       using cc_s.simps [of V K]
-      unfolding powerset_def closed_subset_def
+      unfolding closed_subset_def
       using cc_s x by blast
   qed
 qed
@@ -175,7 +174,7 @@ corollary cc_s_finite_simplices:
     and x: "x \<in> K" and f: "finite V"
   shows "finite x"
   using cc_s_simplices [OF cc_s x] 
-  unfolding powerset_def using f using finite_subset [of x V] by auto
+  using f using finite_subset [of x V] by auto
 
 lemma
   cc_s_closed:
@@ -199,6 +198,13 @@ next
   qed
 qed
 
+lemma closed_subset_singleton_cases:
+  assumes K: "K \<subseteq> powerset {x}" and cs: "closed_subset K"
+  shows "K = {} \<or> K = {{}} \<or> K = {{},{x}}" 
+  using K powerset_singleton_cases [OF K] 
+  using cs unfolding closed_subset_def
+  by (metis insert_absorb singletonI subset_insertI)
+
 lemma "({0}, {}) \<in> cc_s" 
   by (rule cc_s.intros(2))
 
@@ -207,18 +213,15 @@ lemma "({0,1,2}, {}) \<in> cc_s"
 
 lemma "({0,1,2}, {{1},{}}) \<in> cc_s" 
   by (rule cc_s.intros(3) [of "{0,1,2}" "{{1},{}}"], 
-      simp, unfold powerset_def, auto,
-      unfold closed_subset_def, auto)
+      simp, auto, unfold closed_subset_def, auto)
 
 lemma "({0,1,2}, {{1},{2},{}}) \<in> cc_s"
   by (rule cc_s.intros(3) [of "{0,1,2}" "{{1},{2},{}}"], 
-      simp, unfold powerset_def, auto,
-      unfold closed_subset_def, auto)
+      simp, auto, unfold closed_subset_def, auto)
 
 lemma "({0,1,2}, {{1,2},{1},{2},{}}) \<in> cc_s"
   by (rule cc_s.intros(3) [of "{0,1,2}" "{{1,2},{1},{2},{}}"], 
-      simp, unfold powerset_def, auto,
-      unfold closed_subset_def, auto)
+      simp, auto, unfold closed_subset_def, auto)
 
 section\<open>Link and exterior link of a vertex in a set of sets\<close>
 
@@ -234,12 +237,12 @@ lemma link_ext_singleton [simp]: "link_ext x V {{}} = {}"
 lemma link_ext_closed:
   assumes k: "K \<subseteq> powerset V" 
   shows "link_ext v V K \<subseteq> powerset (V - {v})"
-  using k unfolding powerset_def link_ext_def by auto
+  using k unfolding link_ext_def by auto
 
 lemma link_ext_mono:
   assumes "K \<subseteq> L"
   shows "link_ext x V K \<subseteq> link_ext x V L"
-  using assms unfolding link_ext_def powerset_def by auto
+  using assms unfolding link_ext_def by auto
 
 lemma link_ext_cc:
   assumes v: "(V, K) \<in> cc_s"
@@ -258,7 +261,7 @@ proof (cases "x \<in> V")
     assume v: "V = A" and k: "K = L" and "A \<noteq> {}" and l: "L \<subseteq> powerset A"
       and "closed_subset L" 
     show "{s. insert x s \<in> K} = {}" 
-      using False v k l unfolding powerset_def by auto
+      using False v k l by auto
   qed
   thus ?thesis using cc_s.intros (1,2) by simp
 next
@@ -268,7 +271,7 @@ next
     show "V \<noteq> {}" using True by fast
     show "{s. insert x s \<in> K} \<subseteq> powerset V" 
       using v True cc_s.intros (3) [of V K]
-      using cc_s_simplices powerset_def by auto
+      using cc_s_simplices by auto
     show "closed_subset {s. insert x s \<in> K}"
     proof -  
       have "closed_subset K" 
@@ -285,7 +288,7 @@ corollary link_ext_cc_s:
   shows "(V, link_ext x V K) \<in> cc_s"
 proof (cases "V = {}")
   case True
-  show ?thesis using v unfolding True link_ext_def powerset_def
+  show ?thesis using v unfolding True link_ext_def
     by (simp add: cc_s.simps)
 next
   case False note vne = False
@@ -294,7 +297,7 @@ next
     case False
     show ?thesis 
       using False cc_s_subset [OF v] 
-      unfolding link_ext_def powerset_def
+      unfolding link_ext_def
       using cc_s.simps by auto
   next
     case True
@@ -302,13 +305,13 @@ next
     proof (rule cc_s.intros (3))
       show "V \<noteq> {}" using True by fast
       show "{s \<in> powerset V. x \<notin> s \<and> insert x s \<in> K} \<subseteq> powerset V"
-        using True unfolding powerset_def by auto
+        using True  by auto
       from v have pcK: "closed_subset K" 
         using cc_s.simps True
         by (meson cc_s_closed closed_subset_def)
       show "closed_subset {s \<in> powerset V. x \<notin> s \<and> insert x s \<in> K}"
         using pcK
-        unfolding closed_subset_def powerset_def
+        unfolding closed_subset_def
         by auto (meson insert_mono)
     qed
   qed
@@ -316,14 +319,14 @@ qed
 
 lemma link_ext_closed_subset:
   assumes c: "closed_subset K" shows "closed_subset (link_ext v V K)" 
-  using c unfolding closed_subset_def link_ext_def powerset_def
+  using c unfolding closed_subset_def link_ext_def
   by auto (meson insert_mono)
 
 lemma link_ext_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" 
   shows "link_ext y (V - {x}) (link_ext x V K) = 
         link_ext x (V - {y}) (link_ext y V K)"
-  using x y unfolding link_ext_def powerset_def 
+  using x y unfolding link_ext_def
   by auto (simp add: insert_commute)+
 
 definition link :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Rightarrow> nat set set"
@@ -336,17 +339,17 @@ lemma link_intro [intro]:
 lemma link_mono:
   assumes "K \<subseteq> L"
   shows "link x V K \<subseteq> link x V L"
-  using assms unfolding link_def powerset_def by auto
+  using assms unfolding link_def by auto
 
 lemma link_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" 
   shows "link y (V - {x}) (link x V K) = link x (V - {y}) (link y V K)"
-  using x y unfolding link_def powerset_def 
+  using x y unfolding link_def
   by auto (simp add: insert_commute)+
 
 lemma link_subset_link_ext:
   "link x V K \<subseteq> link_ext x V K"
-  unfolding link_def link_ext_def powerset_def by auto
+  unfolding link_def link_ext_def  by auto
 
 lemma cc_s_link_eq_link_ext:
   assumes cc: "(V, K) \<in> cc_s" 
@@ -357,7 +360,7 @@ proof
   proof
     fix y assume y: "y \<in> link_ext x V K"
     from y have y: "y \<in> powerset (V - {x})" and yu: "insert x y \<in> K"
-      unfolding link_ext_def powerset_def by auto
+      unfolding link_ext_def  by auto
     show "y \<in> link x V K"
     proof (intro link_intro)
       show "y \<in> powerset (V - {x})" using y .
@@ -434,7 +437,7 @@ proof
   proof (unfold closed_subset_def, safe)
     fix s s'
     assume s: "s \<in> K" and s's: "s' \<subseteq> s"
-    have fs: "finite s" using s f k unfolding powerset_def
+    have fs: "finite s" using s f k 
       by (meson PowD finite_subset in_mono)
     have fs': "finite s'" by (rule finite_subset [OF s's fs])
     show "s' \<in> K"
@@ -486,10 +489,10 @@ proof (rule closed_remove_element_cc_s)
     fix c x
     assume c: "c \<in> K" and x: "x \<in> c"
     have xn: "x \<notin> c - {x}" and xv: "x \<in> V"
-      using c k powerset_def x by auto
+      using c k  x by auto
     have "c - {x} \<in> link_ext x V K"
       using c x xn k 
-      unfolding link_ext_def powerset_def 
+      unfolding link_ext_def  
       using insert_absorb [OF x] by auto
     hence "c - {x} \<in> link x V K" using l xv by simp
     thus "c - {x} \<in> K" unfolding link_def by simp
@@ -497,14 +500,14 @@ proof (rule closed_remove_element_cc_s)
 qed
 
 lemma link_empty [simp]: "link x V {} = {}" 
-  unfolding link_def powerset_def by simp
+  unfolding link_def  by simp
 
 lemma link_empty_singleton [simp]: "link x {} {{}} = {}" 
-  unfolding link_def powerset_def try by auto
+  unfolding link_def by auto
 
 lemma link_nempty_singleton [simp]: 
   "V \<noteq> {} \<Longrightarrow> link x V {{}} = {}" 
-  unfolding link_def powerset_def by simp
+  unfolding link_def by simp
 
 section\<open>Costar of a vertex in a set of sets\<close>
 
@@ -514,28 +517,28 @@ definition cost :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Righta
 lemma cost_closed:
   assumes k: "K \<subseteq> powerset V" 
   shows "cost v V K \<subseteq> powerset (V - {v})"
-  using k unfolding powerset_def cost_def by auto
+  using k unfolding cost_def by auto
 
 lemma cost_empty [simp]: "cost x V {} = {}" 
-  unfolding cost_def powerset_def by simp
+  unfolding cost_def by simp
 
 lemma cost_singleton [simp]: "cost x V {{}} = {{}}" 
-  unfolding cost_def powerset_def by auto
+  unfolding cost_def by auto
 
 lemma cost_mono:
   assumes "K \<subseteq> L"
   shows "cost x V K \<subseteq> cost x V L"
-  using assms unfolding cost_def powerset_def by auto
+  using assms unfolding cost_def by auto
 
 lemma cost_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" 
   shows "cost y (V - {x}) (cost x V K) = 
         cost x (V - {y}) (cost y V K)"
-  using x y unfolding cost_def powerset_def by auto
+  using x y unfolding cost_def by auto
 
 lemma link_subset_cost:
   shows "link x V K \<subseteq> cost x V K"
-  unfolding link_def cost_def powerset_def by auto
+  unfolding link_def cost_def by auto
 
 text\<open>The previous result does not hold for @{term link_ext}, 
   it is only true for @{term link}. It holds for @{term link_ext} if @{term closed_subset} holds.}\<close>
@@ -543,26 +546,26 @@ text\<open>The previous result does not hold for @{term link_ext},
 lemma link_ext_subset_cost:
   assumes cs: "closed_subset K"
   shows "link_ext x V K \<subseteq> cost x V K"
-  using cs unfolding link_ext_def cost_def powerset_def closed_subset_def by auto
+  using cs unfolding link_ext_def cost_def closed_subset_def by auto
 
 lemma link_ext_cost_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
   shows "link_ext y (V - {x}) (cost x V K) = 
         cost x (V - {y}) (link_ext y V K)"
-  using x y xy unfolding link_ext_def cost_def powerset_def by auto
+  using x y xy unfolding link_ext_def cost_def by auto
 
 lemma link_cost_commute:
   assumes x: "x \<in> V" and y: "y \<in> V" and xy: "x \<noteq> y"
   shows "link y (V - {x}) (cost x V K) = 
         cost x (V - {y}) (link y V K)"
-  using x y xy unfolding link_def cost_def powerset_def by auto
+  using x y xy unfolding link_def cost_def by auto
 
 lemma cost_cc_s:
   assumes v: "(V, K) \<in> cc_s"
   shows "(V, cost x V K) \<in> cc_s"
 proof (cases "V = {}")
   case True
-  show ?thesis using v unfolding True cost_def powerset_def
+  show ?thesis using v unfolding True cost_def
     by (simp add: cc_s.simps)
 next
   case False note vne = False
@@ -572,7 +575,7 @@ next
     show ?thesis
       using False cc_s_subset [OF v]
       using cc_s.simps cc_s_simplices [OF v] cc_s_closed v vne
-      unfolding cost_def powerset_def
+      unfolding cost_def
       apply auto[1] using cc_s_simplices cc_s_closed v unfolding closed_subset_def
       by (metis mem_Collect_eq)
   next
@@ -581,13 +584,13 @@ next
     proof (rule cc_s.intros (3))
       show "V \<noteq> {}" using True by fast
       show "{s \<in> powerset (V - {x}). s \<in> K} \<subseteq> powerset V"
-        using True unfolding powerset_def by auto
+        using True by auto
       from v have pcK: "closed_subset K" 
         using cc_s.simps True
         by (meson cc_s_closed closed_subset_def)
       show "closed_subset {s \<in> powerset (V - {x}). s \<in> K}"
         using pcK
-        unfolding closed_subset_def powerset_def by blast
+        unfolding closed_subset_def by blast
     qed
   qed
 qed
@@ -600,34 +603,34 @@ definition star :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \<Righta
 lemma star_closed:
   assumes k: "K \<subseteq> powerset V" 
   shows "star v V K \<subseteq> powerset V"
-  using k unfolding powerset_def star_def by auto
+  using k unfolding star_def by auto
 
 lemma vertex_in_star:
   assumes k: "K \<subseteq> powerset V" and x: "x \<in> star v V K"
   shows "v \<in> x"
-  using k x unfolding powerset_def star_def by auto
+  using k x unfolding star_def by auto
 
 lemma star_empty [simp]: "star x V {} = {}" 
-  unfolding star_def powerset_def by simp
+  unfolding star_def by simp
 
 lemma star_empty_v_set [simp]: "star x {} K = {}" 
-  unfolding star_def powerset_def by simp
+  unfolding star_def by simp
 
 lemma star_nempty [simp]: 
-    assumes v: "V \<noteq> {}" 
+    assumes v: "V \<noteq> {}"
   shows "star x V {{}} = {}"
-  using v unfolding star_def powerset_def by simp
+  using v unfolding star_def by simp
 
 lemma star_mono:
   assumes "K \<subseteq> L"
   shows "star x V K \<subseteq> star x V L"
-  using assms unfolding star_def powerset_def by auto
+  using assms unfolding star_def by auto
 
 lemma star_commute:
-  assumes x: "x \<in> V" and y: "y \<in> V" 
+  assumes x: "x \<in> V" and y: "y \<in> V"
   shows "star y (V - {x}) (star x V K) = 
         star x (V - {y}) (star y V K)"
-  using x y unfolding star_def powerset_def by auto
+  using x y unfolding star_def by auto
 
 section\<open>Closed star of a vertex in a set of sets\<close>
 
@@ -635,17 +638,17 @@ definition closed_star :: "nat \<Rightarrow> nat set \<Rightarrow> nat set set \
   where "closed_star v V K = star v V K \<union> link v V K"
 
 lemma closed_star_closed:
-  assumes k: "K \<subseteq> powerset V" 
+  assumes k: "K \<subseteq> powerset V"
   shows "closed_star v V K \<subseteq> powerset V"
-  using k unfolding powerset_def closed_star_def star_def link_def by auto
+  using k unfolding closed_star_def star_def link_def by auto
 
 lemma closed_star_empty [simp]: "closed_star x V {} = {}" 
-  unfolding closed_star_def star_def link_def powerset_def by simp
+  unfolding closed_star_def star_def link_def by simp
 
 lemma closed_star_nempty [simp]: 
-    assumes v: "V \<noteq> {}" 
+    assumes v: "V \<noteq> {}"
   shows "closed_star x V {{}} = {}"
-  using v unfolding closed_star_def star_def link_def powerset_def by simp
+  using v unfolding closed_star_def star_def link_def by simp
 
 lemma
   cost_union_closed_star:
@@ -653,9 +656,9 @@ lemma
   shows "K = cost v V K \<union> closed_star v V K"
 proof
   show "cost v V K \<union> closed_star v V K \<subseteq> K"
-    unfolding cost_def closed_star_def star_def link_def powerset_def by auto  
+    unfolding cost_def closed_star_def star_def link_def  by auto  
   show "K \<subseteq> cost v V K \<union> closed_star v V K"
-    using k unfolding cost_def closed_star_def star_def link_def powerset_def by auto
+    using k unfolding cost_def closed_star_def star_def link_def by auto
 qed
 
 text\<open>The premises can be omitted from the following statement:\<close>
@@ -665,9 +668,9 @@ lemma cost_inter_closed_star:
   shows "link v V K = cost v V K \<inter> closed_star v V K"
 proof
   show "link v V K \<subseteq> cost v V K \<inter> closed_star v V K"
-    unfolding link_def cost_def closed_star_def powerset_def by auto
+    unfolding link_def cost_def closed_star_def  by auto
   show "cost v V K \<inter> closed_star v V K \<subseteq> link v V K"
-    unfolding link_def cost_def closed_star_def star_def powerset_def by auto
+    unfolding link_def cost_def closed_star_def star_def  by auto
 qed
 
 section\<open>Evaluation of a list over a set of sets\<close>
@@ -679,7 +682,7 @@ function evaluation :: "nat list \<Rightarrow> nat set set \<Rightarrow> bool li
   | "evaluation (x # l) K =
           (evaluation l (link_ext x (set (x # l)) K)) @ 
           (evaluation l (cost x (set (x # l)) K))"
-  unfolding cost_def link_ext_def powerset_def 
+  unfolding cost_def link_ext_def  
   by (auto) (meson neq_Nil_conv)
 termination proof (relation "Wellfounded.measure (\<lambda>(V,K). length V)", simp_all)
 qed
@@ -746,7 +749,7 @@ lemma evaluation_mono:
  shows "evaluation l K \<le> evaluation l L"
 using kl proof (induction l arbitrary: K L)
   case Nil
-  then show ?case 
+  then show ?case
     using kl using evaluation.simps (1,2)
     unfolding less_eq_list_def
     by (metis One_nat_def bot.extremum_uniqueI le_boolE length_evaluation_empty_list less_Suc0 linorder_linear nth_Cons_0)
@@ -823,8 +826,8 @@ next
   show ?thesis
     unfolding l1 l2
   proof (rule evaluation_mono [of _ "set (a # l')"])
-    show "cost a (set (a # l')) K \<subseteq> powerset (set (a # l'))" unfolding cost_def powerset_def by auto
-    show "link a (set (a # l')) K \<subseteq> powerset (set (a # l'))" unfolding link_def powerset_def by auto
+    show "cost a (set (a # l')) K \<subseteq> powerset (set (a # l'))" unfolding cost_def by auto
+    show "link a (set (a # l')) K \<subseteq> powerset (set (a # l'))" unfolding link_def by auto
     show "link a (set (a # l')) K \<subseteq> cost a (set (a # l')) K" by (rule link_subset_cost)
   qed
 qed
@@ -858,18 +861,18 @@ lemma false_evader: "[False] \<notin> not_evaders"
 
 lemma tf_not_not_evader: "[True, False] \<notin> not_evaders"
 proof (rule ccontr, safe)
-  assume "[True, False] \<in> not_evaders"
+  assume tf: "[True, False] \<in> not_evaders"
   show False
-    using not_evaders.cases [of "[True, False]"] true_evader false_evader
-    by (smt (verit, ccfv_threshold) \<open>[True, False] \<in> not_evaders\<close> append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
+    using not_evaders.cases [of "[True, False]"] true_evader false_evader tf
+    by (smt (verit, ccfv_threshold) append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
 qed
 
 lemma ft_not_not_evader: "[False, True] \<notin> not_evaders"
 proof (rule ccontr, safe)
-  assume "[False, True] \<in> not_evaders"
+  assume ft: "[False, True] \<in> not_evaders"
   show False
-    using not_evaders.cases [of "[False, True]"] true_evader false_evader
-    by (smt (verit, ccfv_threshold) \<open>[False, True] \<in> not_evaders\<close> append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
+    using not_evaders.cases ft true_evader false_evader
+    by (smt (verit, ccfv_threshold) append_butlast_last_id append_eq_same_length(1) butlast.simps(2) last.simps list.distinct(1) list.size(4))
 qed
 
 lemma empty_set_not_evader: assumes lne: "l \<noteq> []" shows "evaluation l {} \<in> not_evaders"
@@ -900,7 +903,7 @@ section\<open>Join of two sets\<close>
 
 text\<open>From the different characterizations of the @{term join} operator
   we chose the following one, where only the elements being union of two elements 
-  are considered, since this will fit better with simplicial complexes and their 
+  are ed, since this will fit better with simplicial complexes and their 
   property of being closed by taking subsets.\<close>
 
 definition join :: "nat set set \<Rightarrow> nat set set \<Rightarrow> nat set set"
@@ -912,7 +915,8 @@ text\<open>This is the usual definition of the join operation for a vertex, when
 definition join_vertex :: "nat \<Rightarrow> nat set set \<Rightarrow> nat set set"
   where "join_vertex v V = join {{},{v}} V"
 
-text\<open>Our definition of @{term join_vertex} does not produce @{term closed_subset} sets.\<close>
+text\<open>Our definition of @{term join_vertex} 
+      produces @{term closed_subset} sets for @{term closed_subset} sets.\<close>
 
 (*lemma shows "join_vertex v {} = {{},{v}}" unfolding join_vertex_def join_def by auto*)
 
@@ -930,13 +934,13 @@ lemma join_closed_subset: assumes cs: "closed_subset V"
   by auto (metis insert_Diff subset_insert_iff)
 
 lemma link_ext_empty_vertex: "link_ext v {} K = {} | link_ext v {} K = {{}}" 
-  unfolding link_ext_def powerset_def by auto
+  unfolding link_ext_def by auto
 
 corollary closed_subset_empty_vertex_link: "closed_subset (link_ext v {} K)"
   using link_ext_empty_vertex unfolding closed_subset_def by fastforce
 
 lemma cost_empty_vertex: "cost v {} K = {} | cost v {} K = {{}}" 
-  unfolding cost_def powerset_def by auto
+  unfolding cost_def by auto
 
 corollary closed_subset_empty_vertex_cost: "closed_subset (cost v {} K)"
   using cost_empty_vertex unfolding closed_subset_def by fastforce
@@ -979,7 +983,7 @@ proof
   show "join_vertex v (link v V K) \<subseteq> closed_star v V K"
    using k p
    unfolding join_vertex_def join_def link_def
-     closed_star_def star_def powerset_def closed_subset_def by auto
+     closed_star_def star_def  closed_subset_def by auto
   show "closed_star v V K \<subseteq> join_vertex v (link v V K)"
   proof (unfold closed_star_def)
     have "star v V K \<subseteq> join_vertex v (link v V K)"
@@ -988,11 +992,11 @@ proof
       hence xV: "x \<in> powerset V" and v: "v \<in> x" and xK: "x \<in> K"
         using x unfolding star_def by auto
       then obtain s' where xi: "x = insert v s'" and v: "v \<notin> s'" and s': "s' \<in> K"
-        using Set.set_insert [OF v] p unfolding powerset_def
+        using Set.set_insert [OF v] p
         by (metis closed_subset_def subset_insertI)
-      have "s' \<in> powerset (V - {v})" using xV xi v unfolding powerset_def by auto
+      have "s' \<in> powerset (V - {v})" using xV xi v by auto
       thus "x \<in> join_vertex v (link v V K)"
-        unfolding join_vertex_def join_def link_def powerset_def xi
+        unfolding join_vertex_def join_def link_def  xi
         using s' xK xi by auto
     qed
     moreover have "link v V K \<subseteq> join_vertex v (link v V K)" 
@@ -1047,7 +1051,7 @@ text\<open>Any non-emtpy cone has at least one distinguished element.\<close>
 
 lemma singleton_cone: assumes v: "v \<in> V" shows "cone V {{v}, {}}"
   unfolding cone_def
-  by (rule bexI [OF _ v], rule exI [of _ "{{}}"]) (unfold powerset_def, auto simp add: v)
+  by (rule bexI [OF _ v], rule exI [of _ "{{}}"]) (auto simp add: v)
 
 text\<open>The trivial simplicial complex is a cone over a non-empty vertex set.\<close>
 
@@ -1067,7 +1071,7 @@ lemma cone_disjoint:
   assumes "cone X K" and "x \<in> X" and t: "T \<subseteq> powerset (X - {x})"
    and "K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
   shows "T \<inter> {s. \<exists>t\<in>T. s = insert x t} = {}"
-  using t unfolding powerset_def by auto
+  using t by auto
 
 lemma cone_cost_eq_link:
   assumes x: "x \<in> X"
@@ -1078,7 +1082,7 @@ proof
   show "link x V K \<subseteq> cost x V K" by (rule link_subset_cost) 
   show "cost x V K \<subseteq> link x V K"
     unfolding kt
-    unfolding cost_def link_def powerset_def by auto
+    unfolding cost_def link_def by auto
 qed
 
 text\<open>The following result does hold for @{term link_ext}, 
@@ -1093,11 +1097,11 @@ lemma cone_impl_cost_eq_link_ext:
   shows "cost v V K = link_ext v V K"
 proof
   show "link_ext v V K \<subseteq> cost v V K"
-    using assms unfolding link_ext_def cost_def powerset_def
+    using assms unfolding link_ext_def cost_def 
     by auto (metis Diff_insert_absorb PowD in_mono mk_disjoint_insert)
   show "cost v V K \<subseteq> link_ext v V K"
     unfolding kt
-    unfolding cost_def link_ext_def powerset_def by auto
+    unfolding cost_def link_ext_def by auto
 qed
 
 lemma cost_eq_link_ext_impl_cone:
@@ -1107,14 +1111,14 @@ proof (unfold cone_def)
   show "\<exists>x\<in>V. \<exists>T. T \<subseteq> powerset (V - {x}) \<and> K = T \<union> {s. \<exists>t\<in>T. s = insert x t}"
   proof (rule bexI [OF _ x], rule exI [of _ "cost x V K"], rule conjI)
     show "cost x V K \<subseteq> powerset (V - {x})"
-      using p unfolding cost_def powerset_def by auto
+      using p unfolding cost_def  by auto
     show "K = cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}"
     proof
       show "cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t} \<subseteq> K"
         using x p c
-        unfolding cost_def powerset_def link_ext_def by auto
+        unfolding cost_def link_ext_def by auto
       show "K \<subseteq> cost x V K \<union> {s. \<exists>t\<in>cost x V K. s = insert x t}" 
-      proof (subst c, unfold cost_def link_ext_def powerset_def, rule)
+      proof (subst c, unfold cost_def link_ext_def, rule)
         fix xa
         assume xa: "xa \<in> K"
         show "xa \<in> {s \<in> Pow V. x \<notin> s \<and> insert x s \<in> K} \<union>
@@ -1122,14 +1126,14 @@ proof (unfold cone_def)
         proof (cases "x \<in> xa")
           case False
           then show ?thesis using xa c p 
-            unfolding cost_def link_ext_def powerset_def by blast
+            unfolding cost_def link_ext_def by blast
         next
           case True
           have "xa - {x} \<in> {s \<in> Pow V. x \<notin> s \<and> insert x s \<in> K}"
-            using xa p True unfolding powerset_def
+            using xa p True
             using mk_disjoint_insert by fastforce
           hence "xa - {x} \<in> {s \<in> Pow (V - {x}). s \<in> K}"
-            using c unfolding cost_def link_ext_def powerset_def by simp
+            using c unfolding cost_def link_ext_def  by simp
           hence "xa \<in> {s. \<exists>t\<in>{s \<in> Pow (V - {x}). s \<in> K}. s = insert x t}"
             using True by auto
           thus ?thesis by fast
@@ -1155,8 +1159,8 @@ proof
     proof (cases "x \<in> xa")
       case False
       from xa and False have "xa \<in> T" and "xa \<in> Pow (V - {x} - {y})" 
-        unfolding kt cost_def powerset_def by auto
-      thus ?thesis unfolding cost_def powerset_def  by simp
+        unfolding kt cost_def  by auto
+      thus ?thesis unfolding cost_def   by simp
     next
       case True note xxa = True
       show ?thesis
@@ -1164,20 +1168,20 @@ proof
         case True
         obtain xa'
           where "xa' \<in> Pow (V - {x} - {y})" and "xa' \<in> T" and "xa = insert x xa'"
-          using cs True xxa unfolding powerset_def by auto
-        thus ?thesis unfolding cost_def powerset_def by auto
+          using cs True xxa by auto
+        thus ?thesis unfolding cost_def by auto
       next
         case False
         with xxa and xa and cs obtain t
           where xapow: "xa \<in> Pow (V - {y})" and xainsert: "xa = insert x t" 
             and tT: "t \<in> T" and tpow: "t \<in> Pow (V - {x} - {y})"
-          unfolding kt cost_def powerset_def by blast
-        thus ?thesis unfolding cost_def powerset_def by auto
+          unfolding kt cost_def  by blast
+        thus ?thesis unfolding cost_def  by auto
       qed
     qed
   qed
   show "cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t} \<subseteq> cost y V K"
-    unfolding kt cost_def powerset_def using x xy by auto
+    unfolding kt cost_def  using x xy by auto
 qed
 
 text\<open>Under the given premises, @{term link_ext} of a cone is a cone.\<close>
@@ -1189,7 +1193,7 @@ lemma link_ext_cone_eq:
   shows "link_ext y V K = (link_ext y (V - {x}) T) \<union> {s. \<exists>t\<in>(link_ext y (V - {x}) T). s = insert x t}"
 proof
   show "link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t} \<subseteq> link_ext y V K"
-    unfolding kt link_ext_def powerset_def using x xy by auto
+    unfolding kt link_ext_def  using x xy by auto
   show "link_ext y V K \<subseteq> link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}"
   unfolding link_ext_def [of y V K]
   unfolding link_ext_def [of y "V - {x}" T]
@@ -1202,7 +1206,7 @@ proof
                        s = insert x t}"
     proof (cases "x \<in> xa")
       case False note xnxa = False
-      hence xapxy: "xa \<in> powerset (V - {x})" using xap xy unfolding powerset_def by auto
+      hence xapxy: "xa \<in> powerset (V - {x})" using xap xy by auto
       moreover have "y \<notin> xa" using xak .
       moreover have "insert y xa \<in> T"
       proof (cases "insert y xa \<in> T")
@@ -1222,18 +1226,18 @@ proof
       then obtain t where xai: "xa = insert x t" and xnt: "x \<notin> t" 
         using Set.set_insert [OF True] by auto
       have "t \<in> powerset (V - {x})" 
-        using xap xai xnt unfolding powerset_def by auto
+        using xap xai xnt by auto
       moreover have t: "y \<notin> xa" using xak .
       moreover have "insert y t \<in> T"
       proof (cases "insert y xa \<in> T")
         case True then have False
-          using cs xxa unfolding powerset_def by auto
+          using cs xxa by auto
         thus ?thesis by (rule ccontr)
       next
         case False
-        with xai iyxa kt have "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}" by simp
-        with xai xap xnt kt show ?thesis
-          unfolding powerset_def
+        hence "insert y xa \<in> {s. \<exists>t\<in>T. s = insert x t}" using xai iyxa kt by simp
+        thus ?thesis
+          using xai xap xnt kt
           by auto (metis (full_types) Diff_insert_absorb False insert_absorb insert_commute insert_iff xak)
       qed
       ultimately show ?thesis using xai by auto
@@ -1251,7 +1255,7 @@ lemma link_cone_eq:
   shows "link y V K = (link y (V - {x}) T) \<union> {s. \<exists>t\<in>(link y (V - {x}) T). s = insert x t}"
 proof
   show "link y (V - {x}) T \<union> {s. \<exists>t\<in>link y (V - {x}) T. s = insert x t} \<subseteq> link y V K"
-    unfolding kt link_def powerset_def using x xy by auto
+    unfolding kt link_def using x xy by auto
   show "link y V K \<subseteq> link y (V - {x}) T \<union> {s. \<exists>t\<in>link y (V - {x}) T. s = insert x t}"
   unfolding link_def [of y V K]
   unfolding link_def [of y "V - {x}" T]
@@ -1263,7 +1267,7 @@ proof
            {s. \<exists>t\<in>{s \<in> powerset (V - {x} - {y}). s \<in> T \<and> insert y s \<in> T}. s = insert x t}"
     proof (cases "x \<in> xa")
       case False note xnxa = False
-      hence xapxy: "xa \<in> powerset (V - {x} - {y})" using xap xy unfolding powerset_def by auto
+      hence xapxy: "xa \<in> powerset (V - {x} - {y})" using xap xy by auto
       moreover have "xa \<in> T" using xak kt False by auto
       moreover have "insert y xa \<in> T"
       proof (cases "insert y xa \<in> T")
@@ -1283,12 +1287,12 @@ proof
       then obtain t where xai: "xa = insert x t" and xnt: "x \<notin> t" 
         using Set.set_insert [OF True] by auto
       have "t \<in> powerset (V - {x} - {y})" 
-        using xap xai xnt unfolding powerset_def by auto
+        using xap xai xnt by auto
       moreover have t: "t \<in> T"
       proof (cases "xa \<in> T")
         case True
         have "xa \<notin> {s. \<exists>t\<in>T. s = insert x t}" 
-          using x cs kt True unfolding powerset_def by auto
+          using x cs kt True by auto
         then have False using xai True by auto
         then show ?thesis by (rule ccontr)
       next
@@ -1300,13 +1304,13 @@ proof
       moreover have "insert y t \<in> T"
       proof (cases "insert y xa \<in> T")
         case True then have False
-          using cs xxa unfolding powerset_def by auto
+          using cs xxa by auto
         thus ?thesis by (rule ccontr)
       next
         case False
         then show ?thesis
-          using xai xap xnt kt iyxa unfolding powerset_def
-          by (smt (verit, del_insts) Diff_insert_absorb PowD UnE Un_insert_right insert_absorb insert_is_Un iyxa kt mem_Collect_eq powerset_def singletonD subset_Diff_insert xai xap xnt)
+          using xai xap xnt kt iyxa
+          by (smt (verit, del_insts) Diff_insert_absorb PowD UnE Un_insert_right insert_absorb insert_is_Un mem_Collect_eq singletonD subset_Diff_insert)
       qed
       ultimately show ?thesis using xai by auto
     qed
@@ -1390,7 +1394,7 @@ lemma evaluation_cone_not_evaders:
             show "cone (V - {y}) (link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t})"
             proof (rule cone_intro, intro bexI [of _ x] exI [of _ "link_ext y (V - {x}) T"], rule conjI)
               show "link_ext y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
-                unfolding link_ext_def powerset_def by auto
+                unfolding link_ext_def  by auto
               show "link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t} =
                     link_ext y (V - {x}) T \<union> {s. \<exists>t\<in>link_ext y (V - {x}) T. s = insert x t}" ..
               show "x \<in> V - {y}" using x xney by simp
@@ -1413,7 +1417,7 @@ lemma evaluation_cone_not_evaders:
             show "cone (V - {y}) (cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t})"
             proof (rule cone_intro, intro bexI [of _ x] exI [of _ "cost y (V - {x}) T"], rule conjI)
               show "cost y (V - {x}) T \<subseteq> powerset (V - {y} - {x})"
-                unfolding cost_def powerset_def by auto
+                unfolding cost_def  by auto
               show "cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t} =
                     cost y (V - {x}) T \<union> {s. \<exists>t\<in>cost y (V - {x}) T. s = insert x t}" ..
               show "x \<in> V - {y}" using x xney by simp
@@ -1429,16 +1433,16 @@ lemma evaluation_cone_not_evaders:
 qed
 
 lemma empty_set_in_cost: assumes s: "{} \<in> K" 
-  shows "{} \<in> cost v V K" using s unfolding cost_def powerset_def by simp
+  shows "{} \<in> cost v V K" using s unfolding cost_def by simp
 
 lemma singleton_in_link_ext: assumes s: "{v} \<in> K" shows "{} \<in> link_ext v V K" 
-  using s unfolding link_ext_def powerset_def by simp
+  using s unfolding link_ext_def by simp
 
 lemma "link x {x} {{}, {x}} = {{}}"
-  unfolding link_def powerset_def by auto
+  unfolding link_def by auto
 
 lemma cost_singleton2: "cost x {x} {{}, {x}} = {{}}" 
-  unfolding cost_def powerset_def by auto
+  unfolding cost_def by auto
 
 lemma evaluation_empty_set_not_evaders:
   assumes a: "l \<noteq> []"
@@ -1729,8 +1733,7 @@ lemma cone_collapsible:
 proof -
   from c and cone_def obtain v T where v: "v \<in> V"
     and tp: "T \<subseteq> powerset (V - {v})" and kt: "K = T \<union> {s. \<exists>t\<in>T. s = insert v t}" by auto
-  have fK: "finite K" using f cs unfolding powerset_def
-    by (simp add: finite_subset)
+  have fK: "finite K" using f cs by (simp add: finite_subset)
   hence fT: "finite T" using kt by simp
   show ?thesis
   proof (cases "K = {}")
@@ -1743,14 +1746,13 @@ proof -
       have tne: "T \<noteq> {}" using less.prems (5,7) by simp
       then obtain t where t: "facet t T" and tinT: "t \<in> T"
         unfolding facet_def using less.prems (2) by (meson finite_has_maximal)
-      have vninT: "v \<notin> t" using tinT less.prems (6) unfolding powerset_def by auto
+      have vninT: "v \<notin> t" using tinT less.prems (6) by auto
       have "insert v t \<in> K" using facet_in_K less.prems (5) t by auto
       have "t \<subset> insert v t"
-        using facet_in_K [OF t] using less.prems (6) unfolding powerset_def by auto
+        using facet_in_K [OF t] using less.prems (6) by auto
       have "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
         using t tinT less.prems (5) \<open>t \<subset> insert v t\<close> 
-        unfolding facet_def powerset_def by auto
-
+        unfolding facet_def by auto
       have "free_face t K \<and> free_coface t K = insert v t"
       proof (rule free_face_and_free_coface [of "insert v t"], unfold face_def)
         show "insert v t \<in> K" using \<open>insert v t \<in> K\<close> .
@@ -1771,14 +1773,14 @@ proof -
           show "finite V" using f .
           show "finite (T - {t})" using less.prems(2) by blast
           show "v \<in> V" using less.prems (3) .
-          show "K - {t, insert v t} \<subseteq> powerset V" using less.prems (4) unfolding powerset_def by auto
-          show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (6) unfolding powerset_def by auto
+          show "K - {t, insert v t} \<subseteq> powerset V" using less.prems (4) by auto
+          show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (6) by auto
           show "K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
           proof
             show "K - {t, insert v t} \<subseteq> T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
               using less.prems (5) by auto
             show "T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t} \<subseteq> K - {t, insert v t}"
-              using less.prems (5,6) tinT vninT unfolding powerset_def by auto
+              using less.prems (5,6) tinT vninT by auto
           qed
       show "card (T - {t}) < card T"
         by (meson card_Diff1_less less.prems(2) tinT)
@@ -1812,8 +1814,7 @@ lemma cone_collapses_to_peak:
     and pK: "closed_subset K"
   shows "(K, {{v}, {}}) \<in> collapses_rtrancl"
 proof -
-  have fK: "finite K" using f KV unfolding powerset_def
-    using finite_subset by auto
+  have fK: "finite K" using f KV finite_subset by auto
   hence fT: "finite T" using cs by simp
   show ?thesis
   using f fT v cs Kne T pK proof (induct "card T" arbitrary: T K rule: less_induct)
@@ -1821,14 +1822,14 @@ proof -
   have tne: "T \<noteq> {}" using less.prems (2,4,5) by simp
   then obtain t where t: "facet t T" and tinT: "t \<in> T"
     using less.prems (2) unfolding facet_def by (meson finite_has_maximal)
-  have vninT: "v \<notin> t" using tinT less.prems (6) unfolding powerset_def by auto
+  have vninT: "v \<notin> t" using tinT less.prems (6) by auto
   have "insert v t \<in> K" using facet_in_K less.prems (4) t by auto
   have "t \<subset> insert v t"
-    using facet_in_K [OF t] unfolding powerset_def
+    using facet_in_K [OF t]
     using vninT by blast
   have "(\<forall>a1\<in>K. t \<subset> a1 \<longrightarrow> a1 = insert v t)"
     using t tinT less.prems (4) \<open>t \<subset> insert v t\<close> 
-    unfolding facet_def powerset_def by auto
+    unfolding facet_def by auto
   have "free_face t K \<and> free_coface t K = insert v t"
   proof (rule free_face_and_free_coface, unfold face_def)
     show "insert v t \<in> K" using \<open>insert v t \<in> K\<close> .
@@ -1851,18 +1852,18 @@ proof -
       show "finite V" using f .
       show "finite (T - {t})" using less.prems(2) by blast
       show "v \<in> V" using less.prems (3) .
-      show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (6) unfolding powerset_def by auto
+      show "T - {t} \<subseteq> powerset (V - {v})" using less.prems (6) by auto
       show "K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
       proof
         show "K - {t, insert v t} \<subseteq> T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}"
           using less.prems (4) by auto
         show "T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t} \<subseteq> K - {t, insert v t}"
-          using less.prems (4,6) tinT vninT unfolding powerset_def by auto
+          using less.prems (4,6) tinT vninT by auto
       qed
       show "K - {t, insert v t} \<noteq> {}"
         using Tnet less.prems (4) using tinT
         using \<open>K - {t, insert v t} = T - {t} \<union> {s. \<exists>t\<in>T - {t}. s = insert v t}\<close> by force
-      show "closed_subset (K - {t, insert v t})" 
+      show "closed_subset (K - {t, insert v t})"
         unfolding \<open>free_coface t K = insert v t\<close> [symmetric]
         by (rule closed_subset_free_face, intro less.prems (7), intro \<open>free_face t K\<close>) 
     qed
@@ -1896,19 +1897,19 @@ qed
 proposition facet_join:
   assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
   shows "facet ({v} \<union> a) (join_vertex v K)"
-  using a f k v unfolding facet_def join_def join_vertex_def powerset_def by auto
+  using a f k v unfolding facet_def join_def join_vertex_def by auto
 
 proposition facet_free_face_join:
   assumes a: "a \<in> K" and f: "facet a K" and k: "K \<subseteq> powerset V" and v: "v \<notin> V"
   shows "free_face a (join_vertex v K)"
 proof (unfold free_face_def, rule ex1I [of _ "{v} \<union> a"], rule conjI)
   show "{v} \<union> a \<in> join_vertex v K" using a unfolding join_vertex_def join_def by auto
-  show "face a ({v} \<union> a)" using a v k unfolding face_def powerset_def by auto
+  show "face a ({v} \<union> a)" using a v k unfolding face_def by auto
   fix b
   assume b: "b \<in> join_vertex v K \<and> face a b"
   show "b = {v} \<union> a"
     using b a f k v
-    unfolding join_def join_vertex_def powerset_def facet_def face_def by blast
+    unfolding join_def join_vertex_def facet_def face_def by blast
 qed
 
 corollary facet_free_coface_join:
@@ -1920,7 +1921,7 @@ proof (unfold free_coface_def, rule the1_equality)
   show "{v} \<union> a \<in> join_vertex v K \<and> face a ({v} \<union> a)"
   proof (rule conjI)
     show "{v} \<union> a \<in> join_vertex v K" using a unfolding join_vertex_def join_def by auto
-    show "face a ({v} \<union> a)" using a v k unfolding face_def powerset_def by auto
+    show "face a ({v} \<union> a)" using a v k unfolding face_def by auto
   qed
 qed
 
@@ -1937,7 +1938,7 @@ lemma join_subset_collapses:
     and K2K1: "K2 \<subseteq> K1"
   shows "(join_vertex v K1, join_vertex v K2) \<in> collapses_rtrancl"
 proof -
-  have fK1: "finite K1" and fK2: "finite K2" using f K1V K2V K2K1 unfolding powerset_def
+  have fK1: "finite K1" and fK2: "finite K2" using f K1V K2V K2K1
     by (simp add: finite_subset)+
   show ?thesis
   using K1V K2K1 fK1 pwK1 proof (induct "card (K1 - K2)" arbitrary: K1 rule: less_induct)
@@ -1970,10 +1971,10 @@ proof -
       have tinjoin: "t \<in> join_vertex v K1" and ivt: "insert v t \<in> join_vertex v K1" 
         using t unfolding join_vertex_def join_def by auto
       have vnit: "v \<notin> t" and t_in_insert: "t \<subset> insert v t"
-        using less.prems (1) v t unfolding powerset_def by auto
+        using less.prems (1) v t by auto
       have "face t (insert v t)"
         using less.prems (1) v t
-        unfolding face_def powerset_def by auto
+        unfolding face_def  by auto
       have "insert v t \<in> (join_vertex v K1)"
         using facet_in_K [OF ftK1]
         unfolding join_vertex_def join_def by auto
@@ -2057,11 +2058,11 @@ proof -
         show "v \<in> V \<union> {v}" by simp
         show "join_vertex v K1 \<subseteq> powerset (V \<union> {v})" 
           using less.prems (1)
-          unfolding powerset_def join_vertex_def join_def by auto
-        show "join_vertex v K1 \<noteq> {}" unfolding powerset_def join_vertex_def join_def
+          unfolding  join_vertex_def join_def by auto
+        show "join_vertex v K1 \<noteq> {}" unfolding  join_vertex_def join_def
           using K2neK1 True by auto
         show "K1 \<subseteq> powerset (V \<union> {v} - {v})"
-          using less.prems (1) unfolding powerset_def using v by simp
+          using less.prems (1) using v by simp
         show "join_vertex v K1 = K1 \<union> {s. \<exists>t\<in>K1. s = insert v t}"
         proof
           show "K1 \<union> {s. \<exists>t\<in>K1. s = insert v t} \<subseteq> join_vertex v K1"
@@ -2116,7 +2117,7 @@ lemma collapsible_ne_card_ge_2:
   assumes f: "finite V" and KV: "K \<subseteq> powerset V" and cK: "K \<in> collapsible" and Kne: "K \<noteq> {}"
   shows "2 \<le> card K"
 proof -
-  from f have fK: "finite K" using KV unfolding powerset_def by (simp add: finite_subset)
+  from f have fK: "finite K" using KV by (simp add: finite_subset)
   from cK and Kne obtain t where t: "t \<in> K" and f: "free_face t K"
     unfolding collapsible_def collapses_rtrancl_def
     using collapses_at_least_one_free_face by auto
@@ -2166,7 +2167,7 @@ using KV cK card cs proof (induct "card K" arbitrary: K rule: less_induct)
       show "card K' < card K" 
         using k' t
         using card.infinite collapses_card gr_implies_not0 kk' less.prems(3) by blast 
-      show k'p: "K' \<subseteq> powerset V" using k' less.prems (1) unfolding powerset_def by auto
+      show k'p: "K' \<subseteq> powerset V" using k' less.prems (1) by auto
       show "K' \<in> collapsible" using k'c .
       have fct: "free_coface t K \<in> K" using t
         using free_coface_free_face(1) ft by blast
@@ -2218,9 +2219,9 @@ lemma union_join_collapses_to_base:
     and Kv: "(T, {}) \<in> collapses_rtrancl"
   shows "(K1 \<union> K, K1) \<in> collapses_rtrancl"
 proof -
-  have fK: "finite K" using f KV unfolding powerset_def
+  have fK: "finite K" using f KV
     using finite_subset by auto
-  hence fT: "finite T" using T unfolding powerset_def
+  hence fT: "finite T" using T
     using finite_subset f by auto
   show ?thesis
     using fT cs T Kv TK1 pK proof (induct "card T" arbitrary: T K rule: less_induct)
@@ -2243,22 +2244,22 @@ proof -
       have fsscf: "t \<subset> free_coface t T"
         using free_coface_free_face(2) [OF ft] unfolding face_def by auto
       have ivtivfct: "insert v t \<subset> insert v (free_coface t T)"
-        using fsscf t fct v less.prems (3) unfolding powerset_def by auto
+        using fsscf t fct v less.prems (3) by auto
       have ivtK1: "insert v t \<notin> K1" and ivfctK1: "insert v (free_coface t T) \<notin> K1"
-        using fct t v K1 unfolding powerset_def by auto
+        using fct t v K1 by auto
       have "free_face (insert v t) (K1 \<union> K) \<and> free_coface (insert v t) (K1 \<union> K) = insert v (free_coface t T)"
       proof (rule free_face_and_free_coface, unfold face_def)
         show "insert v (free_coface t T) \<in> K1 \<union> K"
           using less.prems (2) fct ft by auto
         show "insert v t \<subset> insert v (free_coface t T)"
-          using fsscf less.prems (3) t fct unfolding powerset_def by blast
+          using fsscf less.prems (3) t fct by blast
         show "\<forall>a1\<in>K1 \<union> K. insert v t \<subset> a1 \<longrightarrow> a1 = insert v (free_coface t T)"
         proof (rule, rule)
           fix a1
           assume a1: "a1 \<in> K1 \<union> K" and iv: "insert v t \<subset> a1" 
           show "a1 = insert v (free_coface t T)"
           proof (cases "a1 \<in> K1")
-            case True have False using iv t K1 True unfolding powerset_def by auto
+            case True have False using iv t K1 True by auto
             thus ?thesis by (rule ccontr)
           next
             case False have "a1 \<in> K" using a1 False by simp
@@ -2268,8 +2269,7 @@ proof -
             have "t' = free_coface t T"
             proof (rule ccontr)
               assume foo: "\<not> t' = free_coface t T"
-              have "t \<subset> t'" using iv unfolding a1 using v t t' less.prems (3)
-                unfolding powerset_def by auto
+              have "t \<subset> t'" using iv unfolding a1 using v t t' less.prems (3) by auto
               hence "t' = free_coface t T"
                 using t free_coface_free_face (3) [OF ft] t' unfolding face_def by simp
               thus False using foo by simp
@@ -2286,14 +2286,14 @@ proof -
         show "insert v (free_coface t T) \<in> K"
           using less.prems (2) fct ft by auto
         show "insert v t \<subset> insert v (free_coface t T)" 
-          using fsscf less.prems (3) t fct unfolding powerset_def by blast
+          using fsscf less.prems (3) t fct by blast
         show "\<forall>a1\<in>K. insert v t \<subset> a1 \<longrightarrow> a1 = insert v (free_coface t T)"
         proof (rule, rule)
           fix a1
           assume a1: "a1 \<in> K" and iv: "insert v t \<subset> a1" 
           show "a1 = insert v (free_coface t T)"
           proof (cases "a1 \<in> K1")
-            case True have False using iv t K1 True unfolding powerset_def by auto
+            case True have False using iv t K1 True by auto
             thus ?thesis by (rule ccontr)
           next
             case False have "a1 \<in> K" using a1 False by simp
@@ -2303,8 +2303,7 @@ proof -
             have "t' = free_coface t T"
             proof (rule ccontr)
               assume foo: "\<not> t' = free_coface t T"
-              have "t \<subset> t'" using iv unfolding a1 using v t t' less.prems (3)
-                unfolding powerset_def by auto
+              have "t \<subset> t'" using iv unfolding a1 using v t t' less.prems (3) by auto
               hence "t' = free_coface t T"
                 using t free_coface_free_face (3) [OF ft] t' unfolding face_def by simp
               thus False using foo by simp
@@ -2313,13 +2312,14 @@ proof -
           qed
         qed
       qed
-      hence "free_face (insert v t) K" and free_coface_insertK: "free_coface (insert v t) K = insert v (free_coface t T)"
+      hence "free_face (insert v t) K" 
+        and free_coface_insertK: "free_coface (insert v t) K = insert v (free_coface t T)"
         by simp_all
       have fftKminus: "free_face t (K - {insert v t, free_coface (insert v t) K}) \<and> 
           free_coface t (K - {insert v t, free_coface (insert v t) K}) = free_coface t T"
       proof (rule free_face_and_free_coface, unfold face_def)
         show "free_coface t T \<in> K - {insert v t, free_coface (insert v t) K}"
-          using fct less.prems (2,3) free_coface_insertK unfolding powerset_def by auto
+          using fct less.prems (2,3) free_coface_insertK by auto
         show "t \<subset> free_coface t T" using fsscf .
         show "\<forall>a1\<in>K - {insert v t, free_coface (insert v t) K}. t \<subset> a1 \<longrightarrow> a1 = free_coface t T"
         proof (rule, rule)
@@ -2345,7 +2345,8 @@ proof -
           qed
         qed
       qed
-      hence fftKminus: "free_face t (K - {insert v t, free_coface (insert v t) K})" and fftKfftT: "free_coface t (K - {insert v t, free_coface (insert v t) K}) = free_coface t T"
+      hence fftKminus: "free_face t (K - {insert v t, free_coface (insert v t) K})" 
+            and fftKfftT: "free_coface t (K - {insert v t, free_coface (insert v t) K}) = free_coface t T"
         by simp_all
       text\<open>We start here the collapsing process:\<close>
       have "(K1 \<union> K, (K1 \<union> K) - {insert v t, insert v (free_coface t T)}) \<in> collapses"
@@ -2385,7 +2386,7 @@ proof -
             by (metis Diff_insert_absorb insert_absorb subset_iff)+
         qed
         show "T - {t, free_coface t T} \<subseteq> powerset (V - {v})"
-          using less.prems (3) v unfolding powerset_def by auto
+          using less.prems (3) v by auto
         show "(T - {t, free_coface t T}, {}) \<in> collapses_rtrancl" using Tempty .
         show "T - {t, free_coface t T} \<subseteq> K1" using less.prems (5) by auto
         show "closed_subset (K - {t, free_coface t T, insert v t, insert v (free_coface t T)})"
@@ -2428,7 +2429,7 @@ next
   hence "K3 \<subseteq> K2" using K2col
     using K2col collapses_rtrancl_subseteq by blast
   with False have K3K2: "K3 \<subset> K2" by simp
-  have fK2: "finite K2" using K2V f unfolding powerset_def by (simp add: finite_subset)
+  have fK2: "finite K2" using K2V f by (simp add: finite_subset)
   show ?thesis using K2col K3K2 K2V K2K1 fK2 csK2
   proof (induct "card (K2 - K3)" arbitrary: K2 rule: less_induct)
    case less
@@ -2444,16 +2445,16 @@ next
      using fft free_coface_free_face(2) unfolding face_def by auto
    from t and fct and tsubsetfc have cardK2: "2 \<le> card K2" using less.prems (5)
      by (metis card_0_eq card_Suc_eq empty_iff less_2_cases_iff linorder_not_less psubset_eq singletonD)
-   have vnint: "v \<notin> t" using v t less.prems (3) unfolding powerset_def by auto
+   have vnint: "v \<notin> t" using v t less.prems (3) by auto
    have vninfct: "v \<notin> free_coface t K2"
-     using v t less.prems (3) vnint fct unfolding powerset_def by auto
+     using v t less.prems (3) vnint fct by auto
    have ivt_in: "insert v t \<in> join_vertex v K2"
     using facet_in_K less.prems (3) t
     unfolding join_vertex_def join_def by auto
   have t_invt: "t \<subset> insert v t" using vnint by auto
   have "face (insert v t) (insert v (free_coface t K2))"
-    using tsubsetfc using less.prems (3) t fct v 
-    unfolding powerset_def face_def by fast
+    using tsubsetfc using less.prems (3) t fct v
+    unfolding  face_def by fast
   have "insert v (free_coface t K2) \<in> (K1 \<union> join_vertex v K2)" using fct by simp
   have "insert v t \<subset> insert v (free_coface t K2)"
       using \<open>face (insert v t) (insert v (free_coface t K2))\<close> unfolding face_def .
@@ -2485,7 +2486,7 @@ next
       qed
      qed
    next
-     case True have False using True a1 ivt fcf K1V v unfolding powerset_def by blast
+     case True have False using True a1 ivt fcf K1V v by blast
      thus ?thesis by (rule ccontr)
    qed
  qed
@@ -2517,7 +2518,7 @@ next
     qed
     moreover have "K1 \<union> join_vertex v K2 - {insert v t, insert v (free_coface t K2)} =
       K1 \<union> (join_vertex v K2 - {insert v t, insert v (free_coface t K2)})" 
-      using v K1V unfolding powerset_def by auto
+      using v K1V by auto
     moreover have "K1 \<union> (join_vertex v K2 - {insert v t, insert v (free_coface t K2)}) = 
       K1 \<union> join_vertex v (K2 - {t, free_coface t K2}) \<union> {t, free_coface t K2}"
     proof -
@@ -2531,7 +2532,7 @@ next
         \<subseteq> join_vertex v K2 - {insert v t, insert v (free_coface t K2)}"
           unfolding join_vertex_def join_def 
           using v t less.prems (3) fct vnint tne
-          unfolding powerset_def by auto (fast+)
+          by auto (fast+)
         qed
         thus ?thesis by simp
       qed
@@ -2547,10 +2548,11 @@ next
           show "(K2 - {t, free_coface t K2}, K3) \<in> collapses_rtrancl" using K2tcol .
           show "K2 - {t, free_coface t K2} \<subseteq> powerset V" using less.prems(3) by auto
           show "K2 - {t, free_coface t K2} \<subseteq> K1" using less.prems(4) by auto
-          show "K3 \<subset> K2 - {t, free_coface t K2}" using False
+          show c: "K3 \<subset> K2 - {t, free_coface t K2}" using False
             by (meson K2tcol collapses_rtrancl_subseteq)
           show "card (K2 - {t, free_coface t K2} - K3) < card (K2 - K3)" using fct less.prems (5)
-            by (metis (full_types) Diff_iff Diff_mono Diff_subset Orderings.order_eq_iff \<open>K3 \<subset> K2 - {t, free_coface t K2}\<close> card_seteq fct linorder_not_less order_less_imp_le rev_finite_subset subset_Diff_insert)
+            by (metis (full_types) Diff_iff Diff_mono Diff_subset Orderings.order_eq_iff
+                  c card_seteq linorder_not_less order_less_imp_le rev_finite_subset subset_Diff_insert)
           show "finite (K2 - {t, free_coface t K2})" using less.prems(5) by blast
           show "closed_subset (K2 - {t, free_coface t K2})" 
             using less.prems(6) fft
@@ -2570,11 +2572,11 @@ next
        show "v \<in> V \<union> {v}" by simp
        show "join_vertex v K2 \<subseteq> powerset (V \<union> {v})"
          using less.prems (3)
-         unfolding powerset_def join_vertex_def join_def by auto
+         unfolding  join_vertex_def join_def by auto
        show "join_vertex v K2 \<noteq> {}"
          using ivt_in join_def join_vertex_def by force
        show "K2 \<subseteq> powerset (V \<union> {v} - {v})" 
-         using less.prems (3) unfolding powerset_def using v by simp
+         using less.prems (3) using v by simp
        show "join_vertex v K2 = K2 \<union> {s. \<exists>t\<in>K2. s = insert v t}"
        proof
         show "K2 \<union> {s. \<exists>t\<in>K2. s = insert v t} \<subseteq> join_vertex v K2"
@@ -2608,9 +2610,9 @@ next
       show "finite (V \<union> {v})" using f by simp
       show "v \<in> V \<union> {v}" by simp
       show "join_vertex v K2 \<subseteq> powerset (V \<union> {v})"
-        using less.prems (3) unfolding powerset_def join_vertex_def join_def by auto
-      show "K2 \<subseteq> powerset (V \<union> {v} - {v})" 
-        using less.prems (3) v unfolding powerset_def join_vertex_def join_def by auto
+        using less.prems (3) unfolding  join_vertex_def join_def by auto
+      show "K2 \<subseteq> powerset (V \<union> {v} - {v})"
+        using less.prems (3) v unfolding  join_vertex_def join_def by auto
       show "join_vertex v K2 = join_vertex v K2" by (rule refl)
       show "closed_subset (join_vertex v K2)"
       proof (unfold join_vertex_def join_def closed_subset_def, rule, rule, rule)
@@ -2632,7 +2634,7 @@ next
           qed
         qed
       show "K2 \<subseteq> K1" using less.prems (4) .
-      show "K1 \<subseteq> powerset (V \<union> {v} - {v})" using K1V v unfolding powerset_def by simp
+      show "K1 \<subseteq> powerset (V \<union> {v} - {v})" using K1V v by simp
       show "(K2, {}) \<in> collapses_rtrancl" using less.prems (1) unfolding True .
     qed
   qed
@@ -2654,7 +2656,7 @@ proof -
     show "finite V" using f .
     show "v \<in> V" using v .
     show "join_vertex v K \<subseteq> powerset V"
-      using KV v unfolding join_vertex_def join_def powerset_def by auto
+      using KV v unfolding join_vertex_def join_def by auto
     show "K \<subseteq> powerset (V - {v})" using KV .
     show "join_vertex v K = join_vertex v K" ..
     show "closed_subset (join_vertex v K)"
@@ -2682,8 +2684,7 @@ next
   hence "K2 \<subseteq> K1" using K2col
     using K2col collapses_rtrancl_subseteq by blast
   with False have K2K1: "K2 \<subset> K1" by simp
-  have fK2: "finite K2" and fK1: "finite K1" using K1V K2V f 
-    unfolding powerset_def by (simp add: finite_subset)+
+  have fK2: "finite K2" and fK1: "finite K1" using K1V K2V f by (simp add: finite_subset)+
   show ?thesis using K2col K2K1 K1V fK1
   proof (induct "card (K1 - K2)" arbitrary: K1 rule: less_induct)
    case less
@@ -2702,9 +2703,9 @@ next
    from t and fct and tsubsetfc have cardK2: "2 \<le> card K1" using less.prems (4)
      by (metis card_0_eq card_Suc_eq empty_iff less_2_cases_iff linorder_not_less psubset_eq singletonD)
    
-   have vnint: "v \<notin> t" using v t less.prems (3) unfolding powerset_def by auto
+   have vnint: "v \<notin> t" using v t less.prems (3) by auto
    have vninfct: "v \<notin> free_coface t K1"
-     using v t less.prems (3) vnint fct unfolding powerset_def by auto
+     using v t less.prems (3) vnint fct by auto
    
    have tnij: "t \<notin> join_vertex v K3" using vnint tniK2 K3K2 unfolding join_vertex_def join_def by auto
    have fctnij: "(free_coface t K1) \<notin> join_vertex v K3"
@@ -2738,7 +2739,7 @@ next
                using K3K2 a1nK1 less.prems(2) by auto
            next
              case False
-             have "\<exists>s'\<in>K3. a1 = insert v s'" 
+             have "\<exists>s'\<in>K3. a1 = insert v s'"
                using False a1nK1 a1 unfolding join_vertex_def join_def by simp
              thus ?thesis using fct ivt vninfct vnint
                by (metis K3K2 closed_subset_def csK2 order_less_imp_le psubset_insert_iff subset_iff tniK2)
@@ -2747,7 +2748,6 @@ next
        next
          case True show ?thesis 
            using True a1 ivt less.prems (3) v fft
-           unfolding powerset_def
            by (simp add: face_def free_coface_free_face(3))
        qed
      qed
@@ -2792,7 +2792,7 @@ next
          show "K2 \<subset> K1 - {t, free_coface t K1}" using False K2tcol
            by (meson collapses_rtrancl_subseteq)
          show "K1 - {t, free_coface t K1} \<subseteq> powerset V" 
-           using less.prems (3) unfolding powerset_def by auto
+           using less.prems (3) by auto
          show "finite (K1 - {t, free_coface t K1})" using less.prems (4) by simp
        qed
      next
@@ -2935,7 +2935,7 @@ lemma shows "zero_collapsible {x} {}" by simp
 lemma shows "\<not> zero_collapsible {x} {{}}" by simp
 
 lemma "link_ext x {x} {{}, {x}} = {{}}"
-  unfolding link_ext_def powerset_def by auto
+  unfolding link_ext_def  by auto
 
 lemma shows "zero_collapsible {x} {{}, {x}}" by simp
 
@@ -3010,7 +3010,7 @@ next
     have "\<exists>l. (X - {x}, l) \<in> sorted_variables \<and> evaluation l (cost x X K) \<in> not_evaders"
     proof (rule Suc.hyps (1))
       show "n = card (X - {x})" using x using Suc.hyps (2) by simp
-      show "cost x X K \<subseteq> powerset (X - {x})" unfolding cost_def powerset_def by auto
+      show "cost x X K \<subseteq> powerset (X - {x})" unfolding cost_def  by auto
       show "X - {x} \<noteq> {}"
         using False Suc.hyps (2) using cardx by (intro xxne)
       show "finite (X - {x})" using Suc.prems (3) by simp
@@ -3023,7 +3023,7 @@ next
       using x xxne by auto
     have el: "evaluation l' (link_ext x X K) \<in> not_evaders"
     proof (rule evaluation_cone_not_evaders)
-      show "link_ext x X K \<subseteq> powerset (X - {x})" unfolding link_ext_def powerset_def by auto
+      show "link_ext x X K \<subseteq> powerset (X - {x})" unfolding link_ext_def  by auto
       show "cone (X - {x}) (link_ext x X K)" using cl .
       show "X - {x} \<noteq> {}" using y by blast
       show "finite (X - {x})" using Suc.prems(3) by blast
@@ -3060,7 +3060,7 @@ next
       proof -
         from kne and Suc.prems (1)
         have k_cases: "K = {{}} \<or> K = {{}, {x}} \<or> K = {{x}}"
-          unfolding X powerset_def
+          unfolding X 
           by (metis Suc.prems(1) X powerset_singleton_cases)
         show ?thesis
         proof (cases "K = {{}}")
@@ -3076,7 +3076,7 @@ next
             show ?thesis
               using Suc.prems (4)
               unfolding True X
-              unfolding evaluation.simps link_ext_def cost_def powerset_def
+              unfolding evaluation.simps link_ext_def cost_def 
               using not_evaders.intros [of "[True]"] 
               by auto (metis (no_types, lifting) \<open>\<And>l2. [True] = l2 \<Longrightarrow> [True] @ l2 \<in> not_evaders\<close> bot.extremum empty_iff evaluation.simps(2) mem_Collect_eq)
           next
