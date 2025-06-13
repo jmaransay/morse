@@ -2584,12 +2584,11 @@ qed
 
 section\<open>Consequences of the main theorem.\<close>
 
-definition vertex_set :: "nat set set \<Rightarrow> nat set"
-  where "vertex_set K = {v::nat. {v} \<in> K}"
+(*definition vertex_set :: "nat set set \<Rightarrow> nat set"
+  where "vertex_set K = {v::nat. {v} \<in> K}"*)
 
-lemma assumes c: "closed_subset K" 
-  shows "K \<subseteq> powerset (vertex_set K)" 
-  using c unfolding  vertex_set_def closed_subset_def by auto
+lemma assumes c: "closed_subset K" shows "K \<subseteq> powerset (vertex_of_simpl_complex K)" 
+  using c unfolding  vertex_of_simpl_complex_def closed_subset_def by auto
 
 definition facets :: "nat set set \<Rightarrow> nat set set"
   where "facets K = {a. facet a K}"
@@ -2597,10 +2596,29 @@ definition facets :: "nat set set \<Rightarrow> nat set set"
 lemma shows "facet a K \<equiv> a \<in> facets K"
   unfolding facets_def by simp
 
+lemma assumes K: "K \<noteq> {}" shows "facets K \<noteq> {}"
+proof - 
+  (*(rule ccontr)
+  assume "\<not> facets K \<noteq> {}" hence fe: "facets K = {}" by simp*)
+  from K obtain v where vK: "v \<in> K" by auto
+  show ?thesis
+  proof (cases "facet v K")
+    case True
+    then show ?thesis using vK unfolding facets_def by auto
+  next
+    case False
+    obtain w where "v \<subseteq> w" and "w \<in> K"
+      using vK False unfolding facet_def by auto
+    
+  qed
+  
+  have False using K
+  using K unfolding facets_def facet_def apply auto try
+
 definition pure_d :: "nat \<Rightarrow> nat set set \<Rightarrow> bool"
   where "pure_d d K = (\<forall>f\<in>facets K. card f = d)"
 
-text\<open>Lemma 9 in our paper:\<close>
+text\<open>Lemma 5.1 in our paper in DML:\<close>
 
 lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and d: "0 < d" 
   and p: "pure_d d K" and v: "{v} \<in> K" shows "pure_d (d - 1) (link_ext v V K)"
@@ -2638,9 +2656,26 @@ definition dim :: "nat set set \<Rightarrow> nat"
 lemma "dim {{}} = 0" and "dim {{7}} = 0" and "dim {{3,7}} = 1" 
   unfolding dim_def by auto
 
-lemma assumes n: "non_evasive (vertex_set K) K" and p: "pure_d 1 K"
-  and f: "finite (vertex_set K)" and K: "K \<subseteq> powerset (vertex_set K)" shows "2 \<le> card {v. {v} \<in> K}"
-proof (induct "card {v\<in>K. card v = 2}")
+lemma
+  assumes p: "pure_d d K" and d: "0 < d" and cs: "closed_subset K"
+  shows "2 \<le> card (vertex_of_simpl_complex K)"
+  using p d cs proof (induct d rule: nat_induct)
+  case 0
+  have False using "0.prems" (2) by simp thus ?thesis by (rule ccontr)
+next
+  case (Suc n)
+  show ?case
+  proof (cases "n = 0")
+    case True hence s: "Suc n = 1" by simp
+    from Suc.prems (1) obtain f where "f \<in> {a \<in> K. \<forall>b\<in>K. a \<subseteq> b \<longrightarrow> a = b}" and "card f = Suc n" 
+      unfolding pure_d_def facets_def facet_def apply auto try
+    
+qed 
+
+lemma non_evasive_dim_1_two_free_faces: assumes n: "non_evasive (vertex_of_simpl_complex K) K" and p: "pure_d 1 K"
+  and f: "finite (vertex_of_simpl_complex K)" and K: "K \<subseteq> powerset (vertex_of_simpl_complex K)"
+  shows "2 \<le> card {f. free_face f K}"
+proof (induct "card {v\<in>K. card v = 2}" rule: nat_induct)
   case 0 with n
   show ?case sorry
 next
@@ -2648,28 +2683,53 @@ next
   then show ?case sorry
 qed
 
-lemma assumes n: "non_evasive (vertex_set K) K" and p: "pure_d d K" and d: "0 < d"
-      and f: "finite (vertex_set K)" and K: "K \<subseteq> powerset (vertex_set K)" shows "2 \<le> card {f. free_face f K}"
+lemma assumes n: "non_evasive (vertex_of_simpl_complex K) K" and p: "pure_d (dim K) K" and d: "0 < (dim K)"
+      and f: "finite (vertex_of_simpl_complex K)" and cs: "closed_subset K" and K: "K \<subseteq> powerset (vertex_of_simpl_complex K)" 
+    shows "2 \<le> card {f. free_face f K}"
+  using n p d f cs K proof (induct "dim K" rule: nat_induct)
+  case 0 from "0.prems" (3) and "0.hyps" have False by linarith
+  thus ?thesis by (rule ccontr)
+next
+  case (Suc n)
+  show ?thesis
+  proof (cases "dim K = 1")
+    case True hence p: "pure_d 1 K" using "Suc.prems" (2) by simp
+    show ?thesis
+      using non_evasive_dim_1_two_free_faces [OF "Suc.prems" (1) p Suc.prems (4,6)] 
+      using free_face_def face_def by simp
+  next
+    case False
+    have "2 \<le> card (vertex_of_simpl_complex K)" 
+      using Suc.prems (2,3,5) 
+      unfolding pure_d_def closed_subset_def vertex_of_simpl_complex_def facets_def facet_def 
+      try
+    from "Suc.prems" (1) have False using non_evasive.simps
+    then show ?thesis sorry
+  qed
+
+
 proof (cases "K = {}")
   case True
   from n
-  have False unfolding True vertex_set_def by simp thus ?thesis by (rule ccontr)
+  have False unfolding True vertex_of_simpl_complex_def by simp thus ?thesis by (rule ccontr)
 next
   case False note Kne = False
   show ?thesis
   proof (cases "K = {{}}")
     case True
-    have False using n unfolding True vertex_set_def by simp
+    have False using n unfolding True vertex_of_simpl_complex_def by simp
     thus ?thesis by (rule ccontr)
   next
     case False
-    have "finite K" using f K unfolding vertex_set_def 
+    have "finite K" using f K unfolding vertex_of_simpl_complex_def
       by (simp add: finite_subset)
     show ?thesis
-      using Kne False n p d proof (induct "dim K")
-      case 0 note prems = "0.prems" and hyp = 0
+      using Kne False n p d proof (induct "dim K" rule: nat_induct)
+      case 0 from "0.prems" (5) and "0.hyps" have False by linarith
+      thus ?thesis by (rule ccontr)
+    next
       show ?case
-      proof (induct "card (facets K)")
+      proof (induct "card (facets K)" rule: nat_induct)
         case 0 with prems (4,5) and `finite K` have False unfolding pure_d_def
         show ?case sorry
       next
