@@ -792,7 +792,7 @@ lemma "vertex_of_simpl_complex {{}} = {}" unfolding vertex_of_simpl_complex_def 
 
 lemma "vertex_of_simpl_complex {{v}} = {v}" unfolding vertex_of_simpl_complex_def by simp
 
-definition vertex_of :: "nat set set \<Rightarrow> nat set set"
+(*definition vertex_of :: "nat set set \<Rightarrow> nat set set"
   where "vertex_of K = {v. v \<in> K \<and> card v = 1}"
 
 definition map_v where "map_v v = {v}"
@@ -817,6 +817,18 @@ qed
   have "finite {V \<in> K. card V = 1}" using f by simp
   define f where "f v = {v}"
   thus ?thesis unfolding vertex_of_simpl_complex_def using card_image try
+*)
+
+lemma finite_vertex_of_simpl_complex: 
+  assumes f: "finite V" and K: "K \<subseteq> powerset V" 
+  shows "finite (vertex_of_simpl_complex K)"
+proof -
+  have "finite K" using K f by (simp add: finite_subset)
+  hence f2: "finite {v. v \<in> V \<and> {v} \<in> K}" using f by simp
+  have "{v. v \<in> V \<and> {v} \<in> K} = {v. {v} \<in> K}"
+    using K by blast
+  thus ?thesis using f2 unfolding vertex_of_simpl_complex_def by simp
+qed
 
 text\<open>Beware that when we are dealing with subsets not closed by subset relation
     the previous definition does not work nicely:\<close>
@@ -2689,8 +2701,9 @@ lemma "dim {{}} = 0" and "dim {{7}} = 0" and "dim {{3,7}} = 1"
   unfolding dim_def by auto
 
 lemma assumes p: "pure_d (dim K) K" and d: "0 < (dim K)" and cs: "closed_subset K" and f: "finite K" and Kne: "K \<noteq> {}"
+  and fV: "finite V" and KV: "K \<subseteq> powerset V" and ne: "non_evasive (vertex_of_simpl_complex K) K"
   shows "2 \<le> card (vertex_of_simpl_complex K)"
-  using p d cs f Kne proof (induct "dim K" rule: nat_induct)
+  using p d cs f Kne fV KV ne proof (induct "dim K" rule: nat_induct)
   case 0
   have False using "0.hyps" "0.prems" (2) by simp thus ?thesis by (rule ccontr)
 next
@@ -2704,16 +2717,25 @@ next
     from cf have "card f = 2" using dK unfolding dim_def using fK by simp
     then obtain v1 v2 where f: "f = {v1,v2}" and v1v2: "v1 \<noteq> v2" by (meson card_2_iff)
     hence "{v1} \<in> K" and "{v2} \<in> K" and "{v1} \<noteq> {v2}" using Suc.prems (3) fK unfolding closed_subset_def by simp_all
-    hence "v1 \<in> vertex_of_simpl_complex K" and "v2 \<in> vertex_of_simpl_complex K"
+    hence v1: "v1 \<in> vertex_of_simpl_complex K" and v2: "v2 \<in> vertex_of_simpl_complex K"
       unfolding vertex_of_simpl_complex_def by simp_all
-    hence "1 \<le> card (vertex_of_simpl_complex K)" using v1v2 try
-    thus ?thesis
-      using Suc.prems (3) fK
-      unfolding closed_subset_def vertex_of_simpl_complex_def facets_def facet_def try
-    from Suc.prems (1) obtain f where "f \<in> {a \<in> K. \<forall>b\<in>K. a \<subseteq> b \<longrightarrow> a = b}" and "card f = Suc n"
-      using facets_not_empty
-      unfolding pure_d_def facets_def facet_def apply auto
+    have "finite (vertex_of_simpl_complex K)"
+      by (rule finite_vertex_of_simpl_complex [OF Suc.prems (6,7)])
+    thus ?thesis using v1 v2 v1v2
+      by (metis One_nat_def card_0_eq card_1_singletonE empty_iff insertE less_2_cases linorder_not_less)
+  next
+    case False thm non_evasive.simps
+    show ?thesis
+    proof (cases "V = {}")
+      case True hence "powerset V = {}" try
+      then have False using Suc.prems (5,6,7) try
+    next
+      case False
+      then show ?thesis sorry
+    qed
     
+    from Suc.prems (8) have False using non_evasive.cases
+
 qed 
 
 lemma non_evasive_dim_1_two_free_faces: assumes n: "non_evasive (vertex_of_simpl_complex K) K" and p: "pure_d 1 K"
