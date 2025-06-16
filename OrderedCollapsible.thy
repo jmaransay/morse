@@ -792,6 +792,32 @@ lemma "vertex_of_simpl_complex {{}} = {}" unfolding vertex_of_simpl_complex_def 
 
 lemma "vertex_of_simpl_complex {{v}} = {v}" unfolding vertex_of_simpl_complex_def by simp
 
+definition vertex_of :: "nat set set \<Rightarrow> nat set set"
+  where "vertex_of K = {v. v \<in> K \<and> card v = 1}"
+
+definition map_v where "map_v v = {v}"
+
+lemma assumes f: "finite K" shows "finite (vertex_of K)" using f unfolding vertex_of_def by simp
+
+lemma "map_v \<circ> vertex_of_simpl_complex = vertex_of"
+  unfolding map_v_def vertex_of_simpl_complex_def vertex_of_def apply (rule ext) apply auto try 
+
+lemma "card (vertex_of K) = card (vertex_of_simpl_complex K)"
+  using card_image [symmetric, of map_v]
+lemma assumes f: "finite K" shows "finite (vertex_of_simpl_complex K)"
+proof (cases "vertex_of_simpl_complex K = {}")
+  case True
+  then show ?thesis by simp
+next
+  case False then obtain v where "v \<in> vertex_of_simpl_complex K" by auto
+  define g where "g k = {k}"
+  then show ?thesis sorry
+qed
+  
+  have "finite {V \<in> K. card V = 1}" using f by simp
+  define f where "f v = {v}"
+  thus ?thesis unfolding vertex_of_simpl_complex_def using card_image try
+
 text\<open>Beware that when we are dealing with subsets not closed by subset relation
     the previous definition does not work nicely:\<close>
 
@@ -2596,10 +2622,9 @@ definition facets :: "nat set set \<Rightarrow> nat set set"
 lemma shows "facet a K \<equiv> a \<in> facets K"
   unfolding facets_def by simp
 
-lemma assumes K: "K \<noteq> {}" shows "facets K \<noteq> {}"
-proof - 
-  (*(rule ccontr)
-  assume "\<not> facets K \<noteq> {}" hence fe: "facets K = {}" by simp*)
+lemma facets_not_empty: assumes K: "K \<noteq> {}" and f: "finite K" 
+  shows "facets K \<noteq> {}"
+proof -
   from K obtain v where vK: "v \<in> K" by auto
   show ?thesis
   proof (cases "facet v K")
@@ -2607,16 +2632,23 @@ proof -
     then show ?thesis using vK unfolding facets_def by auto
   next
     case False
-    obtain w where "v \<subseteq> w" and "w \<in> K"
-      using vK False unfolding facet_def by auto
-    
+    define vs where "vs = {w\<in>K. v \<subseteq> w}"
+    have fvs: "finite vs" and vsne: "vs \<noteq> {}" unfolding vs_def using f vK by auto
+    obtain w where wmax: "\<forall>b\<in>vs. w \<subseteq> b \<longrightarrow> w = b" and win: "w \<in> vs"
+      using finite_has_maximal [OF fvs vsne] by auto
+    have "facet w K" using wmax win unfolding facet_def vs_def by auto
+    thus ?thesis unfolding facets_def by auto
   qed
-  
-  have False using K
-  using K unfolding facets_def facet_def apply auto try
+qed
 
 definition pure_d :: "nat \<Rightarrow> nat set set \<Rightarrow> bool"
-  where "pure_d d K = (\<forall>f\<in>facets K. card f = d)"
+  where "pure_d d K = (\<forall>f\<in>facets K. card f = d + 1)"
+
+lemma pure_d_facet:
+  assumes Kne: "K \<noteq> {}" and f: "finite K" and p: "pure_d d K"
+  obtains f where "f \<in> facets K" and "card f = d + 1"
+  using facets_not_empty [OF Kne f]
+  using p pure_d_def by auto
 
 text\<open>Lemma 5.1 in our paper in DML:\<close>
 
@@ -2624,11 +2656,11 @@ lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and d: "0 <
   and p: "pure_d d K" and v: "{v} \<in> K" shows "pure_d (d - 1) (link_ext v V K)"
 proof (unfold pure_d_def, rule)
   fix f
-  assume f: "f \<in> facets (link_ext v V K)" 
-  hence "f \<in> link_ext v V K" 
+  assume f: "f \<in> facets (link_ext v V K)"
+  hence "f \<in> link_ext v V K"
     unfolding facets_def
     using facet_in_K by auto
-  hence vnf: "v \<notin> f" unfolding link_ext_def  by simp
+  hence vnf: "v \<notin> f" unfolding link_ext_def by simp
   have insf: "insert v f \<in> facets K"
   proof (unfold facets_def, rule, unfold facet_def, rule)
     show "insert v f \<in> K"
@@ -2646,8 +2678,8 @@ proof (unfold pure_d_def, rule)
       qed
     qed
   qed
-  show "card f = d - 1" using insf p vnf d unfolding pure_d_def
-    by (metis (no_types, lifting) Diff_insert_absorb card_Diff_singleton insertCI)
+  show "card f = d - 1 + 1" using insf p vnf d unfolding pure_d_def
+    by (metis Suc_diff_1 Suc_eq_plus1 card_Diff_singleton_if diff_Suc_1 insertI1 insert_Diff1)
 qed
 
 definition dim :: "nat set set \<Rightarrow> nat"
@@ -2656,19 +2688,31 @@ definition dim :: "nat set set \<Rightarrow> nat"
 lemma "dim {{}} = 0" and "dim {{7}} = 0" and "dim {{3,7}} = 1" 
   unfolding dim_def by auto
 
-lemma
-  assumes p: "pure_d d K" and d: "0 < d" and cs: "closed_subset K"
+lemma assumes p: "pure_d (dim K) K" and d: "0 < (dim K)" and cs: "closed_subset K" and f: "finite K" and Kne: "K \<noteq> {}"
   shows "2 \<le> card (vertex_of_simpl_complex K)"
-  using p d cs proof (induct d rule: nat_induct)
+  using p d cs f Kne proof (induct "dim K" rule: nat_induct)
   case 0
-  have False using "0.prems" (2) by simp thus ?thesis by (rule ccontr)
+  have False using "0.hyps" "0.prems" (2) by simp thus ?thesis by (rule ccontr)
 next
   case (Suc n)
   show ?case
   proof (cases "n = 0")
-    case True hence s: "Suc n = 1" by simp
-    from Suc.prems (1) obtain f where "f \<in> {a \<in> K. \<forall>b\<in>K. a \<subseteq> b \<longrightarrow> a = b}" and "card f = Suc n" 
-      unfolding pure_d_def facets_def facet_def apply auto try
+    case True hence s: "Suc n = 1" and dK: "dim K = 1" using Suc.hyps (2) by simp_all
+    obtain f where f: "f \<in> facets K" and cf: "card f = dim K + 1"
+      using pure_d_facet [OF Suc.prems (5,4,1)] .
+    hence fK :"f \<in> K" unfolding facets_def facet_def by simp
+    from cf have "card f = 2" using dK unfolding dim_def using fK by simp
+    then obtain v1 v2 where f: "f = {v1,v2}" and v1v2: "v1 \<noteq> v2" by (meson card_2_iff)
+    hence "{v1} \<in> K" and "{v2} \<in> K" and "{v1} \<noteq> {v2}" using Suc.prems (3) fK unfolding closed_subset_def by simp_all
+    hence "v1 \<in> vertex_of_simpl_complex K" and "v2 \<in> vertex_of_simpl_complex K"
+      unfolding vertex_of_simpl_complex_def by simp_all
+    hence "1 \<le> card (vertex_of_simpl_complex K)" using v1v2 try
+    thus ?thesis
+      using Suc.prems (3) fK
+      unfolding closed_subset_def vertex_of_simpl_complex_def facets_def facet_def try
+    from Suc.prems (1) obtain f where "f \<in> {a \<in> K. \<forall>b\<in>K. a \<subseteq> b \<longrightarrow> a = b}" and "card f = Suc n"
+      using facets_not_empty
+      unfolding pure_d_def facets_def facet_def apply auto
     
 qed 
 
