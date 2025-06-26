@@ -1478,6 +1478,21 @@ lemma facet_no_coface: assumes f: "facet a K" shows "\<nexists>b. a \<subset> b 
 
 lemma facet_in_K: assumes f: "facet a K" shows "a \<in> K" using f facet_def by blast
 
+lemma facet_exists: assumes f: "finite K" and k: "k \<in> K" 
+  shows "\<exists>f. k \<subseteq> f \<and> facet f K"
+proof (cases "facet k K")
+  case True
+  then show ?thesis by auto
+next
+  case False
+  define vs where "vs = {w\<in>K. k \<subseteq> w}"
+  have fvs: "finite vs" and vsne: "vs \<noteq> {}" unfolding vs_def using f k by auto
+  obtain w where wmax: "\<forall>b\<in>vs. w \<subseteq> b \<longrightarrow> w = b" and win: "w \<in> vs" and wK: "w \<in> K"
+    using finite_has_maximal [OF fvs vsne] using vs_def by auto
+  have "facet w K" using wmax win unfolding facet_def vs_def by auto
+  thus ?thesis using win wK vs_def by auto
+qed
+
 lemma "facet {1,2,3} {{1,2,3},{1,2},{1,3},{2,3},{1},{2},{3}}"
   unfolding facet_def by simp
 
