@@ -1470,6 +1470,19 @@ qed
 
 section\<open>Main Theorem.\<close>
 
+lemma nat_induct_2 [case_names 0 1 Suc, induct type: nat]:
+  fixes n
+  assumes p0: "P 0" and p1: "P 1" and f: "\<And>n. n \<ge> 1 \<Longrightarrow> P n \<Longrightarrow> P (Suc n)"
+  shows "P n"
+proof (induct rule: nat_induct)
+  case 0
+  show ?case using p0 .
+next
+  case (Suc n)
+  then show ?case using p1 f
+    by (metis One_nat_def leI less_one)
+qed
+
 lemma nat_induct_3 [case_names 0 1 2 Suc, induct type: nat]:
   fixes n
   assumes p0: "P 0" and p1: "P 1" and p2: "P 2" and f: "\<And>n. n \<ge> 2 \<Longrightarrow> P n \<Longrightarrow> P (Suc n)"
@@ -2769,84 +2782,64 @@ proof -
     by (meson card_mono order_trans)
 qed
 
-lemma assumes p: "pure_d (dim K) K" and d: "0 < (dim K)" and cs: "closed_subset K" and f: "finite K" and Kne: "K \<noteq> {}"
-  and fV: "finite V" and KV: "K \<subseteq> powerset V" and ne: "non_evasive (vertex_of_simpl_complex K) K"
-  shows "2 \<le> card (vertex_of_simpl_complex K)"
-  using p d cs f Kne fV KV ne proof (induct "dim K" rule: nat_induct)
-  case 0
-  have False using "0.hyps" "0.prems" (2) by simp thus ?thesis by (rule ccontr)
-next
-  case (Suc n)
-  show ?case
-  proof (cases "n = 0")
-    case True hence s: "Suc n = 1" and dK: "dim K = 1" using Suc.hyps (2) by simp_all
-    obtain f where f: "f \<in> facets K" and cf: "card f = dim K + 1"
-      using pure_d_facet [OF Suc.prems (5,4,1)] .
-    hence fK :"f \<in> K" unfolding facets_def facet_def by simp
-    from cf have "card f = 2" using dK unfolding dim_def using fK by simp
-    then obtain v1 v2 where f: "f = {v1,v2}" and v1v2: "v1 \<noteq> v2" by (meson card_2_iff)
-    hence "{v1} \<in> K" and "{v2} \<in> K" and "{v1} \<noteq> {v2}" using Suc.prems (3) fK unfolding closed_subset_def by simp_all
-    hence v1: "v1 \<in> vertex_of_simpl_complex K" and v2: "v2 \<in> vertex_of_simpl_complex K"
-      unfolding vertex_of_simpl_complex_def by simp_all
-    have "finite (vertex_of_simpl_complex K)"
-      by (rule finite_vertex_of_simpl_complex [OF Suc.prems (6,7)])
-    thus ?thesis using v1 v2 v1v2
-      by (metis One_nat_def card_0_eq card_1_singletonE empty_iff insertE less_2_cases linorder_not_less)
-  next
-    case False
-    show ?thesis
-    proof (cases "V = {}")
-      case True hence "powerset V = {}" try
-
-
-lemma assumes p: "pure_d (dim K) K" and d: "0 < (dim K)" and cs: "closed_subset K" and f: "finite K" and Kne: "K \<noteq> {}"
-  and fV: "finite V" and KV: "K \<subseteq> powerset V" and ne: "non_evasive (vertex_of_simpl_complex K) K"
-  shows "2 \<le> card (vertex_of_simpl_complex K)"
-  using p d cs f Kne fV KV ne proof (induct "dim K" rule: nat_induct)
-  case 0
-  have False using "0.hyps" "0.prems" (2) by simp thus ?thesis by (rule ccontr)
-next
-  case (Suc n)
-  show ?case
-  proof (cases "n = 0")
-    case True hence s: "Suc n = 1" and dK: "dim K = 1" using Suc.hyps (2) by simp_all
-    obtain f where f: "f \<in> facets K" and cf: "card f = dim K + 1"
-      using pure_d_facet [OF Suc.prems (5,4,1)] .
-    hence fK :"f \<in> K" unfolding facets_def facet_def by simp
-    from cf have "card f = 2" using dK unfolding dim_def using fK by simp
-    then obtain v1 v2 where f: "f = {v1,v2}" and v1v2: "v1 \<noteq> v2" by (meson card_2_iff)
-    hence "{v1} \<in> K" and "{v2} \<in> K" and "{v1} \<noteq> {v2}" using Suc.prems (3) fK unfolding closed_subset_def by simp_all
-    hence v1: "v1 \<in> vertex_of_simpl_complex K" and v2: "v2 \<in> vertex_of_simpl_complex K"
-      unfolding vertex_of_simpl_complex_def by simp_all
-    have "finite (vertex_of_simpl_complex K)"
-      by (rule finite_vertex_of_simpl_complex [OF Suc.prems (6,7)])
-    thus ?thesis using v1 v2 v1v2
-      by (metis One_nat_def card_0_eq card_1_singletonE empty_iff insertE less_2_cases linorder_not_less)
-  next
-    case False
-    show ?thesis
-    proof (cases "V = {}")
-      case True hence "powerset V = {}" try
-
-      then have False using Suc.prems (5,6,7) try
-    next
-      case False
-      then show ?thesis sorry
-    qed
-    
-    from Suc.prems (8) have False using non_evasive.cases
-
-qed 
-
-lemma non_evasive_dim_1_two_free_faces: assumes n: "non_evasive (vertex_of_simpl_complex K) K" and p: "pure_d 1 K"
-  and f: "finite (vertex_of_simpl_complex K)" and K: "K \<subseteq> powerset (vertex_of_simpl_complex K)"
+lemma non_evasive_dim_1_two_free_faces: assumes n: "non_evasive (vertex_of_simpl_complex K) K" 
+  and p: "pure_d 1 K" and f: "finite (vertex_of_simpl_complex K)" 
+  and K: "K \<subseteq> powerset (vertex_of_simpl_complex K)" and Kne: "K \<noteq> {}" and cs: "closed_subset K"
   shows "2 \<le> card {f. free_face f K}"
-proof (induct "card {v\<in>K. card v = 2}" rule: nat_induct)
-  case 0 with n
-  show ?case sorry
+proof (induct "card {v\<in>K. card v = 2}" rule: nat_induct_2)
+  case 0
+  have fK: "finite K" using f K by (simp add: finite_subset)
+  obtain f where ff: "f \<in> facets K" and cf: "card f = 2" using pure_d_facet [OF Kne fK p] by (metis nat_1_add_1)
+  with 0 and fK have False unfolding facets_def facet_def by simp
+  thus ?case by (rule ccontr)
+next
+  case 1
+  have fK: "finite K" using f K by (simp add: finite_subset)
+  obtain f where ff: "f \<in> facets K" and cf: "card f = 2" using pure_d_facet [OF Kne fK p] by (metis nat_1_add_1)
+  then obtain v1 v2 where fv1v2: "f = {v1,v2}" and neq: "v1 \<noteq> v2" by (meson card_2_iff)
+  have "{v1} \<in> {f. free_face f K}"
+  proof (rule, unfold free_face_def, rule ex1I [of _ f], rule conjI)
+    show finK: "f \<in> K" using ff by (simp add: facet_in_K facets_def)
+    show "face {v1} f" unfolding face_def using fv1v2 neq by auto
+    show "\<And>b. b \<in> K \<and> face {v1} b \<Longrightarrow> b = f"
+    proof -
+      fix b 
+      assume "b \<in> K \<and> face {v1} b"
+      hence bK: "b \<in> K" and fv1b: "face {v1} b" by simp_all
+      have "card {v1} = 1" by simp
+      then have "1 < card b" using fv1b unfolding face_def
+        by (metis K Pow_iff bK f finite_subset psubset_card_mono subset_iff)
+      then have "card b = 2" using pure_d_card [OF p fK] fv1b bK unfolding face_def by auto
+      with 1 bK cf finK show "b = f"
+        by (smt (verit) card_1_singletonE mem_Collect_eq singletonD)
+    qed
+  qed
+  moreover have "{v2} \<in> {f. free_face f K}"
+  proof (rule, unfold free_face_def, rule ex1I [of _ f], rule conjI)
+    show finK: "f \<in> K" using ff by (simp add: facet_in_K facets_def)
+    show "face {v2} f" unfolding face_def using fv1v2 neq by auto
+    show "\<And>b. b \<in> K \<and> face {v2} b \<Longrightarrow> b = f"
+    proof -
+      fix b 
+      assume "b \<in> K \<and> face {v2} b"
+      hence bK: "b \<in> K" and fv1b: "face {v2} b" by simp_all
+      have "card {v2} = 1" by simp
+      then have "1 < card b" using fv1b unfolding face_def
+        by (metis K Pow_iff bK f finite_subset psubset_card_mono subset_iff)
+      then have "card b = 2" using pure_d_card [OF p fK] fv1b bK unfolding face_def by auto
+      with 1 bK cf finK show "b = f"
+        by (smt (verit) card_1_singletonE mem_Collect_eq singletonD)
+    qed
+  qed
+  moreover have "finite {f. free_face f K}" unfolding free_face_def face_def sorry
+  moreover have "{v1} \<noteq> {v2}" using neq by simp
+  ultimately show ?case
+    by (metis One_nat_def card_0_eq card_1_singletonE empty_iff less_2_cases_iff linorder_not_less singletonD)
+    
+    sorry
 next
   case (Suc x)
-  then show ?case sorry
+  show ?case sorry
 qed
 
 lemma assumes n: "non_evasive (vertex_of_simpl_complex K) K" and p: "pure_d (dim K) K" and d: "0 < (dim K)"
