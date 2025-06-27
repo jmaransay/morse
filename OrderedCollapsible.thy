@@ -2785,7 +2785,7 @@ qed
 lemma non_evasive_dim_1_two_free_faces: assumes n: "non_evasive (vertex_of_simpl_complex K) K" 
   and p: "pure_d 1 K" and f: "finite (vertex_of_simpl_complex K)" 
   and K: "K \<subseteq> powerset (vertex_of_simpl_complex K)" and Kne: "K \<noteq> {}" and cs: "closed_subset K"
-  shows "2 \<le> card {f. free_face f K}"
+  shows "2 \<le> card {f\<in>K. free_face f K}"
 proof (induct "card {v\<in>K. card v = 2}" rule: nat_induct_2)
   case 0
   have fK: "finite K" using f K by (simp add: finite_subset)
@@ -2797,13 +2797,16 @@ next
   have fK: "finite K" using f K by (simp add: finite_subset)
   obtain f where ff: "f \<in> facets K" and cf: "card f = 2" using pure_d_facet [OF Kne fK p] by (metis nat_1_add_1)
   then obtain v1 v2 where fv1v2: "f = {v1,v2}" and neq: "v1 \<noteq> v2" by (meson card_2_iff)
-  have "{v1} \<in> {f. free_face f K}"
-  proof (rule, unfold free_face_def, rule ex1I [of _ f], rule conjI)
+  have v1K: "{v1} \<in> K" and v2K: "{v2} \<in> K" 
+    using ff fv1v2 unfolding facets_def facet_def 
+    using cs unfolding closed_subset_def by fastforce+
+  have "{v1} \<in> {f\<in>K. free_face f K}"
+  proof (rule, intro conjI, intro v1K, unfold free_face_def, rule ex1I [of _ f], rule conjI)
     show finK: "f \<in> K" using ff by (simp add: facet_in_K facets_def)
     show "face {v1} f" unfolding face_def using fv1v2 neq by auto
     show "\<And>b. b \<in> K \<and> face {v1} b \<Longrightarrow> b = f"
     proof -
-      fix b 
+      fix b
       assume "b \<in> K \<and> face {v1} b"
       hence bK: "b \<in> K" and fv1b: "face {v1} b" by simp_all
       have "card {v1} = 1" by simp
@@ -2814,13 +2817,13 @@ next
         by (smt (verit) card_1_singletonE mem_Collect_eq singletonD)
     qed
   qed
-  moreover have "{v2} \<in> {f. free_face f K}"
-  proof (rule, unfold free_face_def, rule ex1I [of _ f], rule conjI)
+  moreover have "{v2} \<in> {f\<in>K. free_face f K}"
+  proof (rule, intro conjI, intro v2K, unfold free_face_def, rule ex1I [of _ f], rule conjI)
     show finK: "f \<in> K" using ff by (simp add: facet_in_K facets_def)
     show "face {v2} f" unfolding face_def using fv1v2 neq by auto
     show "\<And>b. b \<in> K \<and> face {v2} b \<Longrightarrow> b = f"
     proof -
-      fix b 
+      fix b
       assume "b \<in> K \<and> face {v2} b"
       hence bK: "b \<in> K" and fv1b: "face {v2} b" by simp_all
       have "card {v2} = 1" by simp
@@ -2831,12 +2834,10 @@ next
         by (smt (verit) card_1_singletonE mem_Collect_eq singletonD)
     qed
   qed
-  moreover have "finite {f. free_face f K}" unfolding free_face_def face_def sorry
+  moreover have "finite {f\<in>K. free_face f K}" using fK by simp
   moreover have "{v1} \<noteq> {v2}" using neq by simp
   ultimately show ?case
-    by (metis One_nat_def card_0_eq card_1_singletonE empty_iff less_2_cases_iff linorder_not_less singletonD)
-    
-    sorry
+    by (metis (no_types, lifting) One_nat_def card_0_eq card_1_singletonE empty_iff less_2_cases linorder_not_le singletonD)
 next
   case (Suc x)
   show ?case sorry
