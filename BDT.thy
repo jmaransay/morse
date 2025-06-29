@@ -1520,6 +1520,23 @@ definition free_face :: "nat set \<Rightarrow> nat set set \<Rightarrow> bool"
 (*definition free_faces :: "nat set set \<Rightarrow> nat set set"
   where "free_faces K = {x. free_face x K}"*)
 
+lemma free_face_in_K:
+  assumes cs: "closed_subset K" and ff: "free_face a K" 
+  shows "a \<in> K"
+proof -
+  obtain b where "b \<in> K" and "face a b" 
+    using ff unfolding free_face_def by auto
+  thus "a \<in> K" using cs unfolding closed_subset_def face_def by simp
+qed
+
+lemma finite_free_faces:
+  assumes f: "finite K" and cs: "closed_subset K"
+  shows "finite {a. free_face a K}"
+proof -
+  have "{a. free_face a K} \<subseteq> K" using free_face_in_K [OF cs] by auto
+  thus ?thesis using f by (rule finite_subset)
+qed
+
 lemma ff1: "free_face {1} {{1,2},{1},{2},{}}"
   by (unfold free_face_def face_def, rule ex1I [of _ "{1,2}"], auto)
 
