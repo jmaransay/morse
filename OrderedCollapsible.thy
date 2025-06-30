@@ -2718,14 +2718,18 @@ proof
   show "facets (cost v V K) \<union> join_vertex v (facets (link_ext v V K)) \<subseteq> facets K"
   proof
     fix x
-    assume x: "x \<in> facets (cost v V K) \<union> join_vertex v (facets (link_ext v V K))" 
+    assume x: "x \<in> facets (cost v V K) \<union> join_vertex v (facets (link_ext v V K))"
+    consider (xint) "x \<in> facets (cost v V K) \<inter> join_vertex v (facets (link_ext v V K))" | 
+                (xcost) "x \<in> facets (cost v V K) - (join_vertex v (facets (link_ext v V K)))" | 
+                    (xlink) "x \<in> (join_vertex v (facets (link_ext v V K))) - (facets (cost v V K))" using x by auto
+  then 
     show "x \<in> facets K"
-    proof (cases "x \<in> facets (cost v V K)")
-      case True note xfc = True
-      show ?thesis 
+    proof (cases)
+      case xcost
+      show ?thesis
         unfolding facets_def facet_def
       proof (rule, intro conjI)
-        show "x \<in> K" using True unfolding facets_def facet_def cost_def by simp
+        show "x \<in> K" using xcost unfolding facets_def facet_def cost_def by simp
         show "\<forall>b\<in>K. x \<subseteq> b \<longrightarrow> x = b" 
         proof (rule)
           fix b
@@ -2733,17 +2737,22 @@ proof
           show "x \<subseteq> b \<longrightarrow> x = b"
           proof (cases "v \<in> b")
             case False
-            hence "b \<in> powerset (V - {v})" using K True b by blast
-            thus ?thesis using True b unfolding facets_def facet_def cost_def by simp
+            hence "b \<in> powerset (V - {v})" using K xcost b by blast
+            thus ?thesis using xcost b unfolding facets_def facet_def cost_def by simp
           next
             case True
-            show ?thesis 
+            show ?thesis
             proof
               assume xb: "x \<subseteq> b"
+              have vnx: "v \<notin> x" using xcost unfolding cost_def facets_def facet_def  by auto
               hence "x \<in> link_ext v V K"
-                using xb b True xfc cs
+                using xb b True cs xcost
                 unfolding link_ext_def cost_def facets_def facet_def closed_subset_def by auto
-              with xfc show "x = b" try
+              with True have "insert v x \<in> join_vertex v (link_ext v V K)" by simp
+              thus "x = b" 
+                using vnx b xcost True cs
+                unfolding link_ext_def cost_def facets_def facet_def closed_subset_def
+                try
 
 
 
