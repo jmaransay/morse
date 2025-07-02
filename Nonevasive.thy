@@ -107,9 +107,49 @@ next
     using two link_ext_empty [of _ V] cost_empty [of _ V] n x by auto
 qed
 
-lemma assumes "V \<noteq> {}" and f: "finite V" shows "non_evasive V {}"
+lemma non_evasive_empty_set:
+  assumes "V \<noteq> {}" and f: "finite V" shows "non_evasive V {}"
   using v_ge_2 non_evasive.simps (2) f
   by (metis Suc_leI assms(1) card_1_singleton_iff card_gt_0_iff nle_le not_less_eq_eq numerals(2))
+
+lemma evasive_empty_set: assumes v: "V \<noteq> {}" and f: "finite V" shows "\<not> (non_evasive V {{}})"
+  using v f proof (induct "card V" arbitrary: V rule: less_induct)
+  case (less V)
+  show ?case
+  proof (cases "card V = 0")
+    case True
+    have False using True less (2,3) by simp
+    thus ?thesis by (rule ccontr)
+  next
+    case False note vne = False
+    show ?thesis
+    proof (cases "card V = 1")
+      case True
+      then obtain v where "V = {v}" by (rule card_1_singletonE)
+      thus ?thesis using non_evasive.simps (2,3,4) [of V v "{{}}"] by simp
+    next
+      case False
+      then have c2: "2 \<le> card V" using False vne by simp
+      show ?thesis
+      proof (rule ccontr)
+        assume "\<not> \<not> non_evasive V {{}}"
+        hence ne: "non_evasive V {{}}" by simp
+        then obtain x where x: "x \<in> V" and nl: "non_evasive (V - {x}) (link_ext x V {{}})" 
+          and nc: "non_evasive (V - {x}) (cost x V {{}})"
+          using non_evasive.simps (5) [OF c2, of "{{}}"] by auto
+        have *: "cost x V {{}} = {{}}" unfolding cost_def by auto
+        have "\<not> non_evasive (V - {x}) (cost x V {{}})" unfolding *
+        proof (rule less.hyps)
+          show "card (V - {x}) < card V" by (rule card_Diff1_less [OF less.prems (2) x])
+          show "V - {x} \<noteq> {}" using c2 False vne
+            by (metis One_nat_def card_1_singleton_iff insert_Diff x)
+          show "finite (V - {x})" using less.prems (2) by simp
+        qed
+        thus False using nc by simp
+      qed
+    qed
+  qed
+qed
 
 lemma non_evasiveI1:
   assumes v: "V = {x}" and k: "K = {{},{x}}"
