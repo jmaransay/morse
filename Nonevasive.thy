@@ -162,6 +162,83 @@ lemma non_evasiveI2:
   shows "non_evasive V K"
   unfolding non_evasive.simps (5) [OF v] using k .
 
+lemma assumes v: "2 \<le> card V" and kne: "K \<noteq> {}" and cs: "closed_subset K" and K: "K \<subseteq> powerset V" and x: "x \<in> V"
+    and nl: "non_evasive (V - {x}) (link_ext x V K)" and "non_evasive (V - {x}) (cost x V K)"
+  shows "{x} \<in> K"
+proof (rule ccontr)
+  assume xn: "{x} \<notin> K"
+  hence "{} \<notin> link_ext x V K" unfolding link_ext_def by simp
+  hence lempty: "link_ext x V K = {}" using link_ext_closed_subset [OF cs] unfolding closed_subset_def by auto
+  have "K \<subseteq> powerset (V - {x})"
+    using cost_closed [OF K, of x] xn K x cs
+    using cost_closed_subset [OF cs] unfolding closed_subset_def cost_def
+    by (smt (verit) Diff_empty Pow_iff empty_subsetI insert_Diff insert_subset subsetI subset_Diff_insert)
+  hence "K = cost x V K" unfolding cost_def by auto
+  thus False using lempty try
+    show False
+
+  unfolding non_evasive.simps (5) [OF v] using k .
+
+
+lemma assumes ne: "non_evasive V K" and sb: "W \<subseteq> V" 
+  and wne: "W \<noteq> {}" and K: "K \<subseteq> powerset W" and c2: "2 \<le> card V"
+shows "non_evasive W K"
+  using ne c2 sb proof (induct "card V" arbitrary: V)
+  case 0
+  then show ?case by linarith
+next
+  case (Suc x)
+  obtain x where "x \<in> V" and "non_evasive (V - {x}) (link_ext x V K)" and "non_evasive (V - {x}) (cost x V K)"
+    using Suc.prems (1)
+    unfolding non_evasive.simps (5) [OF Suc.prems (2)] by auto
+  show ?case
+  proof (cases "2 \<le> card W")
+    case True
+    obtain x where x: "x \<in> V"
+      and nl: "non_evasive (V - {x}) (link_ext x V K)" and ne: "non_evasive (V - {x}) (cost x V K)"
+      using Suc.prems (1) unfolding non_evasive.simps (5) [OF Suc.prems (2), of K] by auto
+    then have "{x} \<in> K" using Suc.prems (1) unfolding non_evasive.simps (5) [OF Suc.prems (2), of K] try
+    have l: "link_ext x V K = link_ext x W K" using link_ext_mono2 [OF Suc.prems (3) K, of x] .
+    moreover have c: "cost x V K = cost x W K" using cost_mono2 [OF Suc.prems (3) K, of x] .
+    
+    show ?thesis
+      using Suc.prems using non_evasive.simps (5) [OF Suc.prems (2), of K]
+      using non_evasive.simps (5) [OF True, of K]
+    
+    sorry
+qed
+
+lemma assumes ne: "non_evasive V K" and sb: "W \<subseteq> V" and wne: "W \<noteq> {}" and K: "K \<subseteq> powerset W"
+  shows "non_evasive W K"
+proof (cases \<open>(V,K)\<close> rule: non_evasive.cases)
+  case (1 V K)
+  then show ?thesis using ne by simp
+next
+  case (2 V x K)
+  then show ?thesis using ne wne sb
+    by (simp add: subset_singleton_iff)
+next
+  case (3 V x K)
+  then show ?thesis using ne wne sb by auto
+next
+  case (4 V x K)
+  then show ?thesis using ne wne sb by simp
+next
+  case (5 V K)
+  show ?thesis 
+  proof (cases "2 \<le> card W")
+    case True
+    show ?thesis using 5 proof (induct "card V") using ne wne sb K using non_evasive.simps (5) sorry
+  next
+    case False
+    then show ?thesis sorry
+  qed
+    
+next
+  case (6 V K)
+  then show ?thesis using ne wne sb K by simp
+qed
+
 lemma assumes c: "cone {x} K" shows "K = {{x},{}} \<or> K = {}"
   using c unfolding cone_def by (cases "K = {}", auto)
 

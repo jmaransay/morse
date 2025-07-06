@@ -819,6 +819,10 @@ qed
   thus ?thesis unfolding vertex_of_simpl_complex_def using card_image try
 *)
 
+lemma powerset_vertex_of_simpl_complex: assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" 
+  shows "K \<subseteq> powerset (vertex_of_simpl_complex K)"
+  using K cs unfolding vertex_of_simpl_complex_def closed_subset_def by auto
+
 lemma finite_vertex_of_simpl_complex: 
   assumes f: "finite V" and K: "K \<subseteq> powerset V" 
   shows "finite (vertex_of_simpl_complex K)"
@@ -2714,7 +2718,7 @@ qed
 
 text\<open>Lemma 5.1 in our paper in DML:\<close>
 
-lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and d: "0 < d" 
+lemma pure_d_minus_one_link_ext: assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and d: "0 < d" 
   and p: "pure_d d K" and v: "{v} \<in> K" shows "pure_d (d - 1) (link_ext v V K)"
 proof (unfold pure_d_def, rule)
   fix f
@@ -2861,6 +2865,116 @@ corollary pure_d_0_singleton2:
   using pure_d_0_collection_vertexes [OF p cs Kne f K]
   using card_1_singletonE by force
 
+lemma non_evasive_dim_1_two_free_faces: assumes n: "non_evasive (vertex_of_simpl_complex K) K" 
+  and p: "pure_d 1 K" and f: "finite V" and K: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}" and cs: "closed_subset K"
+  shows "2 \<le> card {f. free_face f K}"
+using n p f K Kne cs proof (induct "card {v\<in>K. card v = 2}" arbitrary: K rule: nat_induct_2)
+  case (0 K)
+  have fK: "finite K" using "0.prems" (3,4) by (simp add: finite_subset)
+  obtain f where ff: "f \<in> facets K" and cf: "card f = 2" 
+    using pure_d_facet [OF "0.prems" (5) fK "0.prems" (2)] by (metis nat_1_add_1)
+  with "0.hyps" (1) and fK have False unfolding facets_def facet_def by simp
+  thus ?case by (rule ccontr)
+next
+  case 1
+  have fK: "finite K" using "1.prems" (3,4) by (simp add: finite_subset)
+  obtain f where ff: "f \<in> facets K" and cf: "card f = 2" 
+    using pure_d_facet [OF "1.prems" (5) fK "1.prems" (2)] by (metis nat_1_add_1)
+  then obtain v1 v2 where fv1v2: "f = {v1,v2}" and neq: "v1 \<noteq> v2" by (meson card_2_iff)
+  have v1K: "{v1} \<in> K" and v2K: "{v2} \<in> K" 
+    using ff fv1v2 unfolding facets_def facet_def 
+    using "1.prems" (6) unfolding closed_subset_def by fastforce+
+  have "{v1} \<in> {f. free_face f K}"
+  proof (rule, unfold free_face_def, rule ex1I [of _ f], rule conjI)
+    show finK: "f \<in> K" using ff by (simp add: facet_in_K facets_def)
+    show "face {v1} f" unfolding face_def using fv1v2 neq by auto
+    show "\<And>b. b \<in> K \<and> face {v1} b \<Longrightarrow> b = f"
+    proof -
+      fix b
+      assume "b \<in> K \<and> face {v1} b"
+      hence bK: "b \<in> K" and fv1b: "face {v1} b" by simp_all
+      have "card {v1} = 1" by simp
+      then have "1 < card b"
+        using fv1b "1.prems" (3,4) bK unfolding face_def
+        by (metis Pow_iff finite_subset psubset_card_mono subset_iff)
+      then have "card b = 2"
+        using pure_d_card [OF "1.prems" (2) fK] fv1b bK unfolding face_def by auto
+      with 1 bK cf finK show "b = f"
+        by (smt (verit) card_1_singletonE mem_Collect_eq singletonD)
+    qed
+  qed
+  moreover have "{v2} \<in> {f. free_face f K}"
+  proof (rule, unfold free_face_def, rule ex1I [of _ f], rule conjI)
+    show finK: "f \<in> K" using ff by (simp add: facet_in_K facets_def)
+    show "face {v2} f" unfolding face_def using fv1v2 neq by auto
+    show "\<And>b. b \<in> K \<and> face {v2} b \<Longrightarrow> b = f"
+    proof -
+      fix b
+      assume "b \<in> K \<and> face {v2} b"
+      hence bK: "b \<in> K" and fv2b: "face {v2} b" by simp_all
+      have "card {v2} = 1" by simp
+      then have "1 < card b" using fv2b "1.prems" (3,4) unfolding face_def
+        by (metis K Pow_iff bK f finite_subset psubset_card_mono subset_iff)
+      then have "card b = 2"
+        using pure_d_card [OF "1.prems" (2) fK] fv2b bK unfolding face_def by auto
+      with 1 bK cf finK show "b = f"
+        by (smt (verit) card_1_singletonE mem_Collect_eq singletonD)
+    qed
+  qed
+  moreover have "finite {f. free_face f K}" using finite_free_faces [OF fK "1.prems" (6)] .
+  moreover have "{v1} \<noteq> {v2}" using neq by simp
+  ultimately show ?case
+    by (metis (no_types, lifting) One_nat_def card_0_eq card_1_singletonE empty_iff less_2_cases linorder_not_le singletonD)
+next
+  case (Suc n K)
+  have cardvK: "2 \<le> card (vertex_of_simpl_complex K)" 
+    using p pure_d_n_two_vertexes [OF "Suc.prems" (2,6,5,3,4)] by simp
+  obtain r where "r \<in> K" and "card r = 2" using Suc.hyps(3) unfolding pure_d_def facets_def facet_def
+    by (metis (mono_tags, lifting) Collect_empty_eq Zero_not_Suc card.empty)
+  obtain v where v: "v \<in> vertex_of_simpl_complex K"
+        and nl: "non_evasive (vertex_of_simpl_complex K - {v}) (link_ext v (vertex_of_simpl_complex K) K)"
+        and nc: "non_evasive (vertex_of_simpl_complex K - {v}) (cost v (vertex_of_simpl_complex K) K)"
+    using Suc.prems (1) unfolding non_evasive.simps (5) [OF cardvK, of K] by auto
+  have pwv: "K \<subseteq> powerset (vertex_of_simpl_complex K)"
+    by (rule powerset_vertex_of_simpl_complex [OF Suc.prems (4,6)])
+  have "pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)"
+    using pure_d_minus_one_link_ext [OF pwv Suc.prems (6) _ Suc.prems (2), of v]
+    using v unfolding vertex_of_simpl_complex_def by simp
+  have "card (vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K)) = 1"
+  proof (rule pure_d_0_singleton [of _ "vertex_of_simpl_complex K - {v}"])
+    show lepw: "link_ext v (vertex_of_simpl_complex K) K \<subseteq> powerset (vertex_of_simpl_complex K - {v})"
+      using link_ext_closed pwv by presburger
+    show csle: "closed_subset (link_ext v (vertex_of_simpl_complex K) K)"
+      using Suc.prems(6) link_ext_closed_subset by auto
+    show "finite (vertex_of_simpl_complex K - {v})"
+      using Suc.prems(1) non_evasive.simps(6) by blast
+    show "link_ext v (vertex_of_simpl_complex K) K \<noteq> {}"
+      using singleton_in_link_ext v vertex_of_simpl_complex_def by fastforce
+    show "pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)"
+      using \<open>pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)\<close> by blast
+    have "link_ext v (vertex_of_simpl_complex K) K \<subseteq> powerset (vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K))"
+      by (rule powerset_vertex_of_simpl_complex [of _ "vertex_of_simpl_complex K - {v}"], rule lepw, rule csle)
+    thus "non_evasive (vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K)) (link_ext v (vertex_of_simpl_complex K) K)"
+      using nl unfolding vertex_of_simpl_complex_def unfolding link_ext_def
+      try
+    qed
+    then obtain w where "link_ext v (vertex_of_simpl_complex K) K = {{},{w}}"
+    apply (rule pure_d_0_singleton2 [of "link_ext v (vertex_of_simpl_complex K) K" "V - {v}"])
+    using pure_d_0_singleton2 [OF Suc.prems (4,6) f Suc.prems (5)]
+    have "free_face {v} K"
+  proof (unfold free_face_def, rule ex1I)
+  from Suc.hyps
+
+
+
+
+
+
+lemma pure_d_1_free_faces:
+  assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" and f: "finite V" and Kne: "K \<noteq> {}"
+    and p: "pure_d 1 K" and ne: "non_evasive (vertex_of_simpl_complex K) K"
+  shows " "
+
 lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and d: "0 < d" and f: "finite K"
   and p: "pure_d d K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" shows "pure_d d (cost v V K)"
 proof (unfold pure_d_def, rule)
@@ -3001,78 +3115,6 @@ proof
       case False
       then show ?thesis sorry
     qed
-
-lemma non_evasive_dim_1_two_free_faces: assumes n: "non_evasive (vertex_of_simpl_complex K) K" 
-  and p: "pure_d 1 K" and f: "finite (vertex_of_simpl_complex K)"
-  and K: "K \<subseteq> powerset (vertex_of_simpl_complex K)" and Kne: "K \<noteq> {}" and cs: "closed_subset K"
-  shows "2 \<le> card {f. free_face f K}"
-using n p f K Kne cs proof (induct "card {v\<in>K. card v = 2}" arbitrary: K rule: nat_induct_2)
-  case (0 K)
-  have fK: "finite K" using "0.prems" (3,4) by (simp add: finite_subset)
-  obtain f where ff: "f \<in> facets K" and cf: "card f = 2" 
-    using pure_d_facet [OF "0.prems" (5) fK "0.prems" (2)] by (metis nat_1_add_1)
-  with "0.hyps" (1) and fK have False unfolding facets_def facet_def by simp
-  thus ?case by (rule ccontr)
-next
-  case 1
-  have fK: "finite K" using "1.prems" (3,4) by (simp add: finite_subset)
-  obtain f where ff: "f \<in> facets K" and cf: "card f = 2" 
-    using pure_d_facet [OF "1.prems" (5) fK "1.prems" (2)] by (metis nat_1_add_1)
-  then obtain v1 v2 where fv1v2: "f = {v1,v2}" and neq: "v1 \<noteq> v2" by (meson card_2_iff)
-  have v1K: "{v1} \<in> K" and v2K: "{v2} \<in> K" 
-    using ff fv1v2 unfolding facets_def facet_def 
-    using "1.prems" (6) unfolding closed_subset_def by fastforce+
-  have "{v1} \<in> {f. free_face f K}"
-  proof (rule, unfold free_face_def, rule ex1I [of _ f], rule conjI)
-    show finK: "f \<in> K" using ff by (simp add: facet_in_K facets_def)
-    show "face {v1} f" unfolding face_def using fv1v2 neq by auto
-    show "\<And>b. b \<in> K \<and> face {v1} b \<Longrightarrow> b = f"
-    proof -
-      fix b
-      assume "b \<in> K \<and> face {v1} b"
-      hence bK: "b \<in> K" and fv1b: "face {v1} b" by simp_all
-      have "card {v1} = 1" by simp
-      then have "1 < card b"
-        using fv1b "1.prems" (3,4) bK unfolding face_def
-        by (metis Pow_iff finite_subset psubset_card_mono subset_iff)
-      then have "card b = 2" 
-        using pure_d_card [OF "1.prems" (2) fK] fv1b bK unfolding face_def by auto
-      with 1 bK cf finK show "b = f"
-        by (smt (verit) card_1_singletonE mem_Collect_eq singletonD)
-    qed
-  qed
-  moreover have "{v2} \<in> {f. free_face f K}"
-  proof (rule, unfold free_face_def, rule ex1I [of _ f], rule conjI)
-    show finK: "f \<in> K" using ff by (simp add: facet_in_K facets_def)
-    show "face {v2} f" unfolding face_def using fv1v2 neq by auto
-    show "\<And>b. b \<in> K \<and> face {v2} b \<Longrightarrow> b = f"
-    proof -
-      fix b
-      assume "b \<in> K \<and> face {v2} b"
-      hence bK: "b \<in> K" and fv2b: "face {v2} b" by simp_all
-      have "card {v2} = 1" by simp
-      then have "1 < card b" using fv2b "1.prems" (3,4) unfolding face_def
-        by (metis K Pow_iff bK f finite_subset psubset_card_mono subset_iff)
-      then have "card b = 2"
-        using pure_d_card [OF "1.prems" (2) fK] fv2b bK unfolding face_def by auto
-      with 1 bK cf finK show "b = f"
-        by (smt (verit) card_1_singletonE mem_Collect_eq singletonD)
-    qed
-  qed
-  moreover have "finite {f. free_face f K}" using finite_free_faces [OF fK "1.prems" (6)] .
-  moreover have "{v1} \<noteq> {v2}" using neq by simp
-  ultimately show ?case
-    by (metis (no_types, lifting) One_nat_def card_0_eq card_1_singletonE empty_iff less_2_cases linorder_not_le singletonD)
-next
-  case (Suc n K)
-  have cardvK: "2 \<le> card (vertex_of_simpl_complex K)" 
-    using p pure_d_n_two_vertexes [OF "Suc.prems" (2,6,5,3,4)] by simp
-  obtain v where v: "v\<in>vertex_of_simpl_complex K"
-        and nl: "non_evasive (vertex_of_simpl_complex K - {v}) (link_ext v (vertex_of_simpl_complex K) K)"
-        and nc: "non_evasive (vertex_of_simpl_complex K - {v}) (cost v (vertex_of_simpl_complex K) K)"
-    using Suc.prems (1) unfolding non_evasive.simps (5) [OF cardvK, of K] by auto
-  from Suc.hyps
-
 
   show ?case
 qed

@@ -244,6 +244,10 @@ lemma link_ext_mono:
   shows "link_ext x V K \<subseteq> link_ext x V L"
   using assms unfolding link_ext_def by auto
 
+lemma link_ext_mono2: assumes sb: "W \<subseteq> V" and K: "K \<subseteq> powerset W"
+  shows "link_ext x V K = link_ext x W K"
+  using assms unfolding link_ext_def by auto
+
 lemma link_ext_cc:
   assumes v: "(V, K) \<in> cc_s"
   shows "(V, {s. insert x s \<in> K}) \<in> cc_s"
@@ -519,6 +523,10 @@ lemma cost_closed:
   shows "cost v V K \<subseteq> powerset (V - {v})"
   using k unfolding cost_def by auto
 
+lemma cost_closed_subset:
+  assumes c: "closed_subset K" shows "closed_subset (cost v V K)" 
+  using c unfolding closed_subset_def cost_def by auto
+
 lemma cost_empty [simp]: "cost x V {} = {}" 
   unfolding cost_def by simp
 
@@ -528,6 +536,10 @@ lemma cost_singleton [simp]: "cost x V {{}} = {{}}"
 lemma cost_mono:
   assumes "K \<subseteq> L"
   shows "cost x V K \<subseteq> cost x V L"
+  using assms unfolding cost_def by auto
+
+lemma cost_mono2: assumes sb: "W \<subseteq> V" and K: "K \<subseteq> powerset W"
+  shows "cost x V K = cost x W K"
   using assms unfolding cost_def by auto
 
 lemma cost_commute:
