@@ -162,7 +162,7 @@ lemma non_evasiveI2:
   shows "non_evasive V K"
   unfolding non_evasive.simps (5) [OF v] using k .
 
-lemma assumes v: "2 \<le> card V" and kne: "K \<noteq> {}" and cs: "closed_subset K" and K: "K \<subseteq> powerset V" and x: "x \<in> V"
+(*lemma assumes v: "2 \<le> card V" and kne: "K \<noteq> {}" and cs: "closed_subset K" and K: "K \<subseteq> powerset V" and x: "x \<in> V"
     and nl: "non_evasive (V - {x}) (link_ext x V K)" and "non_evasive (V - {x}) (cost x V K)"
   shows "{x} \<in> K"
 proof (rule ccontr)
@@ -206,9 +206,9 @@ next
       using non_evasive.simps (5) [OF True, of K]
     
     sorry
-qed
+qed*)
 
-lemma assumes ne: "non_evasive V K" and sb: "W \<subseteq> V" and wne: "W \<noteq> {}" and K: "K \<subseteq> powerset W"
+(*lemma assumes ne: "non_evasive V K" and sb: "W \<subseteq> V" and wne: "W \<noteq> {}" and K: "K \<subseteq> powerset W"
   shows "non_evasive W K"
 proof (cases \<open>(V,K)\<close> rule: non_evasive.cases)
   case (1 V K)
@@ -237,7 +237,7 @@ next
 next
   case (6 V K)
   then show ?thesis using ne wne sb K by simp
-qed
+qed*)
 
 lemma assumes c: "cone {x} K" shows "K = {{x},{}} \<or> K = {}"
   using c unfolding cone_def by (cases "K = {}", auto)

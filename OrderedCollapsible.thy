@@ -783,6 +783,8 @@ proof (rule)
   with nc and Kd and v show False unfolding cone_peak_def by auto
 qed
 
+section\<open>The set of vertexes that belong to the simplicial complex\<close>
+
 definition vertex_of_simpl_complex :: "nat set set \<Rightarrow> nat set"
   where "vertex_of_simpl_complex K = {v. {v} \<in> K}"
 
@@ -823,6 +825,16 @@ lemma powerset_vertex_of_simpl_complex: assumes K: "K \<subseteq> powerset V" an
   shows "K \<subseteq> powerset (vertex_of_simpl_complex K)"
   using K cs unfolding vertex_of_simpl_complex_def closed_subset_def by auto
 
+lemma vertex_of_simpl_complex_subset:
+  assumes fV: "finite V" and KV: "K \<subseteq> powerset V"
+  shows "vertex_of_simpl_complex K \<subseteq> V"
+  unfolding vertex_of_simpl_complex_def using KV by auto
+
+corollary card_vertex_of_simpl_complex:
+  assumes fV: "finite V" and KV: "K \<subseteq> powerset V"
+  shows "card (vertex_of_simpl_complex K) \<le> card V"
+   by (rule card_mono [OF fV vertex_of_simpl_complex_subset [OF fV KV]])
+
 lemma finite_vertex_of_simpl_complex: 
   assumes f: "finite V" and K: "K \<subseteq> powerset V" 
   shows "finite (vertex_of_simpl_complex K)"
@@ -838,6 +850,18 @@ lemma closed_subset_vertex_of_simpl_complex:
   assumes f: "f \<in> K" and cs: "closed_subset K"
   shows "{v. {v} \<subseteq> f} \<subseteq> vertex_of_simpl_complex K"
   using f cs unfolding closed_subset_def vertex_of_simpl_complex_def by auto
+
+text\<open>There is no assumption over the vertex for which we compute the @{term lin_ext} or the @{term cost}.\<close>
+
+lemma link_ext_vertex_of_simpl_complex:
+  assumes KV: "K \<subseteq> powerset V" and cs: "closed_subset K"
+  shows "link_ext v V K = link_ext v (vertex_of_simpl_complex K) K"
+  using KV cs unfolding vertex_of_simpl_complex_def link_ext_def closed_subset_def by auto
+
+lemma cost_vertex_of_simpl_complex:
+  assumes KV: "K \<subseteq> powerset V" and cs: "closed_subset K"
+  shows "cost v V K = cost v (vertex_of_simpl_complex K) K"
+  using KV cs unfolding vertex_of_simpl_complex_def cost_def closed_subset_def by auto
 
 text\<open>Beware that when we are dealing with subsets not closed by subset relation
     the previous definition does not work nicely:\<close>
@@ -2770,6 +2794,13 @@ proof -
     by (metis card_mono)
 qed
 
+corollary pure_d_0_at_least_one_vertex:
+  assumes p: "pure_d 0 K" and cs: "closed_subset K" and Kne: "K \<noteq> {}"
+  and fV: "finite V" and KV: "K \<subseteq> powerset V"
+shows "1 \<le> card V"
+  using card_vertex_of_simpl_complex [OF fV KV]
+  using pure_d_0_one_vertex [OF p cs Kne fV KV] by simp
+
 lemma pure_d_n_two_vertexes:
   assumes p: "pure_d n K" and cs: "closed_subset K" and Kne: "K \<noteq> {}" 
   and fV: "finite V" and KV: "K \<subseteq> powerset V" and n: "0 < n"
@@ -2786,6 +2817,13 @@ proof -
   thus ?thesis using sv KV fV finite_vertex_of_simpl_complex [OF fV KV]
     by (meson card_mono order_trans)
 qed
+
+corollary pure_d_n_at_least_two_vertexes:
+  assumes p: "pure_d n K" and cs: "closed_subset K" and Kne: "K \<noteq> {}" 
+  and fV: "finite V" and KV: "K \<subseteq> powerset V" and n: "0 < n"
+  shows "2 \<le> card V"
+    using card_vertex_of_simpl_complex [OF fV KV]
+    using pure_d_n_two_vertexes [OF p cs Kne fV KV n] by simp
 
 lemma pure_d_0_collection_vertexes:
   assumes p: "pure_d 0 K" and cs: "closed_subset K" and Kne: "K \<noteq> {}"
@@ -2941,22 +2979,30 @@ next
     using pure_d_minus_one_link_ext [OF pwv Suc.prems (6) _ Suc.prems (2), of v]
     using v unfolding vertex_of_simpl_complex_def by simp
   have "card (vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K)) = 1"
+    unfolding link_ext_vertex_of_simpl_complex [OF Suc.prems (4) Suc.prems (6), symmetric]
   proof (rule pure_d_0_singleton [of _ "vertex_of_simpl_complex K - {v}"])
-    show lepw: "link_ext v (vertex_of_simpl_complex K) K \<subseteq> powerset (vertex_of_simpl_complex K - {v})"
-      using link_ext_closed pwv by presburger
-    show csle: "closed_subset (link_ext v (vertex_of_simpl_complex K) K)"
+    show lepw: "link_ext v V K \<subseteq> powerset (vertex_of_simpl_complex K - {v})"
+      using link_ext_closed pwv
+      using link_ext_vertex_of_simpl_complex [OF Suc.prems (4) Suc.prems (6)]
+      by presburger
+    show csle: "closed_subset (link_ext v V K)"
       using Suc.prems(6) link_ext_closed_subset by auto
     show "finite (vertex_of_simpl_complex K - {v})"
       using Suc.prems(1) non_evasive.simps(6) by blast
-    show "link_ext v (vertex_of_simpl_complex K) K \<noteq> {}"
+    show "link_ext v V K \<noteq> {}"
       using singleton_in_link_ext v vertex_of_simpl_complex_def by fastforce
-    show "pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)"
-      using \<open>pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)\<close> by blast
-    have "link_ext v (vertex_of_simpl_complex K) K \<subseteq> powerset (vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K))"
-      by (rule powerset_vertex_of_simpl_complex [of _ "vertex_of_simpl_complex K - {v}"], rule lepw, rule csle)
-    thus "non_evasive (vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K)) (link_ext v (vertex_of_simpl_complex K) K)"
+    show "pure_d 0 (link_ext v V K)"
+      using \<open>\<And>v. link_ext v (vertex_of_simpl_complex K) K = link_ext v V K\<close> \<open>pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)\<close>
+      by presburger
+    show "non_evasive (vertex_of_simpl_complex (link_ext v V K)) (link_ext v V K)"
+      using nl
+      unfolding link_ext_vertex_of_simpl_complex [OF Suc.prems (4) Suc.prems (6), symmetric]
       using nl unfolding vertex_of_simpl_complex_def unfolding link_ext_def
-      try
+
+      have "link_ext v (vertex_of_simpl_complex K) K \<subseteq> powerset (vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K))"
+      by (rule powerset_vertex_of_simpl_complex [of _ "vertex_of_simpl_complex K - {v}"], rule lepw, rule csle)
+
+
     qed
     then obtain w where "link_ext v (vertex_of_simpl_complex K) K = {{},{w}}"
     apply (rule pure_d_0_singleton2 [of "link_ext v (vertex_of_simpl_complex K) K" "V - {v}"])
