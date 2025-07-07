@@ -885,6 +885,84 @@ proof (rule ccontr, simp)
   thus False using v unfolding vertex_of_simpl_complex_def by simp
 qed
 
+lemma assumes ne: "non_evasive V K" and KV: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}"
+  shows "non_evasive (vertex_of_simpl_complex K) K"
+proof (cases "(V, K)" rule: non_evasive.cases)
+  case (1 V K)
+  have False using non_evasive.simps (1) [OF "1" (1), of K] using ne "1" (2) by simp
+  thus ?thesis by (rule ccontr)
+next
+  case (2 V x K)
+  have False using Kne using 2 ne using non_evasive_empty_set [OF _ ] by simp
+  thus ?thesis by (rule ccontr)
+next
+  case (3 V x K)
+  hence "vertex_of_simpl_complex K = V" unfolding vertex_of_simpl_complex_def by simp
+  thus ?thesis using ne 3 by simp
+next
+  case (4 V x K)
+  from ne and 4 have False using non_evasive.simps (4) by simp
+  thus ?thesis by (rule ccontr)
+next
+  case (5 V' K')
+  hence v: "V = V'" and k: "K = K'" using 5 by simp_all
+  from ne obtain x where x: "x \<in> V'" and nel: "non_evasive (V' - {x}) (link_ext x V' K')"
+      and nec: "non_evasive (V' - {x}) (cost x V' K')"
+    using non_evasive.simps (5) [OF "5" (1), of K'] 5 by auto
+  show ?thesis unfolding v k
+  proof (cases "2 \<le> card (vertex_of_simpl_complex K')")
+    case True note c2 = True
+    show "non_evasive (vertex_of_simpl_complex K') K'"
+    proof (cases "x \<in> vertex_of_simpl_complex K'")
+      case True
+      show ?thesis
+      using c2 ne unfolding v k proof (induct "card (vertex_of_simpl_complex K')" arbitrary: V' K')
+        case 0
+        then show ?case by presburger
+      next
+        case (Suc xa)
+        have "non_evasive (vertex_of_simpl_complex K' - {x}) (link_ext x (vertex_of_simpl_complex K') K')"
+           using Suc.hyps (1)
+        show ?case using non_evasive.simps (5) [OF "Suc.prems" (1)]
+    next
+      case False
+      then show ?thesis sorry
+    qed
+      
+  next
+    case False
+    then show ?thesis sorry
+  qed
+  
+next
+  case (6 V K)
+  then show ?thesis sorry
+qed
+  using ne c2 sb proof (induct "card V" arbitrary: V)
+  case 0
+  then show ?case by linarith
+next
+  case (Suc x)
+  obtain x where "x \<in> V" and "non_evasive (V - {x}) (link_ext x V K)" and "non_evasive (V - {x}) (cost x V K)"
+    using Suc.prems (1)
+    unfolding non_evasive.simps (5) [OF Suc.prems (2)] by auto
+  show ?case
+  proof (cases "2 \<le> card W")
+    case True
+    obtain x where x: "x \<in> V"
+      and nl: "non_evasive (V - {x}) (link_ext x V K)" and ne: "non_evasive (V - {x}) (cost x V K)"
+      using Suc.prems (1) unfolding non_evasive.simps (5) [OF Suc.prems (2), of K] by auto
+    then have "{x} \<in> K" using Suc.prems (1) unfolding non_evasive.simps (5) [OF Suc.prems (2), of K] try
+    have l: "link_ext x V K = link_ext x W K" using link_ext_mono2 [OF Suc.prems (3) K, of x] .
+    moreover have c: "cost x V K = cost x W K" using cost_mono2 [OF Suc.prems (3) K, of x] .
+    
+    show ?thesis
+      using Suc.prems using non_evasive.simps (5) [OF Suc.prems (2), of K]
+      using non_evasive.simps (5) [OF True, of K]
+    
+    sorry
+
+
 lemma ordered_m_collapsible_swap:
   assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []"
     and d: "distinct l" and vnl: "v \<notin> set l"

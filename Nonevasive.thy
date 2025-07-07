@@ -180,32 +180,7 @@ proof (rule ccontr)
   unfolding non_evasive.simps (5) [OF v] using k .
 
 
-lemma assumes ne: "non_evasive V K" and sb: "W \<subseteq> V" 
-  and wne: "W \<noteq> {}" and K: "K \<subseteq> powerset W" and c2: "2 \<le> card V"
-shows "non_evasive W K"
-  using ne c2 sb proof (induct "card V" arbitrary: V)
-  case 0
-  then show ?case by linarith
-next
-  case (Suc x)
-  obtain x where "x \<in> V" and "non_evasive (V - {x}) (link_ext x V K)" and "non_evasive (V - {x}) (cost x V K)"
-    using Suc.prems (1)
-    unfolding non_evasive.simps (5) [OF Suc.prems (2)] by auto
-  show ?case
-  proof (cases "2 \<le> card W")
-    case True
-    obtain x where x: "x \<in> V"
-      and nl: "non_evasive (V - {x}) (link_ext x V K)" and ne: "non_evasive (V - {x}) (cost x V K)"
-      using Suc.prems (1) unfolding non_evasive.simps (5) [OF Suc.prems (2), of K] by auto
-    then have "{x} \<in> K" using Suc.prems (1) unfolding non_evasive.simps (5) [OF Suc.prems (2), of K] try
-    have l: "link_ext x V K = link_ext x W K" using link_ext_mono2 [OF Suc.prems (3) K, of x] .
-    moreover have c: "cost x V K = cost x W K" using cost_mono2 [OF Suc.prems (3) K, of x] .
-    
-    show ?thesis
-      using Suc.prems using non_evasive.simps (5) [OF Suc.prems (2), of K]
-      using non_evasive.simps (5) [OF True, of K]
-    
-    sorry
+
 qed*)
 
 (*lemma assumes ne: "non_evasive V K" and sb: "W \<subseteq> V" and wne: "W \<noteq> {}" and K: "K \<subseteq> powerset W"
@@ -236,7 +211,7 @@ next
     
 next
   case (6 V K)
-  then show ?thesis using ne wne sb K by simp
+  then show ?thesis usipdang ne wne sb K by simp
 qed*)
 
 lemma assumes c: "cone {x} K" shows "K = {{x},{}} \<or> K = {}"
