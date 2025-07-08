@@ -885,6 +885,65 @@ proof (rule ccontr, simp)
   thus False using v unfolding vertex_of_simpl_complex_def by simp
 qed
 
+lemma assumes ne: "non_evasive V K" and KV: "K \<subseteq> powerset V" and w: "w \<notin> V" and f: "finite V"
+  shows "non_evasive (V \<union> {w}) K"
+proof (cases \<open>(V, K)\<close> rule: non_evasive.cases)
+  case (1 V K)
+  with ne have False by simp
+  thus ?thesis by (rule ccontr)
+next
+  case (2 V v K)
+  show ?thesis using 2 using non_evasive_empty_set using f w by auto
+next
+  case (3 V' v K')
+  hence vw: "V \<union> {w} = {v, w}" using 3 by auto
+  hence c2: "2 \<le> card (V \<union> {w})" using w using "3"(1,3) by auto
+  have k: "K = {{},{v}}" using 3 by simp
+  have lew: "link_ext w (V \<union> {w}) K = {}" unfolding vw k link_ext_def using w 3 by auto
+  have cw: "cost w (V \<union> {w}) K = K" unfolding vw k cost_def using w 3 by auto
+  show ?thesis
+    unfolding non_evasive.simps (5) [OF c2, of K]
+    apply (rule bexI [of _ w], intro conjI, unfold lew)
+    using "3"(1,3) w apply auto[1]
+    by (unfold cw, simp add: ne w, simp)
+next
+  case (4 V x K)
+  have False using ne 4 by simp
+  thus ?thesis by (rule ccontr)
+next
+  case (5 V' K')
+  hence c2: "2 \<le> card V" by simp
+  have c2w: "2 \<le> card (V \<union> {w})" using 5 w f by simp
+  obtain v where v: "v \<in> V" and nel: "non_evasive (V - {v}) (link_ext v V K)"
+    and nec: "non_evasive (V - {v}) (cost v V K)" using ne using non_evasive.simps (5) [OF c2] by auto
+  show ?thesis
+    using f c2 v nel nec w proof (induct "card V" arbitrary: V K v)
+    case 0
+    thus ?case by simp
+  next
+    case (Suc x V K v)
+    have c2w: "2 \<le> card (V \<union> {w})" using Suc.prems (1) Suc.prems (2) by (simp add: card_insert_if)
+    (*from Suc.prems (3) obtain v where v: "v \<in> V" and nel: "non_evasive (V - {v}) (link_ext v V K)"
+      and nec: "non_evasive (V - {v}) (cost v V K)" using Suc.prems (1) using non_evasive.simps (5) [OF Suc.prems (2)] by auto*)
+    have Vd: "V \<union> {w} - {v} = V - {v} \<union> {w}" using Suc.prems (3,6) by auto
+    show ?case unfolding non_evasive.simps (5) [OF c2w, of K]
+    proof (rule bexI [of _ v], rule conjI)
+      show "v \<in> V \<union> {w}" using Suc.prems (3) by simp
+      show "non_evasive (V \<union> {w} - {v}) (link_ext v (V \<union> {w}) K)"
+        unfolding Vd
+        apply (rule Suc.hyps (1) [of "V - {v}" ])
+        using Suc.prems
+ show "non_evasive (V \<union> {w} - {v}) (cost v (V \<union> {w}) K)"
+
+
+  qed
+    unfolding non_evasive.simps (5) [OF c2w] apply (rule bexI [of _ v], intro conjI)
+next
+  case (6 V K)
+  then show ?thesis sorry
+qed
+  
+
 lemma assumes ne: "non_evasive V K" and KV: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}"
   shows "non_evasive (vertex_of_simpl_complex K) K"
 proof (cases "(V, K)" rule: non_evasive.cases)
