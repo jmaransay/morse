@@ -885,6 +885,8 @@ proof (rule ccontr, simp)
   thus False using v unfolding vertex_of_simpl_complex_def by simp
 qed
 
+section\<open>Non evasive over @{term vertex_of_simpl_complex}.}\<close>
+
 lemma non_evasive_impl_non_evasive_union:
   assumes ne: "non_evasive V K" and KV: "K \<subseteq> powerset V" and w: "w \<notin> V" and f: "finite V"
   shows "non_evasive (V \<union> {w}) K"
@@ -1143,83 +1145,51 @@ next
   thus ?thesis by (rule ccontr)
 qed
 
-lemma assumes ne: "non_evasive V K" and KV: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}"
+corollary non_evasive_impl_non_evasive_vsc:
+  assumes ne: "non_evasive V K" and KV: "(vertex_of_simpl_complex K) \<subseteq> V" 
+    and cs: "closed_subset K" (*and f: "finite V"*) and Kne: "K \<noteq> {}"
   shows "non_evasive (vertex_of_simpl_complex K) K"
-proof (cases "(V, K)" rule: non_evasive.cases)
-  case (1 V K)
-  have False using non_evasive.simps (1) [OF "1" (1), of K] using ne "1" (2) by simp
-  thus ?thesis by (rule ccontr)
-next
-  case (2 V x K)
-  have False using Kne using 2 ne using non_evasive_empty_set [OF _ ] by simp
-  thus ?thesis by (rule ccontr)
-next
-  case (3 V x K)
-  hence "vertex_of_simpl_complex K = V" unfolding vertex_of_simpl_complex_def by simp
-  thus ?thesis using ne 3 by simp
-next
-  case (4 V x K)
-  from ne and 4 have False using non_evasive.simps (4) by simp
-  thus ?thesis by (rule ccontr)
-next
-  case (5 V' K')
-  hence v: "V = V'" and k: "K = K'" using 5 by simp_all
-  from ne obtain x where x: "x \<in> V'" and nel: "non_evasive (V' - {x}) (link_ext x V' K')"
-      and nec: "non_evasive (V' - {x}) (cost x V' K')"
-    using non_evasive.simps (5) [OF "5" (1), of K'] 5 by auto
-  show ?thesis unfolding v k
-  proof (cases "2 \<le> card (vertex_of_simpl_complex K')")
-    case True note c2 = True
-    show "non_evasive (vertex_of_simpl_complex K') K'"
-    proof (cases "x \<in> vertex_of_simpl_complex K'")
-      case True
-      show ?thesis
-      using c2 ne unfolding v k proof (induct "card (vertex_of_simpl_complex K')" arbitrary: V' K')
-        case 0
-        then show ?case by presburger
-      next
-        case (Suc xa)
-        have "non_evasive (vertex_of_simpl_complex K' - {x}) (link_ext x (vertex_of_simpl_complex K') K')"
-           using Suc.hyps (1)
-        show ?case using non_evasive.simps (5) [OF "Suc.prems" (1)]
-    next
-      case False
-      then show ?thesis sorry
-    qed
-      
-  next
-    case False
-    then show ?thesis sorry
-  qed
-  
-next
-  case (6 V K)
-  then show ?thesis sorry
-qed
-  using ne c2 sb proof (induct "card V" arbitrary: V)
+proof -
+  have f: "finite V" using ne non_evasive.simps (6) by blast
+  show ?thesis
+  using f ne KV proof (induct "card (V - (vertex_of_simpl_complex K))" arbitrary: V)
   case 0
-  then show ?case by linarith
+  hence "(vertex_of_simpl_complex K) = V" by simp
+  thus ?case using "0.prems" (2) by simp
 next
   case (Suc x)
-  obtain x where "x \<in> V" and "non_evasive (V - {x}) (link_ext x V K)" and "non_evasive (V - {x}) (cost x V K)"
-    using Suc.prems (1)
-    unfolding non_evasive.simps (5) [OF Suc.prems (2)] by auto
-  show ?case
-  proof (cases "2 \<le> card W")
-    case True
-    obtain x where x: "x \<in> V"
-      and nl: "non_evasive (V - {x}) (link_ext x V K)" and ne: "non_evasive (V - {x}) (cost x V K)"
-      using Suc.prems (1) unfolding non_evasive.simps (5) [OF Suc.prems (2), of K] by auto
-    then have "{x} \<in> K" using Suc.prems (1) unfolding non_evasive.simps (5) [OF Suc.prems (2), of K] try
-    have l: "link_ext x V K = link_ext x W K" using link_ext_mono2 [OF Suc.prems (3) K, of x] .
-    moreover have c: "cost x V K = cost x W K" using cost_mono2 [OF Suc.prems (3) K, of x] .
-    
-    show ?thesis
-      using Suc.prems using non_evasive.simps (5) [OF Suc.prems (2), of K]
-      using non_evasive.simps (5) [OF True, of K]
-    
-    sorry
+  from Suc.hyps (2) Suc.prems (1) obtain v where v: "v \<in> (V - vertex_of_simpl_complex K)"
+    by (metis all_not_in_conv card.empty nat.simps(3))
+  have *: "V - vertex_of_simpl_complex K = ((V - {v}) - vertex_of_simpl_complex K) \<union> {v}" using v by auto
+  have **: "V = (V - {v}) \<union> {v}" using v by auto
+  have K: "K \<subseteq> powerset (vertex_of_simpl_complex K)" by (rule powerset_vertex_of_simpl_complex [OF cs])
+  show "non_evasive ((vertex_of_simpl_complex K)) K"
+  proof (rule Suc.hyps (1) [of "V - {v}"])
+    show "x = card (V - {v} - vertex_of_simpl_complex K)" 
+      using v Suc.prems (1) Suc.hyps (2)
+      by (metis DiffD1 DiffD2 Diff_insert2 card_Diff_insert diff_add_inverse plus_1_eq_Suc)
+    show "finite (V - {v})" using Suc.prems (1) by simp
+    show "non_evasive (V - {v}) K" 
+    proof (rule non_evasive_union_impl_non_evasive [of "V - {v}" "v"])
+      show "non_evasive (V - {v} \<union> {v}) K" unfolding ** [symmetric] using Suc.prems (2) .
+      show "K \<subseteq> powerset (V - {v})" 
+        using powerset_vertex_of_simpl_complex [OF cs] Suc.prems (3) v by auto
+      show "v \<notin> V - {v}" by simp
+      show "finite (V - {v})" using Suc.prems (1) by simp
+      show "K \<noteq> {}" using Kne .
+    qed
+    show "vertex_of_simpl_complex K \<subseteq> V - {v}" using v Suc.prems (3) by auto
+    qed
+  qed
+qed
 
+corollary non_evasive_equiv_non_evasive_vsc:
+  assumes KV: "(vertex_of_simpl_complex K) \<subseteq> V" 
+    and cs: "closed_subset K" and f: "finite V" and Kne: "K \<noteq> {}"
+  shows "non_evasive V K \<equiv> non_evasive (vertex_of_simpl_complex K) K"
+  by (smt (verit) KV Kne cs f non_evasive_impl_non_evasive_vsc non_evasive_vsc_impl_non_evasive)
+
+section\<open>Ordered @{term "n::nat"} collapsible permutes the first and second vertexes.\<close>
 
 lemma ordered_m_collapsible_swap:
   assumes v: "v \<notin> vertex_of_simpl_complex K" and l: "l \<noteq> []"
@@ -1625,9 +1595,6 @@ next
     qed
   qed
 qed
-
-text\<open>Beware that when we are dealing with subsets not closed by subset relation
-    the previous definition does not work nicely:\<close>
 
 text\<open>Lemma 4.1 as stated in our paper in DML. We split it into four different lemmas\<close>
 
@@ -3004,9 +2971,6 @@ qed
 
 section\<open>Consequences of the main theorem.\<close>
 
-(*definition vertex_set :: "nat set set \<Rightarrow> nat set"
-  where "vertex_set K = {v::nat. {v} \<in> K}"*)
-
 lemma assumes c: "closed_subset K" shows "K \<subseteq> powerset (vertex_of_simpl_complex K)" 
   using c unfolding  vertex_of_simpl_complex_def closed_subset_def by auto
 
@@ -3205,9 +3169,11 @@ qed
 
 lemma pure_d_0_singleton:
   assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" and f: "finite V" and Kne: "K \<noteq> {}"
-    and p: "pure_d 0 K" and ne: "non_evasive (vertex_of_simpl_complex K) K"
+    and p: "pure_d 0 K" and neVK: "non_evasive V K"
   shows "card (vertex_of_simpl_complex K) = 1"
 proof (rule ccontr)
+  have ne: "non_evasive (vertex_of_simpl_complex K) K"
+    using neVK K Kne cs f non_evasive_impl_non_evasive_vsc vertex_of_simpl_complex_subset by presburger
   assume c: "card (vertex_of_simpl_complex K) \<noteq> 1"
   show False
   proof (cases "card (vertex_of_simpl_complex K) = 0")
@@ -3233,16 +3199,21 @@ qed
 
 corollary pure_d_0_singleton2:
   assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" and f: "finite V" and Kne: "K \<noteq> {}"
-    and p: "pure_d 0 K" and ne: "non_evasive (vertex_of_simpl_complex K) K"
+    and p: "pure_d 0 K" and neVK: "non_evasive V K"
   obtains v where "K = {{}, {v}}"
-  using pure_d_0_singleton [OF K cs f Kne p ne]
+  using non_evasive_impl_non_evasive_vsc [OF neVK vertex_of_simpl_complex_subset] f K cs Kne neVK
+  using pure_d_0_singleton [OF K cs f Kne p]
   using pure_d_0_collection_vertexes [OF p cs Kne f K]
-  using card_1_singletonE by force
+  using card_1_singletonE by (metis non_evasive.simps(4))
 
-lemma non_evasive_dim_1_two_free_faces: assumes n: "non_evasive (vertex_of_simpl_complex K) K" 
+lemma non_evasive_dim_1_two_free_faces: assumes neVK: "non_evasive V K"
   and p: "pure_d 1 K" and f: "finite V" and K: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}" and cs: "closed_subset K"
-  shows "2 \<le> card {f. free_face f K}"
-using n p f K Kne cs proof (induct "card {v\<in>K. card v = 2}" arbitrary: K rule: nat_induct_2)
+shows "2 \<le> card {f. free_face f K}"
+proof -
+  have n: "non_evasive (vertex_of_simpl_complex K) K"
+    using neVK K Kne cs f non_evasive_impl_non_evasive_vsc vertex_of_simpl_complex_subset by presburger
+  show ?thesis
+  using n p f K Kne cs proof (induct "card {v\<in>K. card v = 2}" arbitrary: K rule: nat_induct_2)
   case (0 K)
   have fK: "finite K" using "0.prems" (3,4) by (simp add: finite_subset)
   obtain f where ff: "f \<in> facets K" and cf: "card f = 2" 
@@ -3310,7 +3281,7 @@ next
         and nc: "non_evasive (vertex_of_simpl_complex K - {v}) (cost v (vertex_of_simpl_complex K) K)"
     using Suc.prems (1) unfolding non_evasive.simps (5) [OF cardvK, of K] by auto
   have pwv: "K \<subseteq> powerset (vertex_of_simpl_complex K)"
-    by (rule powerset_vertex_of_simpl_complex [OF Suc.prems (4,6)])
+    by (rule powerset_vertex_of_simpl_complex [OF Suc.prems (6)])
   have "pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)"
     using pure_d_minus_one_link_ext [OF pwv Suc.prems (6) _ Suc.prems (2), of v]
     using v unfolding vertex_of_simpl_complex_def by simp
@@ -3323,26 +3294,27 @@ next
       by presburger
     show csle: "closed_subset (link_ext v V K)"
       using Suc.prems(6) link_ext_closed_subset by auto
-    show "finite (vertex_of_simpl_complex K - {v})"
+    show fKv: "finite (vertex_of_simpl_complex K - {v})"
       using Suc.prems(1) non_evasive.simps(6) by blast
-    show "link_ext v V K \<noteq> {}"
+    show linkne: "link_ext v V K \<noteq> {}"
       using singleton_in_link_ext v vertex_of_simpl_complex_def by fastforce
     show "pure_d 0 (link_ext v V K)"
       using \<open>\<And>v. link_ext v (vertex_of_simpl_complex K) K = link_ext v V K\<close> \<open>pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)\<close>
       by presburger
-    show "non_evasive (vertex_of_simpl_complex (link_ext v V K)) (link_ext v V K)"
+    show "non_evasive (vertex_of_simpl_complex K - {v}) (link_ext v V K)"
       using nl
       unfolding link_ext_vertex_of_simpl_complex [OF Suc.prems (4) Suc.prems (6), symmetric]
-      using nl unfolding vertex_of_simpl_complex_def unfolding link_ext_def
+      using fKv linkne
+      using csle lepw non_evasive_impl_non_evasive_vsc
+        vertex_of_simpl_complex_subset by presburger
+  qed
+  then obtain w where vosc_l: "vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K) = {w}"
+    by (rule card_1_singletonE)
+  show ?case
 
-      have "link_ext v (vertex_of_simpl_complex K) K \<subseteq> powerset (vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K))"
-      by (rule powerset_vertex_of_simpl_complex [of _ "vertex_of_simpl_complex K - {v}"], rule lepw, rule csle)
-
-
-    qed
-    then obtain w where "link_ext v (vertex_of_simpl_complex K) K = {{},{w}}"
+  using pure_d_0_singleton2 [OF Suc.prems (4,6) f Suc.prems (5)]
     apply (rule pure_d_0_singleton2 [of "link_ext v (vertex_of_simpl_complex K) K" "V - {v}"])
-    using pure_d_0_singleton2 [OF Suc.prems (4,6) f Suc.prems (5)]
+    
     have "free_face {v} K"
   proof (unfold free_face_def, rule ex1I)
   from Suc.hyps
