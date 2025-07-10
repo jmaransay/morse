@@ -914,35 +914,266 @@ next
   case (5 V' K')
   hence c2: "2 \<le> card V" by simp
   have c2w: "2 \<le> card (V \<union> {w})" using 5 w f by simp
-  obtain v where v: "v \<in> V" and nel: "non_evasive (V - {v}) (link_ext v V K)"
-    and nec: "non_evasive (V - {v}) (cost v V K)" using ne using non_evasive.simps (5) [OF c2] by auto
   show ?thesis
-    using f c2 v nel nec w proof (induct "card V" arbitrary: V K v)
+    using f c2 ne w KV proof (induct "card V" arbitrary: V K)
     case 0
     thus ?case by simp
   next
-    case (Suc x V K v)
-    have c2w: "2 \<le> card (V \<union> {w})" using Suc.prems (1) Suc.prems (2) by (simp add: card_insert_if)
-    (*from Suc.prems (3) obtain v where v: "v \<in> V" and nel: "non_evasive (V - {v}) (link_ext v V K)"
-      and nec: "non_evasive (V - {v}) (cost v V K)" using Suc.prems (1) using non_evasive.simps (5) [OF Suc.prems (2)] by auto*)
-    have Vd: "V \<union> {w} - {v} = V - {v} \<union> {w}" using Suc.prems (3,6) by auto
-    show ?case unfolding non_evasive.simps (5) [OF c2w, of K]
-    proof (rule bexI [of _ v], rule conjI)
-      show "v \<in> V \<union> {w}" using Suc.prems (3) by simp
-      show "non_evasive (V \<union> {w} - {v}) (link_ext v (V \<union> {w}) K)"
-        unfolding Vd
-        apply (rule Suc.hyps (1) [of "V - {v}" ])
-        using Suc.prems
- show "non_evasive (V \<union> {w} - {v}) (cost v (V \<union> {w}) K)"
-
-
+    case (Suc x V K)
+    obtain v where v: "v \<in> V" and nel: "non_evasive (V - {v}) (link_ext v V K)"
+      and nec: "non_evasive (V - {v}) (cost v V K)" using Suc.prems (3) using non_evasive.simps (5) [OF Suc.prems (2)] by auto
+    have c2: "2 \<le> card (V \<union> {w})" using Suc.prems by fastforce
+    have Vvw: "V - {v} \<union> {w} = V \<union> {w} - {v}" using Suc.prems (4) v by auto
+    have link_ext_inv: "link_ext v (V \<union> {w}) K = link_ext v V K"
+      using Suc.prems (4,5) v unfolding link_ext_def by auto
+    have cost_inv: "cost v (V \<union> {w}) K = cost v V K"
+      using Suc.prems (4,5) v unfolding cost_def by auto
+    have "non_evasive (V - {v} \<union> {w}) (link_ext v (V \<union> {w}) K)"
+    proof (cases "card V = 2")
+      case False hence c2: "2 \<le> card (V - {v})" using v Suc.prems (2) by simp
+      show ?thesis
+      proof (rule Suc.hyps)
+        show "x = card (V - {v})" using v Suc.hyps (2) Suc.prems (1) by simp
+        show "finite (V - {v})" using Suc.prems (1) by simp
+        show "2 \<le> card (V - {v})" using c2 .
+        show "non_evasive (V - {v}) (link_ext v (V \<union> {w}) K)" 
+          unfolding link_ext_inv using nel .
+        show "w \<notin> V - {v}" using Suc.prems (4) v by simp
+        show "link_ext v (V \<union> {w}) K \<subseteq> powerset (V - {v})" unfolding link_ext_inv using Suc.prems (5) by (rule link_ext_closed)
+      qed
+    next
+      case True then obtain v' where v': "V - {v} = {v'}" and vv': "v \<noteq> v'" 
+        using v Suc.prems (1)
+        by (metis Diff_insert_absorb One_nat_def Suc_1 card.remove card_1_singleton_iff insertCI mk_disjoint_insert nat.inject)
+      hence V: "V = {v,v'}" using v by blast
+      hence Vw: "V - {v} \<union> {w} = {v', w}" using Suc.prems (4) v' by auto
+      hence c2Vvw: "2 \<le> card (V - {v} \<union> {w})" using v' Suc.prems (4) V by simp
+      show ?thesis 
+        unfolding link_ext_inv 
+        using non_evasive.simps (5) [OF c2Vvw] using nel Suc.prems(1) V Vw v'
+        by (metis cone_non_evasive finite_insert insertCI insert_not_empty non_evasive.simps(4) non_evasive_empty_set singleton_cone)
+    qed
+    hence nel: "non_evasive (V \<union> {w} - {v}) (link_ext v (V \<union> {w}) K)" unfolding Vvw .
+    have "non_evasive (V - {v} \<union> {w}) (cost v (V \<union> {w}) K)"
+    proof (cases "card V = 2")
+      case False hence c2: "2 \<le> card (V - {v})" using v Suc.prems (2) by simp
+      show ?thesis
+      proof (rule Suc.hyps)
+        show "x = card (V - {v})" using v Suc.hyps (2) Suc.prems (1) by simp
+        show "finite (V - {v})" using Suc.prems (1) by simp
+        show "2 \<le> card (V - {v})" using c2 .
+        show "non_evasive (V - {v}) (cost v (V \<union> {w}) K)" 
+          unfolding cost_inv using nec .
+        show "w \<notin> V - {v}" using Suc.prems (4) v by simp
+        show "cost v (V \<union> {w}) K \<subseteq> powerset (V - {v})" unfolding cost_inv using Suc.prems (5) by (rule cost_closed)
+      qed
+    next
+      case True then obtain v' where v': "V - {v} = {v'}" and vv': "v \<noteq> v'" 
+        using v Suc.prems (1)
+        by (metis Diff_insert_absorb One_nat_def Suc_1 card.remove card_1_singleton_iff insertCI mk_disjoint_insert nat.inject)
+      hence V: "V = {v,v'}" using v by blast
+      hence Vw: "V - {v} \<union> {w} = {v', w}" using Suc.prems (4) v' by auto
+      hence c2Vvw: "2 \<le> card (V - {v} \<union> {w})" using v' Suc.prems (4) V by simp
+      show ?thesis 
+        unfolding cost_inv 
+        using non_evasive.simps (5) [OF c2Vvw] using nec Suc.prems(1) V Vw v'
+        by (metis cone_non_evasive finite_insert insertCI insert_not_empty non_evasive.simps(4) non_evasive_empty_set singleton_cone)
+    qed
+    hence nec: "non_evasive (V \<union> {w} - {v}) (cost v (V \<union> {w}) K)" unfolding Vvw .
+    show ?case unfolding non_evasive.simps (5) [OF c2] 
+      by (rule bexI [of _ v], rule conjI, intro nel, intro nec, simp add: v)
   qed
-    unfolding non_evasive.simps (5) [OF c2w] apply (rule bexI [of _ v], intro conjI)
 next
   case (6 V K)
-  then show ?thesis sorry
+  then have False using non_evasive.simps (6) using ne by simp
+  thus ?thesis by (rule ccontr)
 qed
-  
+
+lemma assumes ne: "non_evasive (V \<union> {w}) K" and KV: "K \<subseteq> powerset V" and w: "w \<notin> V" and f: "finite V" and Kne: "K \<noteq> {}"
+  shows "non_evasive V K"
+proof (cases \<open>(V, K)\<close> rule: non_evasive.cases)
+  case (1 V K)
+  with KV have "K = {} | K = {{}}" by auto
+  then show ?thesis using ne "1"(1,2) Kne by auto
+next
+  case (2 V x K)
+  then show ?thesis using non_evasive.simps (2) by simp
+next
+  case (3 V x K)
+  then show ?thesis using non_evasive.simps (3) by simp
+next
+  case (4 V x K)
+  then consider (k1) "K = {{}}" | (k2) "K = {{x}}" using KV
+    by (metis powerset_singleton_cases prod.inject)
+  then show ?thesis
+  proof (cases)
+    case k1
+    show ?thesis using 4 k1 ne
+      using evasive_empty_set by auto
+  next
+    case k2
+    have "non_evasive (V \<union> {w}) K = False" using k2 4 evasive_singleton [of V x]
+      using evasive_singleton_general by auto
+    then show ?thesis using 4 k2 ne by simp
+  qed
+next
+  case (5 V' K')
+  hence c2: "2 \<le> card V" by simp
+  have c2w: "2 \<le> card (V \<union> {w})" using 5 w f by simp
+  show ?thesis
+    using f c2 ne w KV proof (induct "card V" arbitrary: V K)
+    case 0
+    thus ?case by simp
+  next
+    case (Suc x V K)
+    have c2: "2 \<le> card (V \<union> {w})" using Suc.prems by fastforce
+    obtain v where v: "v \<in> V \<union> {w}" and nel: "non_evasive ((V \<union> {w}) - {v}) (link_ext v (V \<union> {w}) K)"
+      and nec: "non_evasive ((V \<union> {w}) - {v}) (cost v (V \<union> {w}) K)" 
+      using Suc.prems (3) using non_evasive.simps (5) [OF c2] by blast
+    then consider (vw) "v = w" | (xV) "v \<in> V" by auto
+    then show ?case
+    proof (cases)
+    case vw hence Vwv: "V \<union> {w} - {v} = V" using Suc.prems(4) by blast
+    have "link_ext v (V \<union> {w}) K = {}" 
+      using vw Suc.prems (4,5) unfolding link_ext_def by auto
+    have "cost v (V \<union> {w}) K = K"
+      using vw Suc.prems (4,5) unfolding cost_def by auto
+    show ?thesis
+      using non_evasive.simps (5) using "5" (2) using Vwv nel
+      using \<open>cost v (V \<union> {w}) K = K\<close> nec by argo
+    have link_ext_inv: "link_ext v (V \<union> {w}) K = link_ext v V K"
+      using Suc.prems (4,5) v unfolding link_ext_def by auto
+    have cost_inv: "cost v (V \<union> {w}) K = cost v V K"
+      using Suc.prems (4,5) v unfolding cost_def by auto
+    have "non_evasive (V - {v} \<union> {w}) (link_ext v (V \<union> {w}) K)"
+    proof (cases "card V = 2")
+      case False hence c2: "2 \<le> card (V - {v})" using v Suc.prems (2) by simp
+      show ?thesis
+      proof (rule Suc.hyps)
+        show "x = card (V - {v} \<union> {w})" using v Suc.hyps (2) Suc.prems (1) w try by simp
+        show "finite (V - {v})" using Suc.prems (1) by simp
+        show "2 \<le> card (V - {v})" using c2 .
+        show "non_evasive (V - {v}) (link_ext v (V \<union> {w}) K)" 
+          unfolding link_ext_inv using nel .
+        show "w \<notin> V - {v}" using Suc.prems (4) v by simp
+        show "link_ext v (V \<union> {w}) K \<subseteq> powerset (V - {v})" unfolding link_ext_inv using Suc.prems (5) by (rule link_ext_closed)
+      qed
+    next
+      case True then obtain v' where v': "V - {v} = {v'}" and vv': "v \<noteq> v'" 
+        using v Suc.prems (1)
+        by (metis Diff_insert_absorb One_nat_def Suc_1 card.remove card_1_singleton_iff insertCI mk_disjoint_insert nat.inject)
+      hence V: "V = {v,v'}" using v by blast
+      hence Vw: "V - {v} \<union> {w} = {v', w}" using Suc.prems (4) v' by auto
+      hence c2Vvw: "2 \<le> card (V - {v} \<union> {w})" using v' Suc.prems (4) V by simp
+      show ?thesis 
+        unfolding link_ext_inv 
+        using non_evasive.simps (5) [OF c2Vvw] using nel Suc.prems(1) V Vw v'
+        by (metis cone_non_evasive finite_insert insertCI insert_not_empty non_evasive.simps(4) non_evasive_empty_set singleton_cone)
+    qed
+    hence nel: "non_evasive (V \<union> {w} - {v}) (link_ext v (V \<union> {w}) K)" unfolding Vvw .
+    have "non_evasive (V - {v} \<union> {w}) (cost v (V \<union> {w}) K)"
+    proof (cases "card V = 2")
+      case False hence c2: "2 \<le> card (V - {v})" using v Suc.prems (2) by simp
+      show ?thesis
+      proof (rule Suc.hyps)
+        show "x = card (V - {v})" using v Suc.hyps (2) Suc.prems (1) by simp
+        show "finite (V - {v})" using Suc.prems (1) by simp
+        show "2 \<le> card (V - {v})" using c2 .
+        show "non_evasive (V - {v}) (cost v (V \<union> {w}) K)" 
+          unfolding cost_inv using nec .
+        show "w \<notin> V - {v}" using Suc.prems (4) v by simp
+        show "cost v (V \<union> {w}) K \<subseteq> powerset (V - {v})" unfolding cost_inv using Suc.prems (5) by (rule cost_closed)
+      qed
+    next
+      case True then obtain v' where v': "V - {v} = {v'}" and vv': "v \<noteq> v'" 
+        using v Suc.prems (1)
+        by (metis Diff_insert_absorb One_nat_def Suc_1 card.remove card_1_singleton_iff insertCI mk_disjoint_insert nat.inject)
+      hence V: "V = {v,v'}" using v by blast
+      hence Vw: "V - {v} \<union> {w} = {v', w}" using Suc.prems (4) v' by auto
+      hence c2Vvw: "2 \<le> card (V - {v} \<union> {w})" using v' Suc.prems (4) V by simp
+      show ?thesis 
+        unfolding cost_inv 
+        using non_evasive.simps (5) [OF c2Vvw] using nec Suc.prems(1) V Vw v'
+        by (metis cone_non_evasive finite_insert insertCI insert_not_empty non_evasive.simps(4) non_evasive_empty_set singleton_cone)
+    qed
+    hence nec: "non_evasive (V \<union> {w} - {v}) (cost v (V \<union> {w}) K)" unfolding Vvw .
+    show ?case unfolding non_evasive.simps (5) [OF c2] 
+      by (rule bexI [of _ v], rule conjI, intro nel, intro nec, simp add: v)
+  qed
+
+
+
+
+
+
+
+
+  have c2: "2 \<le> card (V' \<union> {w})" using 5 using f w by auto
+  obtain x where x: "x \<in> V' \<union> {w}" and nec: "non_evasive (V' \<union> {w} - {x}) (link_ext x (V \<union> {w}) K)"
+    and nel: "non_evasive (V' \<union> {w} - {x}) (cost x (V' \<union> {w}) K)"
+    using non_evasive.simps (5) [OF c2] ne 5 by blast
+  have cost_inv: "cost x (V' \<union> {w}) K' = cost x V' K'"
+    using x KV "5" (2) unfolding cost_def by auto
+  have link_ext_inv: "link_ext x (V' \<union> {w}) K' = link_ext x V' K"
+    using x KV "5" (2) unfolding link_ext_def by auto
+  consider (xw) "x = w" | (xV) "x \<in> V'" using x by auto
+  then show ?thesis
+  proof (cases)
+    case xw hence Vwx: "V' \<union> {w} - {x} = V'" using "5"(2) w by blast
+    have "link_ext x (V' \<union> {w}) K' = {}"  using "5"(2) w KV xw unfolding link_ext_def by auto
+    have "cost x (V' \<union> {w}) K' = K'"  using "5"(2) w KV xw unfolding cost_def by auto
+    show ?thesis using non_evasive.simps (5) using "5" (2) using Vwx nel
+      by (metis \<open>cost x (V' \<union> {w}) K' = K'\<close> prod.inject)
+  next
+    case xV
+    have V: "V = V'" and K: "K = K'" using "5" (2) by simp_all
+    have ne2: "non_evasive (V' \<union> {w}) K'" using "5" (2) ne by simp
+    have w2: "w \<notin> V'" using "5" (2) w by simp
+    have f2: "finite V'" using f "5" (2) by simp
+    have K'V': "K' \<subseteq> powerset V'" using KV "5" (2) by simp
+    show ?thesis unfolding V K
+      using ne2 w2 f2 "5" (1) K'V' proof (induct "card V'" arbitrary: V' K')
+      case 0
+      then show ?case by linarith
+    next
+      case (Suc xa)
+      have "non_evasive (V' - {x}) (cost x V' K')"
+      proof (cases "card V' = 2")
+      case False hence c2: "2 \<le> card (V' - {x})" using Suc.prems (4) Suc.hyps(2)
+        by (metis card_Diff_singleton_if diff_Suc_1 le_SucE)
+      show ?thesis
+      proof (rule Suc.hyps)
+        show "xa = card (V' - {x})" using Suc.hyps (2) Suc.prems try by simp
+        show "finite (V - {v})" using Suc.prems (1) by simp
+        show "2 \<le> card (V - {v})" using c2 .
+        show "non_evasive (V - {v}) (cost v (V \<union> {w}) K)" 
+          unfolding cost_inv using nec .
+        show "w \<notin> V - {v}" using Suc.prems (4) v by simp
+        show "cost v (V \<union> {w}) K \<subseteq> powerset (V - {v})" unfolding cost_inv using Suc.prems (5) by (rule cost_closed)
+      qed
+    next
+      case True then obtain v' where v': "V - {v} = {v'}" and vv': "v \<noteq> v'" 
+        using v Suc.prems (1)
+        by (metis Diff_insert_absorb One_nat_def Suc_1 card.remove card_1_singleton_iff insertCI mk_disjoint_insert nat.inject)
+      hence V: "V = {v,v'}" using v by blast
+      hence Vw: "V - {v} \<union> {w} = {v', w}" using Suc.prems (4) v' by auto
+      hence c2Vvw: "2 \<le> card (V - {v} \<union> {w})" using v' Suc.prems (4) V by simp
+      show ?thesis 
+        unfolding cost_inv 
+        using non_evasive.simps (5) [OF c2Vvw] using nec Suc.prems(1) V Vw v'
+        by (metis cone_non_evasive finite_insert insertCI insert_not_empty non_evasive.simps(4) non_evasive_empty_set singleton_cone)
+    qed
+ 
+      moreover have "non_evasive (V' - {x}) (link_ext x V' K)" sorry
+      ultimately show ?thesis using non_evasive.simps (5) xV Suc by blast
+    qed
+  qed
+next
+  case (6 V K)
+  then show ?thesis using ne using f by fastforce
+qed
+
+
 
 lemma assumes ne: "non_evasive V K" and KV: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}"
   shows "non_evasive (vertex_of_simpl_complex K) K"

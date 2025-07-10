@@ -162,6 +162,58 @@ lemma non_evasiveI2:
   shows "non_evasive V K"
   unfolding non_evasive.simps (5) [OF v] using k .
 
+lemma evasive_singleton: assumes v: "V = {v}" shows "\<not> (non_evasive V {{v}})"
+  using non_evasive.simps (2,3,4) [OF v] by simp
+
+lemma evasive_singleton_general: assumes v: "v \<in> V" shows "\<not> (non_evasive V {{v}})"
+  using v proof (induct "card V" arbitrary: V)
+  case 0
+  show ?case
+  proof (cases "finite V")
+    case True
+    then have False using "0.prems" "0.hyps" by simp thus ?thesis by (rule ccontr)
+  next
+    case False
+    show ?thesis using non_evasive.simps (6) [OF False] by simp
+  qed
+next
+  case (Suc x V)
+  show ?case
+  proof (cases "x = 0")
+    case True hence V: "V = {v}" using Suc by (metis card_1_singleton_iff singletonD)
+    show ?thesis using non_evasive.simps (2,3,4) [OF V] by simp
+  next
+    case False hence c2: "2 \<le> card V" and f: "finite V" using Suc apply linarith
+      using Suc.hyps(2) card.infinite by fastforce
+    show ?thesis
+    proof (rule ccontr, simp)
+      assume ne: "non_evasive V {{v}}"
+      obtain v' where x: "v' \<in> V" and nel: "non_evasive (V - {v'}) (link_ext v' V {{v}})" 
+        and nec: "non_evasive (V - {v'}) (cost v' V {{v}})" using non_evasive.simps (5) [OF c2] 
+        using ne by auto
+      consider (eq) "v' = v" | (neq) "v' \<noteq> v" using v x by auto
+      then show False
+      proof (cases)
+        case eq
+        have lne: "link_ext v' V {{v}} = {{}}" unfolding eq link_ext_def by auto
+        show ?thesis using nel nec unfolding lne using ne non_evasive.simps eq f
+          by (metis evasive_empty_set)
+      next
+        case neq
+        have cne: "cost v' V {{v}} = {{v}}"
+          using neq Suc.prems (1) unfolding link_ext_def cost_def by auto
+        have "\<not> non_evasive (V - {v'}) (cost v' V {{v}})"
+          unfolding cne
+        proof (rule Suc.hyps)
+          show "x = card (V - {v'})" using x Suc.hyps (2) by simp
+          show "v \<in> V - {v'}" using neq Suc.prems by blast
+        qed
+        thus ?thesis using nec by simp
+      qed
+    qed
+  qed
+qed
+
 (*lemma assumes v: "2 \<le> card V" and kne: "K \<noteq> {}" and cs: "closed_subset K" and K: "K \<subseteq> powerset V" and x: "x \<in> V"
     and nl: "non_evasive (V - {x}) (link_ext x V K)" and "non_evasive (V - {x}) (cost x V K)"
   shows "{x} \<in> K"
