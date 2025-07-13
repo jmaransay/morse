@@ -3024,7 +3024,7 @@ lemma pure_d_card: assumes p: "pure_d d K" and f: "finite K"
 proof (rule ccontr, simp)
   assume "\<exists>f. f \<in> K \<and> Suc d < card f"
   then obtain f where fK: "f \<in> K" and cf: "d + 1 < card f" by auto  
-  show False 
+  show False
   proof (cases "f \<in> facets K")
     case True
     then show ?thesis using pure_d_card_facets [OF p] cf by simp
@@ -3206,6 +3206,130 @@ corollary pure_d_0_singleton2:
   using pure_d_0_collection_vertexes [OF p cs Kne f K]
   using card_1_singletonE by (metis non_evasive.simps(4))
 
+lemma facet_implies_facet_cost: assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" 
+  and f: "f \<in> facets K" and v: "v \<notin> f" 
+  shows "f \<in> facets (cost v V K)"
+unfolding facets_def facet_def cost_def
+proof (rule, rule, rule, intro conjI)
+  show "f \<in> powerset (V - {v})" using f v K unfolding facets_def facet_def by auto
+  show "f \<in> K" using f unfolding facets_def facet_def by simp 
+  show "\<forall>b\<in>{s \<in> powerset (V - {v}). s \<in> K}. f \<subseteq> b \<longrightarrow> f = b"
+  proof (rule)
+    fix b
+    assume b: "b \<in> {s \<in> powerset (V - {v}). s \<in> K}"
+    show "f \<subseteq> b \<longrightarrow> f = b" using f b unfolding facets_def facet_def by auto
+  qed
+qed
+
+lemma facet_cost_implies_facet: assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" 
+  and f: "f \<in> facets (cost v V K)" and fl: "f \<notin> link_ext v V K"
+  shows "f \<in> facets K"
+unfolding facets_def facet_def
+proof (rule, rule)
+  from f have v: "v \<notin> f" unfolding facets_def facet_def cost_def by auto
+  show "f \<in> K" using f K unfolding facets_def facet_def cost_def by auto
+  show "\<forall>b\<in>K. f \<subseteq> b \<longrightarrow> f = b"
+  proof (rule)
+    fix b
+    assume b: "b \<in> K"
+    show "f \<subseteq> b \<longrightarrow> f = b"
+    proof (rule)
+      assume fb: "f \<subseteq> b"
+      show "f = b"
+      proof (cases "v \<in> b")
+        case True
+        hence "f \<in> link_ext v V K"
+          using K v b fb cs
+          unfolding link_ext_def closed_subset_def by fastforce
+        with fl have False by simp
+        thus ?thesis by (rule ccontr)
+      next
+        case False hence bp: "b \<in> powerset (V - {v})" using b K by auto
+        then show ?thesis using f fb unfolding cost_def facets_def facet_def
+          using b by blast
+      qed
+    qed
+  qed
+qed
+
+lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and d: "0 < d" and f: "finite K"
+    and p: "pure_d d K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" and ne: "non_evasive V K" 
+  shows "pure_d d (cost v V K)"
+proof (unfold pure_d_def, rule)
+  from v have Kne: "K \<noteq> {}" by auto
+  (*from p obtain f where "f \<in> facets K" and "card f = d + 1" using pure_d_facet [OF Kne f p] by auto
+  obtain f where "f \<in> cost v V K" and "f \<notin> link_ext v V K"
+    using nc K c v proposition_1 [OF _ K, of v]
+    by (metis Pow_iff closed_subset_link_eq_link_ext insert_not_empty insert_subset link_subset_cost subsetI subset_antisym)*)
+  fix f
+  assume fa: "f \<in> facets (cost v V K)"
+  hence fc: "f \<in> cost v V K"
+    unfolding facets_def
+    using facet_in_K by auto
+  (*have fnl: "f \<notin> link_ext v V K"
+  proof (rule ccontr, simp)
+    assume fle: "f \<in> link_ext v V K"
+    hence "insert v f \<in> K" unfolding link_ext_def by simp
+    with fa have False unfolding facets_def facet_def cost_def try*)
+  have vV: "v \<in> V" using v K by auto
+  have ff: "f \<in> facets K"
+  proof (rule facet_cost_implies_facet [of _ V _ v])
+    show "K \<subseteq> powerset V" using K .
+    show "closed_subset K" using c .
+    show "f \<in> facets (cost v V K)" using fa .
+    show "f \<notin> link_ext v V K"
+      using fc nc vV unfolding cost_def link_ext_def cone_peak_def apply simp sorry
+  qed
+  thus "card f = d + 1" using pure_d_facet [OF Kne f p] ff
+    using p pure_d_def by force
+  with facet_cost_implies_facet [OF K]
+  hence fc: "f \<in> cost v V K"
+    unfolding facets_def
+    using facet_in_K by auto
+  hence vnf: "v \<notin> f" unfolding cost_def by auto
+  show "card f = d + 1"
+  proof (rule ccontr)
+    assume c: "card f \<noteq> d + 1" 
+    hence cf: "card f < d + 1" 
+      using pure_d_card [OF p f] using fc using cost_closed [OF K, of v] unfolding cost_def by auto
+    with vnf 
+    
+  have insf: "f \<in> facets K" 
+  
+  proof (cases "f \<in> facets (link_ext v V K)")
+    case True
+    hence "f \<in> link_ext v V K" unfolding facets_def using facet_in_K by auto
+    hence "insert v f \<in> K" unfolding link_ext_def by simp
+    hence False using f vnf unfolding facets_def facet_def cost_def try
+    then show ?thesis sorry
+  next
+    case Farop
+lse
+    then show ?thesis sorry
+  qed
+  
+
+  proof (unfold facets_def, rule, unfold facet_def, rule)
+    show "f \<in> K" using fc by (metis K Un_iff cost_union_closed_star)
+    show "\<forall>b\<in>K. f \<subseteq> b \<longrightarrow> f = b"
+    proof (rule, rule)
+      fix b assume b: "b \<in> K" and i: "insert v f \<subseteq> b"
+      show "insert v f = b"
+      proof (rule ccontr)
+        assume "insert v f \<noteq> b" hence ins: "insert v f \<subset> b" using i by auto
+        have "b - {v} \<in> link_ext v V K" using b K i unfolding link_ext_def 
+          by auto (simp add: insert_absorb)
+        moreover have "f \<subset> b - {v}" using ins vnf by auto
+        ultimately show False using f unfolding facets_def facet_def by auto
+      qed
+    qed
+  qed
+  show "card f = d - 1 + 1" using insf p vnf d unfolding pure_d_def
+    by (metis Suc_diff_1 Suc_eq_plus1 card_Diff_singleton_if diff_Suc_1 insertI1 insert_Diff1)
+qed
+
+
+
 lemma non_evasive_dim_1_two_free_faces: assumes neVK: "non_evasive V K"
   and p: "pure_d 1 K" and f: "finite V" and K: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}" and cs: "closed_subset K"
 shows "2 \<le> card {f. free_face f K}"
@@ -3307,76 +3431,52 @@ next
       using fKv linkne
       using csle lepw non_evasive_impl_non_evasive_vsc
         vertex_of_simpl_complex_subset by presburger
-  qed
+  qed find_theorems "pure_d"
   then obtain w where vosc_l: "vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K) = {w}"
     by (rule card_1_singletonE)
-  show ?case
-
-  using pure_d_0_singleton2 [OF Suc.prems (4,6) f Suc.prems (5)]
-    apply (rule pure_d_0_singleton2 [of "link_ext v (vertex_of_simpl_complex K) K" "V - {v}"])
-    
-    have "free_face {v} K"
-  proof (unfold free_face_def, rule ex1I)
-  from Suc.hyps
-
-
-
-
-
-
-lemma pure_d_1_free_faces:
-  assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" and f: "finite V" and Kne: "K \<noteq> {}"
-    and p: "pure_d 1 K" and ne: "non_evasive (vertex_of_simpl_complex K) K"
-  shows " "
-
-lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and d: "0 < d" and f: "finite K"
-  and p: "pure_d d K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" shows "pure_d d (cost v V K)"
-proof (unfold pure_d_def, rule)
-
-  from v have Kne: "K \<noteq> {}" by auto
-  from p obtain f where "f \<in> facets K" and "card f = d + 1" using pure_d_facet [OF Kne f p] by auto
-  
-  (*obtain f where "f \<in> cost v V K" and "f \<notin> link_ext v V K"
-    using nc K c v proposition_1 [OF _ K, of v]
-    by (metis Pow_iff closed_subset_link_eq_link_ext insert_not_empty insert_subset link_subset_cost subsetI subset_antisym)*)
-  fix f
-  assume f: "f \<in> facets (cost v V K)"
-  hence fc: "f \<in> cost v V K"
-    unfolding facets_def
-    using facet_in_K by auto
-  hence vnf: "v \<notin> f" unfolding cost_def by auto
-  have insf: "f \<in> facets K" 
-  proof (cases "f \<in> facets (link_ext v V K)")
-    case True
-    hence "f \<in> link_ext v V K" unfolding facets_def using facet_in_K by auto
-    hence "insert v f \<in> K" unfolding link_ext_def by simp
-    hence False using f vnf unfolding facets_def facet_def cost_def try
-    then show ?thesis sorry
-  next
-    case Farop
-lse
-    then show ?thesis sorry
-  qed
-  
-
-  proof (unfold facets_def, rule, unfold facet_def, rule)
-    show "f \<in> K" using fc by (metis K Un_iff cost_union_closed_star)
-    show "\<forall>b\<in>K. f \<subseteq> b \<longrightarrow> f = b"
-    proof (rule, rule)
-      fix b assume b: "b \<in> K" and i: "insert v f \<subseteq> b"
-      show "insert v f = b"
+  have ffv: "free_face {v} K"
+  proof (unfold free_face_def, rule ex1I [of _ "{v, w}"], intro conjI)
+    show "{v, w} \<in> K" using v vosc_l unfolding link_ext_def vertex_of_simpl_complex_def by auto
+    have vnew: "v \<noteq> w" using vosc_l unfolding link_ext_def vertex_of_simpl_complex_def by auto
+    thus "face {v} {v, w}" unfolding face_def by auto
+    have fK : "finite K" using Suc.prems(4) f finite_subset by auto
+    fix b assume b: "b \<in> K \<and> face {v} b"
+    consider (c0) "card b = 0" | (c1) "card b = 1" | (c2) "card b = 2" | (cl2) "2 < card b" by linarith
+    then show "b = {v, w}"
+    proof (cases)
+      case c0 from b have "finite b" using f Suc.prems (4)
+        by (meson PowD finite_subset subset_iff)
+      with c0 have "b = {}" by simp
+      with b have False unfolding face_def by simp
+      thus ?thesis by (rule ccontr)
+    next
+      case c1
+      with b have False unfolding face_def
+        using card_1_singletonE by blast
+      thus ?thesis by (rule ccontr)
+    next
+      case c2
+      show ?thesis
       proof (rule ccontr)
-        assume "insert v f \<noteq> b" hence ins: "insert v f \<subset> b" using i by auto
-        have "b - {v} \<in> link_ext v V K" using b K i unfolding link_ext_def 
-          by auto (simp add: insert_absorb)
-        moreover have "f \<subset> b - {v}" using ins vnf by auto
-        ultimately show False using f unfolding facets_def facet_def by auto
+        assume bvw: "b \<noteq> {v, w}"
+        obtain v2 where b2: "b = {v, v2}" using b c2 card_2_iff [of b] unfolding face_def by auto
+        with bvw have wnb: "w \<notin> b" using b2 using vnew by fastforce
+        hence wnev2: "w \<noteq> v2" using b2 by blast
+        have vnev2: "v \<noteq> v2" using c2 b2 by auto
+        have "{v2} \<in> (link_ext v (vertex_of_simpl_complex K) K)"
+          using b vnev2 unfolding b2 link_ext_def vertex_of_simpl_complex_def
+          using Suc.prems(6) closed_subset_def by fastforce
+        hence "v2 \<in> vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K)"
+          unfolding vertex_of_simpl_complex_def by simp
+        thus False using vosc_l wnev2 by simp
       qed
+    next
+      case cl2
+      then show ?thesis using pure_d_card [OF Suc.prems (2) fK] using cl2 b by auto
     qed
   qed
-  show "card f = d - 1 + 1" using insf p vnf d unfolding pure_d_def
-    by (metis Suc_diff_1 Suc_eq_plus1 card_Diff_singleton_if diff_Suc_1 insertI1 insert_Diff1)
-qed
+
+
 
 
 lemma assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K"
