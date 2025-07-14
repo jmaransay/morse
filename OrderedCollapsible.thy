@@ -3252,6 +3252,60 @@ proof (rule, rule)
   qed
 qed
 
+lemma assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" and f: "finite V"
+    and p: "pure_d 1 K" and w: "{w} \<in> K" and ce: "cost w V K = {{}}" and ne: "K \<noteq> {{}, {w}}" 
+  shows "\<not> (non_evasive V K)"
+  using K cs f w ce ne proof (induct "card V" arbitrary: V K rule: nat_induct)
+  case 0
+  from "0.prems" (3) and "0.hyps" have "V = {}" by simp
+  thus ?case by simp
+next
+  case (Suc n)
+  show ?case
+  proof (cases "n = 0")
+    case True
+    then obtain v where v: "V = {v}" using Suc.hyps (2) by (metis card_1_singleton_iff)
+    with Suc.prems (1,4) have "v = w" by auto
+    thus ?thesis using Suc.prems (1,2,4,5,6) v unfolding cost_def closed_subset_def
+      by blast
+  next
+    case False hence c2: "2 \<le> card V" using Suc.hyps (2) by simp
+    show ?thesis
+    proof (rule ccontr, simp)
+      assume ne: "non_evasive V K"
+      then obtain v where v: "v \<in> V" and nec: "non_evasive (V - {v}) (cost v V K)" 
+        and nel: "non_evasive (V - {v}) (link_ext v V K)" 
+        unfolding non_evasive.simps (5) [OF c2] by auto
+      have Vvne: "V - {v} \<noteq> {}" using c2 False Suc.hyps(2) f v
+        by (metis card.empty card_Diff_singleton diff_Suc_1)
+      show False
+      proof (cases "v = w")
+        case True
+        then show ?thesis using Suc.prems (3,5) nec Vvne using evasive_empty_set by simp
+      next
+        case False
+        have "\<not> (non_evasive (V - {v}) (cost v V K))"
+        proof (rule Suc.hyps (1))
+          show "n = card (V - {v})" using v Suc.prems (3) Suc.hyps (2) by simp
+          show "cost v V K \<subseteq> powerset (V - {v})" using cost_closed [OF Suc.prems (1)] .
+          show "closed_subset (cost v V K)" using closed_subset_cost [OF Suc.prems (1,2)] .
+          show "finite (V - {v})" using Suc.prems (3) by simp
+          have wV: "w \<in> V" using Suc.prems (1,4) by auto
+          show "{w} \<in> cost v V K" using False Suc.prems (4) wV unfolding cost_def by simp
+          show cce: "cost w (V - {v}) (cost v V K) = {{}}" using Suc.prems (5) unfolding cost_def by blast
+          show "cost v V K \<noteq> {{}, {w}}"
+          proof (rule ccontr, simp)
+            assume c: "cost v V K = {{}, {w}}"
+            from cce have "cost w (V - {v}) (cost v V K) = {{}}" unfolding c unfolding cost_def by simp
+            thus False sorry
+            qed
+          qed
+          with nec show False by simp
+      qed
+    qed
+  qed
+qed
+
 lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and d: "0 < d" and f: "finite K"
     and p: "pure_d d K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" and ne: "non_evasive V K" 
   shows "pure_d d (cost v V K)"
