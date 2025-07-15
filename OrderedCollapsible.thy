@@ -3252,7 +3252,7 @@ proof (rule, rule)
   qed
 qed
 
-lemma assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" and f: "finite V"
+lemma pure_1_isolated_vertex_evasive: assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" and f: "finite V"
     and p: "pure_d 1 K" and w: "{w} \<in> K" and ce: "cost w V K = {{}}" and ne: "K \<noteq> {{}, {w}}" 
   shows "\<not> (non_evasive V K)"
   using K cs f w ce ne proof (induct "card V" arbitrary: V K rule: nat_induct)
@@ -3297,9 +3297,16 @@ next
           proof (rule ccontr, simp)
             assume c: "cost v V K = {{}, {w}}"
             thus False
-              using Suc.prems (1,2,3,5,6) cs_cost pw_cost cce
+              using link_ext_subset_cost [OF cs_cost, of w "V - {v}"]
+              using cce v
+              using proposition_2 [OF pw_cost cs_cost, of w]
+              (*using complex_decomposition [OF pw_cost cs_cost, of w]
+              using complex_decomposition [OF Suc.prems (1,2), of v]*)
+              using closed_subset_link_eq_link_ext [OF _ Suc.prems (1,2)]
+              using Suc.prems (1,2,5,6)
               using singleton_in_link_ext [OF w_in_cost] singleton_in_link_ext [OF Suc.prems (4)]
-              by (metis insert_absorb link_ext_subset_cost proposition_2 subset_singleton_iff)
+              by (metis complex_decomposition insert_absorb 
+                    insert_not_empty link_ext_subset_cost subset_singletonD)
             qed
           qed
           with nec show False by simp
@@ -3308,9 +3315,9 @@ next
   qed
 qed
 
-lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and d: "0 < d" and f: "finite K"
-    and p: "pure_d d K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" and ne: "non_evasive V K" 
-  shows "pure_d d (cost v V K)"
+lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite K"
+    and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" and ne: "non_evasive V K" 
+  shows "pure_d 1 (cost v V K)"
 proof (unfold pure_d_def, rule)
   from v have Kne: "K \<noteq> {}" by auto
   (*from p obtain f where "f \<in> facets K" and "card f = d + 1" using pure_d_facet [OF Kne f p] by auto
@@ -3334,7 +3341,17 @@ proof (unfold pure_d_def, rule)
     show "closed_subset K" using c .
     show "f \<in> facets (cost v V K)" using fa .
     show "f \<notin> link_ext v V K"
-      using fc nc vV unfolding cost_def link_ext_def cone_peak_def apply simp sorry
+    proof (rule ccontr, simp)
+      assume fle: "f \<in> link_ext v V K"
+      have "pure_d 0 (link_ext v V K)"
+        by (metis K c diff_self_eq_0 less_one p pure_d_minus_one_link_ext v)
+      hence "card f \<le> 1"
+        using fle K vV ne
+        by (metis One_nat_def Suc_eq_plus1 finite_Pow_iff finite_insert finite_subset insert_Diff 
+            link_ext_closed linorder_not_le non_evasive.simps(6) pure_d_card)
+      hence False
+        unfolding link_ext_def by simp
+
   qed
   thus "card f = d + 1" using pure_d_facet [OF Kne f p] ff
     using p pure_d_def by force
