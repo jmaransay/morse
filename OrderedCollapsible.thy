@@ -3287,17 +3287,19 @@ next
         have "\<not> (non_evasive (V - {v}) (cost v V K))"
         proof (rule Suc.hyps (1))
           show "n = card (V - {v})" using v Suc.prems (3) Suc.hyps (2) by simp
-          show "cost v V K \<subseteq> powerset (V - {v})" using cost_closed [OF Suc.prems (1)] .
-          show "closed_subset (cost v V K)" using closed_subset_cost [OF Suc.prems (1,2)] .
+          show pw_cost: "cost v V K \<subseteq> powerset (V - {v})" using cost_closed [OF Suc.prems (1)] .
+          show cs_cost: "closed_subset (cost v V K)" using closed_subset_cost [OF Suc.prems (1,2)] .
           show "finite (V - {v})" using Suc.prems (3) by simp
           have wV: "w \<in> V" using Suc.prems (1,4) by auto
-          show "{w} \<in> cost v V K" using False Suc.prems (4) wV unfolding cost_def by simp
+          show w_in_cost: "{w} \<in> cost v V K" using False Suc.prems (4) wV unfolding cost_def by simp
           show cce: "cost w (V - {v}) (cost v V K) = {{}}" using Suc.prems (5) unfolding cost_def by blast
           show "cost v V K \<noteq> {{}, {w}}"
           proof (rule ccontr, simp)
             assume c: "cost v V K = {{}, {w}}"
-            from cce have "cost w (V - {v}) (cost v V K) = {{}}" unfolding c unfolding cost_def by simp
-            thus False sorry
+            thus False
+              using Suc.prems (1,2,3,5,6) cs_cost pw_cost cce
+              using singleton_in_link_ext [OF w_in_cost] singleton_in_link_ext [OF Suc.prems (4)]
+              by (metis insert_absorb link_ext_subset_cost proposition_2 subset_singleton_iff)
             qed
           qed
           with nec show False by simp
