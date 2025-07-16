@@ -3279,15 +3279,16 @@ proof (rule, rule)
   qed
 qed
 
-lemma pure_1_isolated_vertex_evasive: assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" and f: "finite V"
-    (*and p: "pure_d 1 K"*) and w: "{w} \<in> K" and ce: "link_ext w V K = {{}}" and ne: "K \<noteq> {{}, {w}}" 
-  shows "\<not> (non_evasive V K)"
-  using K cs f w ce ne proof (induct "card V" arbitrary: V K rule: nat_induct)
+lemma isolated_vertex_evasive: assumes K: "K \<subseteq> powerset V" and cs: "closed_subset K" and f: "finite V"
+  and w: "{w} \<in> K" and ce: "link_ext w V K = {{}}" and ne: "K \<noteq> {{}, {w}}" 
+shows "\<not> (non_evasive V K)"
+using K cs f w ce ne proof (induct "card V" arbitrary: V K rule: nat_induct)
   case 0
   from "0.prems" (3) and "0.hyps" have "V = {}" by simp
   thus ?case by simp
 next
   case (Suc n)
+  have wV: "w \<in> V" using Suc.prems (1,4) by auto
   show ?case
   proof (cases "n = 0")
     case True
@@ -3315,30 +3316,61 @@ next
           using link_ext_mono3 [of "V - {w}" V "cost v V K"]
           by (metis Diff_subset Suc.prems(1,2) dual_order.refl le_sup_iff proposition_2)
         moreover have "{} \<in> link_ext w (V - {w}) (cost v V K)"
-        using Suc.prems (5) lc_ss
-        using singleton_in_link_ext [of w "(cost v V K)" "(V - {w})"] Suc.prems (4) False
-        using Suc.prems(1) cost_def by auto
-      ultimately have "link_ext w (V - {w}) (cost v V K) = {{}}" using Suc.prems (5) by auto
-      have "\<not> non_evasive (V - {v}) (cost v V K)" 
-      proof (rule Suc.hyps (1))
-        show "cost v V K \<noteq> {{}, {w}}"
-        proof (rule ccontr, simp)
-          assume "cost v V K = {{}, {w}}"
-          thus False using Suc.prems try
-
-        (*have "K = {{}, {w}}"*)
-        thus False
-          using Suc.prems (5)
-          using proposition_2 [OF Suc.prems (1,2), of w]
-          using singleton_in_link_ext [OF Suc.prems (4), of V]
-          using link_ext_subset_cost [OF Suc.prems (2), of w V]
-          unfolding join_vertex_def join_def
-         using Suc.prems (6) try by simp
+          using Suc.prems (5) lc_ss
+          using singleton_in_link_ext [of w "(cost v V K)" "(V - {w})"] Suc.prems (4) False
+          using Suc.prems(1) cost_def by auto
+        ultimately have "link_ext w (V - {w}) (cost v V K) = {{}}" using Suc.prems (5) by auto
+        have "\<not> non_evasive (V - {v}) (cost v V K)" 
+        proof (rule Suc.hyps (1))
+          show "n = card (V - {v})" using Suc.hyps (2) v by simp
+          show "cost v V K \<subseteq> powerset (V - {v})" using cost_closed [OF Suc.prems (1), of v] .
+          show "closed_subset (cost v V K)" using cost_closed_subset [OF Suc.prems (2), of v V] .
+          show "finite (V - {v})" using Suc.prems (3) by simp
+          show "{w} \<in> cost v V K" using Suc.prems (1,4) False unfolding cost_def by auto
+          show "link_ext w (V - {v}) (cost v V K) = {{}}" using Suc.prems (5) v wV False by (simp add: link_ext_cost_commute)
+          show "cost v V K \<noteq> {{}, {w}}"
+          proof (rule ccontr, simp)
+            assume c_s: "cost v V K = {{},{w}}"
+            then consider (l1) "link_ext v V K = {{},{w}}" | (l2) "link_ext v V K = {{}}" | (l3) "link_ext v V K = {}"
+              using link_ext_subset_cost [OF Suc.prems (2), of v V]
+              using link_ext_closed_subset [OF Suc.prems (2), of v V]
+              by (metis closed_subset_singleton_cases powerset_singleton)
+            then have "K = {{},{w},{v}} | K = {{},{w},{v},{w,v}}"
+            proof (cases)
+              case l1
+              then show ?thesis
+                using proposition_2 [OF Suc.prems (1,2), of v] using c_s
+                unfolding join_vertex_def join_def by auto
+            next
+              case l2
+              then show ?thesis using proposition_2 [OF Suc.prems (1,2), of v] using c_s
+                unfolding join_vertex_def join_def by auto
+            next
+              case l3
+              then have "K = {{},{w}}" using proposition_2 [OF Suc.prems (1,2), of v] using c_s
+                unfolding join_vertex_def join_def by auto
+              then have False using Suc.prems (6) by simp
+              thus ?thesis by (rule ccontr)
+            qed
+            then consider (K1) "K = {{},{w},{v}}" | (K2) "K = {{},{w},{v},{w,v}}" ..
+            then show False
+            proof (cases)
+              case K1 hence "link_ext v V K = {{}}" unfolding link_ext_def by auto
+              then show False using nel
+                by (metis Diff_empty Suc.prems(3) Vvne evasive_empty_set finite_Diff_insert)
+              next
+                case K2 hence "link_ext w V K = {{},{v}}"
+                  unfolding link_ext_def using False v by auto
+                thus False using Suc.prems (5) by simp
+              qed
+            qed
+          qed
+        with nec show False by simp
       qed
     qed
   qed
 qed
-
+     
 lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
     and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" and ne: "non_evasive V K" 
   shows "pure_d 1 (cost v V K)"
@@ -3363,76 +3395,15 @@ proof (unfold pure_d_def, rule)
         by (metis K c diff_self_eq_0 less_one p pure_d_minus_one_link_ext v)
       hence "card f = 1" using ffl by (simp add: pure_d_def)
       then obtain w where "f = {w}" by (rule card_1_singletonE)
-      have "link_ext w (V - {w}) (cost v V K) = {{}}" sorry
-      
-      have w: "{w} \<in> K" and ce: "cost w V K = {{}}" and ne: "K \<noteq> {{}, {w}}"
-      
-        hence ""
-      obtain w where "link_ext v V K = {{},{w}}" using pure_d_0_singleton2 [OF _ _ _ _ p0_link]
-
-
-      
-      hence "cost v V K = {{},{w}}" 
-        using fa fc unfolding facets_def facet_def cost_closed try
-
-
-
-        using fle K vV ne
-        by (metis One_nat_def Suc_eq_plus1 finite_Pow_iff finite_insert finite_subset insert_Diff 
-            link_ext_closed linorder_not_le non_evasive.simps(6) pure_d_card)
-      hence False
-        unfolding link_ext_def by simp
-
-  qed
-  thus "card f = d + 1" using pure_d_facet [OF Kne f p] ff
-    using p pure_d_def by force
-  with facet_cost_implies_facet [OF K]
-  hence fc: "f \<in> cost v V K"
-    unfolding facets_def
-    using facet_in_K by auto
-  hence vnf: "v \<notin> f" unfolding cost_def by auto
-  show "card f = d + 1"
-  proof (rule ccontr)
-    assume c: "card f \<noteq> d + 1" 
-    hence cf: "card f < d + 1" 
-      using pure_d_card [OF p f] using fc using cost_closed [OF K, of v] unfolding cost_def by auto
-    with vnf 
-    
-  have insf: "f \<in> facets K" 
-  
-  proof (cases "f \<in> facets (link_ext v V K)")
-    case True
-    hence "f \<in> link_ext v V K" unfolding facets_def using facet_in_K by auto
-    hence "insert v f \<in> K" unfolding link_ext_def by simp
-    hence False using f vnf unfolding facets_def facet_def cost_def try
-    then show ?thesis sorry
-  next
-    case Farop
-lse
-    then show ?thesis sorry
-  qed
-  
-
-  proof (unfold facets_def, rule, unfold facet_def, rule)
-    show "f \<in> K" using fc by (metis K Un_iff cost_union_closed_star)
-    show "\<forall>b\<in>K. f \<subseteq> b \<longrightarrow> f = b"
-    proof (rule, rule)
-      fix b assume b: "b \<in> K" and i: "insert v f \<subseteq> b"
-      show "insert v f = b"
-      proof (rule ccontr)
-        assume "insert v f \<noteq> b" hence ins: "insert v f \<subset> b" using i by auto
-        have "b - {v} \<in> link_ext v V K" using b K i unfolding link_ext_def 
-          by auto (simp add: insert_absorb)
-        moreover have "f \<subset> b - {v}" using ins vnf by auto
-        ultimately show False using f unfolding facets_def facet_def by auto
-      qed
+      with fa fc have "cost v V K = {{},{w}}" sorry
+      thus False
+        by (metis K \<open>f = {w}\<close> c closed_subset_singleton_cases cost_eq_link_ext_cone_peak empty_iff 
+            fle insert_iff link_ext_closed_subset link_ext_subset_cost nc powerset_singleton vV)
     qed
   qed
-  show "card f = d - 1 + 1" using insf p vnf d unfolding pure_d_def
-    by (metis Suc_diff_1 Suc_eq_plus1 card_Diff_singleton_if diff_Suc_1 insertI1 insert_Diff1)
+  thus "card f = 1 + 1" using p
+    using pure_d_def by blast
 qed
-
-
 
 lemma non_evasive_dim_1_two_free_faces: assumes neVK: "non_evasive V K"
   and p: "pure_d 1 K" and f: "finite V" and K: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}" and cs: "closed_subset K"
