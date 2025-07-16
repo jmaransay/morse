@@ -248,6 +248,11 @@ lemma link_ext_mono2: assumes sb: "W \<subseteq> V" and K: "K \<subseteq> powers
   shows "link_ext x V K = link_ext x W K"
   using assms unfolding link_ext_def by auto
 
+lemma link_ext_mono3: assumes sb: "V \<subseteq> V'" and K: "K \<subseteq> K'"
+  and K: "K \<subseteq> powerset W" and K: "K' \<subseteq> powerset V'"
+  shows "link_ext x V K \<subseteq> link_ext x V' K'"
+  using assms unfolding link_ext_def by auto
+
 lemma link_ext_cc:
   assumes v: "(V, K) \<in> cc_s"
   shows "(V, {s. insert x s \<in> K}) \<in> cc_s"
