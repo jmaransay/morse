@@ -3370,9 +3370,11 @@ next
     qed
   qed
 qed
-     
+
 lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
-    and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" and ne: "non_evasive V K" 
+    and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" 
+    and nec: "non_evasive (V - {v}) (cost v V K)"
+    and nel: "non_evasive (V - {v}) (link_ext v V K)"
   shows "pure_d 1 (cost v V K)"
 proof (unfold pure_d_def, rule)
   from v have Kne: "K \<noteq> {}" by auto
@@ -3394,11 +3396,85 @@ proof (unfold pure_d_def, rule)
       have p0_link: "pure_d 0 (link_ext v V K)"
         by (metis K c diff_self_eq_0 less_one p pure_d_minus_one_link_ext v)
       hence "card f = 1" using ffl by (simp add: pure_d_def)
-      then obtain w where "f = {w}" by (rule card_1_singletonE)
-      with fa fc have "cost v V K = {{},{w}}" sorry
-      thus False
-        by (metis K \<open>f = {w}\<close> c closed_subset_singleton_cases cost_eq_link_ext_cone_peak empty_iff 
-            fle insert_iff link_ext_closed_subset link_ext_subset_cost nc powerset_singleton vV)
+      then obtain w where fw: "f = {w}" by (rule card_1_singletonE)
+      have lne: "link_ext w (V - {v}) (cost v V K) = {{}}"
+      proof (rule ccontr)
+        assume lne: "link_ext w (V - {v}) (cost v V K) \<noteq> {{}}"
+        have "{} \<in> link_ext w (V - {v}) (cost v V K)" using fc fw unfolding link_ext_def by simp
+        then obtain w' where w': "{w'} \<in> link_ext w (V - {v}) (cost v V K)"
+          using link_ext_closed_subset [OF cost_closed_subset [OF c, of v V], of w "V - {v}"]
+          unfolding closed_subset_def
+          using lne by blast
+        hence wnew': "w \<noteq> w'" using fc fw unfolding link_ext_def by simp
+        hence "{w, w'} \<in> cost v V K" using w' unfolding link_ext_def by simp
+        thus False using fa fw wnew' unfolding facets_def facet_def by auto
+      qed
+      have "\<not> (non_evasive (V - {v}) (cost v V K))"
+      proof (rule isolated_vertex_evasive [of _ _ w])
+        show "cost v V K \<subseteq> powerset (V - {v})" using cost_closed [OF K] .
+        show "closed_subset (cost v V K)" using cost_closed_subset [OF c] .
+        show "finite (V - {v})" using f by simp
+        show "{w} \<in> cost v V K" using fc fw by simp
+        show "link_ext w (V - {v}) (cost v V K) = {{}}" using lne .
+        show "cost v V K \<noteq> {{}, {w}}"
+        proof (rule ccontr, simp)
+          assume c_s: "cost v V K = {{},{w}}"
+          then consider (l1) "link_ext v V K = {{},{w}}" | (l2) "link_ext v V K = {{}}" | (l3) "link_ext v V K = {}"
+            using link_ext_subset_cost [OF c, of v V]
+            using link_ext_closed_subset [OF c, of v V]
+              by (metis closed_subset_singleton_cases powerset_singleton)
+            then have "K = {{},{w},{v}} | K = {{},{w},{v},{w,v}} | K = {{},{w}}"
+            proof (cases)
+              case l1
+              then show ?thesis
+                using proposition_2 [OF K c, of v] using c_s
+                unfolding join_vertex_def join_def by auto
+            next
+              case l2
+              then show ?thesis using proposition_2 [OF K c, of v] using c_s
+                unfolding join_vertex_def join_def by auto
+            next
+              case l3
+              then have "K = {{},{w}}" using proposition_2 [OF K c, of v] using c_s
+                unfolding join_vertex_def join_def by auto
+              then show ?thesis by simp
+            qed
+            then consider (K1) "K = {{},{w},{v}}" | (K2) "K = {{},{w},{v},{w,v}}" | (K3) "K = {{},{w}}" by auto
+            then show False
+            proof (cases)
+              case K1 hence "link_ext v V K = {{}}" unfolding link_ext_def by auto
+              then show False using nel f evasive_empty_set fle fw by blast
+              next
+                case K3
+                hence "link_ext v V K = {{}}" unfolding link_ext_def
+                  using fle fw link_ext_def by force
+                with nel show False using evasive_empty_set f fle fw by blast
+              next
+                case K2
+                have "cone_peak V K v" unfolding K2 cone_peak_def 
+                proof (rule conjI, intro vV, rule exI [of _ "{{},{w}}"], intro conjI)
+                  show "{{}, {w}} \<subseteq> powerset (V - {v})"
+                    using \<open>cost v V K \<subseteq> powerset (V - {v})\<close> c_s by argo
+                  show "{{}, {w}, {v}, {w, v}} = {{}, {w}} \<union> {s. \<exists>b\<in>{{}, {w}}. s = insert v b}"
+                    by auto
+                qed
+                with nc show False by simp
+              qed
+            qed
+          qed
+          with nec show False by simp
+        qed
+      qed
+      thus "card f = 1 + 1" using p pure_d_def by blast
+    qed
+
+          
+          
+          
+          
+          
+          
+          with nec show False by simp
     qed
   qed
   thus "card f = 1 + 1" using p
