@@ -3468,18 +3468,36 @@ proof (unfold pure_d_def, rule)
       thus "card f = 1 + 1" using p pure_d_def by blast
     qed
 
-          
-          
-          
-          
-          
-          
-          with nec show False by simp
-    qed
-  qed
-  thus "card f = 1 + 1" using p
-    using pure_d_def by blast
+lemma facets_union: assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
+    and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" 
+    and nec: "non_evasive (V - {v}) (cost v V K)"
+    and nel: "non_evasive (V - {v}) (link_ext v V K)" and vnew: "v \<noteq> w"
+  shows "facets K = {{v,w}} \<union> facets (cost v V K)"
+  sorry
+
+
+lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
+    and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" 
+    and nec: "non_evasive (V - {v}) (cost v V K)"
+    and nel: "non_evasive (V - {v}) (link_ext v V K)" and cf: "1 < card ({f. f \<in> facets K})"
+    and vnew: "v \<noteq> w"
+  shows "card ({f. f \<in> facets (cost v V K)}) + 1 = card ({f. f \<in> facets K})"
+proof -
+  have ffK: "finite {f. f \<in> facets K}" using K f unfolding facets_def facet_def
+    by (simp add: finite_subset)
+  have "{v,w} \<notin> cost v V K" unfolding cost_def by simp
+  hence "{v,w} \<notin> facets (cost v V K)" unfolding facets_def facet_def by simp
+  thus ?thesis using facets_union [OF K c f p v nc nec nel vnew] ffK cf
+    by (metis Collect_mem_eq Diff_insert_absorb Un_insert_left add.commute card_Diff_singleton cf insertI1 nat_less_le
+        ordered_cancel_comm_monoid_diff_class.add_diff_inverse sup_bot_left)
 qed
+
+proof -
+  obtain w where "link_ext v V K = {{},{w}}" sorry
+
+
+
+
 
 lemma non_evasive_dim_1_two_free_faces: assumes neVK: "non_evasive V K"
   and p: "pure_d 1 K" and f: "finite V" and K: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}" and cs: "closed_subset K"
