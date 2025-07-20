@@ -3371,7 +3371,7 @@ next
   qed
 qed
 
-lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
+lemma pure_d_implies_pure_d_cost: assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
     and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" 
     and nec: "non_evasive (V - {v}) (cost v V K)"
     and nel: "non_evasive (V - {v}) (link_ext v V K)"
@@ -3457,24 +3457,58 @@ proof (unfold pure_d_def, rule)
                     using \<open>cost v V K \<subseteq> powerset (V - {v})\<close> c_s by argo
                   show "{{}, {w}, {v}, {w, v}} = {{}, {w}} \<union> {s. \<exists>b\<in>{{}, {w}}. s = insert v b}"
                     by auto
-                qed
-                with nc show False by simp
-              qed
             qed
+            with nc show False by simp
           qed
-          with nec show False by simp
         qed
       qed
-      thus "card f = 1 + 1" using p pure_d_def by blast
+      with nec show False by simp
     qed
+  qed
+  thus "card f = 1 + 1" using p pure_d_def by blast
+qed
 
 lemma facets_union: assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
     and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" 
     and nec: "non_evasive (V - {v}) (cost v V K)"
-    and nel: "non_evasive (V - {v}) (link_ext v V K)" and vnew: "v \<noteq> w"
-  shows "facets K = {{v,w}} \<union> facets (cost v V K)"
-  sorry
-
+    and nel: "non_evasive (V - {v}) (link_ext v V K)"
+  shows "\<exists>w. v \<noteq> w \<and> facets K = {{v,w}} \<union> facets (cost v V K)"
+proof -
+  obtain f where fK: "f \<in> facets K" and cf2: "card f = 1 + 1" using K f v p
+    by (metis empty_iff finite_Pow_iff finite_subset pure_d_facet)
+  show ?thesis
+  proof (cases "v \<in> f")
+    case True then obtain w where fdef: "f = {v,w}" using cf2
+      by (metis card_1_singletonE card_Diff_singleton diff_Suc_1 insert_Diff_single insert_absorb plus_1_eq_Suc)
+    then have vnew: "v \<noteq> w" using cf2 by auto
+    show ?thesis
+    proof (rule exI [of _ w], intro conjI)
+      show "v \<noteq> w" using vnew .
+      show "facets K = {{v, w}} \<union> facets (cost v V K)" 
+      proof
+        show "facets K \<subseteq> {{v, w}} \<union> facets (cost v V K)"
+        proof (rule)
+          fix x 
+          assume x: "x \<in> facets K" 
+          show "x \<in> {{v, w}} \<union> facets (cost v V K)"
+          proof (cases "v \<in> x")
+            case True
+            have "x = {v,w}"
+            proof (rule ccontr)
+              assume xne: "x \<noteq> {v, w}" then obtain w' where xvw': "x = {v,w'}"
+                using True x p unfolding facets_def facet_def pure_d_def
+                by (metis (lifting) card_1_singletonE card_Diff_singleton diff_add_inverse insert_Diff)
+              with xne have wnew': "w \<noteq> w'" by auto
+              show False try
+          next
+            case False
+            show ?thesis using facet_implies_facet_cost [OF K c x False] by simp
+          qed
+        
+  next
+    case False
+    then show ?thesis sorry
+  qed
 
 lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
     and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" 
@@ -3486,16 +3520,15 @@ proof -
   have ffK: "finite {f. f \<in> facets K}" using K f unfolding facets_def facet_def
     by (simp add: finite_subset)
   have "{v,w} \<notin> cost v V K" unfolding cost_def by simp
-  hence "{v,w} \<notin> facets (cost v V K)" unfolding facets_def facet_def by simp
-  thus ?thesis using facets_union [OF K c f p v nc nec nel vnew] ffK cf
+  hence vwnin: "{v,w} \<notin> facets (cost v V K)" unfolding facets_def facet_def by simp
+  from facets_union [OF K c f p v nc nec nel vnew] vnew 
+  obtain w where vnew: "v \<noteq> w" and funion: "facets K = {{v,w}} \<union> facets (cost v V K)" by auto
+  have "{v,w} \<notin> cost v V K" unfolding cost_def by simp
+  hence vwnin: "{v,w} \<notin> facets (cost v V K)" unfolding facets_def facet_def by simp
+  show ?thesis using ffK cf vwnin funion vnew
     by (metis Collect_mem_eq Diff_insert_absorb Un_insert_left add.commute card_Diff_singleton cf insertI1 nat_less_le
         ordered_cancel_comm_monoid_diff_class.add_diff_inverse sup_bot_left)
 qed
-
-proof -
-  obtain w where "link_ext v V K = {{},{w}}" sorry
-
-
 
 
 
