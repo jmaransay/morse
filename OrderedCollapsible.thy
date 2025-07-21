@@ -3620,34 +3620,43 @@ proof -
   qed
 qed
 
-lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
+lemma card_facets_cost: assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
     and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" 
     and nec: "non_evasive (V - {v}) (cost v V K)"
     and nel: "non_evasive (V - {v}) (link_ext v V K)" and cf: "1 < card ({f. f \<in> facets K})"
-    and vnew: "v \<noteq> w"
   shows "card ({f. f \<in> facets (cost v V K)}) + 1 = card ({f. f \<in> facets K})"
 proof -
   have ffK: "finite {f. f \<in> facets K}" using K f unfolding facets_def facet_def
     by (simp add: finite_subset)
+  obtain w where vnew: "v \<noteq> w" and funion: "facets K = {{v,w}} \<union> facets (cost v V K)"
+    using facets_union [OF K c f p v nc nec nel] by auto
   have "{v,w} \<notin> cost v V K" unfolding cost_def by simp
   hence vwnin: "{v,w} \<notin> facets (cost v V K)" unfolding facets_def facet_def by simp
-  from facets_union [OF K c f p v nc nec nel] vnew 
-  obtain w where vnew: "v \<noteq> w" and funion: "facets K = {{v,w}} \<union> facets (cost v V K)" by auto
-  have "{v,w} \<notin> cost v V K" unfolding cost_def by simp
-  hence vwnin: "{v,w} \<notin> facets (cost v V K)" unfolding facets_def facet_def by simp
-  show ?thesis using ffK cf vwnin funion vnew
-    by (metis Collect_mem_eq Diff_insert_absorb Un_insert_left add.commute card_Diff_singleton cf insertI1 nat_less_le
+  show ?thesis using ffK vwnin funion vnew cf
+    by (metis Collect_mem_eq Diff_insert_absorb Un_insert_left add.commute card_Diff_singleton insertI1 nat_less_le
         ordered_cancel_comm_monoid_diff_class.add_diff_inverse sup_bot_left)
 qed
 
-lemma non_evasive_dim_1_two_free_faces: assumes neVK: "non_evasive V K"
-  and p: "pure_d 1 K" and f: "finite V" and K: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}" and cs: "closed_subset K"
-shows "2 \<le> card {f. free_face f K}"
+lemma non_evasive_dim_1_two_free_faces: assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
+    and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)"
+    and nec: "non_evasive (V - {v}) (cost v V K)"
+    and nel: "non_evasive (V - {v}) (link_ext v V K)" and cf: "1 < card ({f. f \<in> facets K})"
+  shows "2 \<le> card {f. free_face f K}"
 proof -
+  have Kne: "K \<noteq> {}" using cf unfolding facets_def facet_def by auto
+  have c2v: "2 \<le> card V"
+    using pure_d_n_at_least_two_vertexes [OF p c Kne f K] by simp
+  have vV: "v \<in> V" using v K by auto
   have n: "non_evasive (vertex_of_simpl_complex K) K"
-    using neVK K Kne cs f non_evasive_impl_non_evasive_vsc vertex_of_simpl_complex_subset by presburger
+  proof (rule non_evasive_impl_non_evasive_vsc [of V])
+    show "non_evasive V K"
+      using non_evasive.simps (5) [OF c2v, of K] nel nec vV by auto
+    show "vertex_of_simpl_complex K \<subseteq> V" using vertex_of_simpl_complex_subset [OF f K] .
+    show "closed_subset K" using c .
+    show "K \<noteq> {}" using Kne .
+  qed
   show ?thesis
-  using n p f K Kne cs proof (induct "card {v\<in>K. card v = 2}" arbitrary: K rule: nat_induct_2)
+  using n p f K Kne c v nc nec nel proof (induct "card {v\<in>K. card v = 2}" arbitrary: K rule: nat_induct_2)
   case (0 K)
   have fK: "finite K" using "0.prems" (3,4) by (simp add: finite_subset)
   obtain f where ff: "f \<in> facets K" and cf: "card f = 2" 
@@ -3706,17 +3715,38 @@ next
     by (metis (no_types, lifting) One_nat_def card_0_eq card_1_singletonE empty_iff less_2_cases linorder_not_le singletonD)
 next
   case (Suc n K)
-  have cardvK: "2 \<le> card (vertex_of_simpl_complex K)" 
+  have cardvK: "2 \<le> card (vertex_of_simpl_complex K)"
     using p pure_d_n_two_vertexes [OF "Suc.prems" (2,6,5,3,4)] by simp
   obtain r where "r \<in> K" and "card r = 2" using Suc.hyps(3) unfolding pure_d_def facets_def facet_def
     by (metis (mono_tags, lifting) Collect_empty_eq Zero_not_Suc card.empty)
+  have v: "v \<in> vertex_of_simpl_complex K" using Suc.prems (7) unfolding vertex_of_simpl_complex_def by simp
+  have lvsc: "link_ext v (vertex_of_simpl_complex K) K = link_ext v V K"
+    using link_ext_vertex_of_simpl_complex [OF Suc.prems(4,6)] ..
+  have cvsc: "cost v (vertex_of_simpl_complex K) K = cost v V K"
+    using cost_vertex_of_simpl_complex [OF Suc.prems(4,6)] ..
+  have nl: "non_evasive (vertex_of_simpl_complex K - {v}) (link_ext v (vertex_of_simpl_complex K) K)"
+    unfolding lvsc
+    using non_evasive_equiv_non_evasive_vsc
+    using Suc.prems (10)
+    by (metis Suc.prems(1,4,6,7) finite.emptyI finite_Diff2 finite_insert insert_absorb insert_not_empty link_ext_closed link_ext_closed_subset lvsc
+        non_evasive.simps(6) powerset_vertex_of_simpl_complex singleton_in_link_ext vertex_of_simpl_complex_subset)
+  (*have "vertex_of_simpl_complex K - {v} = vertex_of_simpl_complex (cost v V K)"
+  have nc: "non_evasive (vertex_of_simpl_complex K - {v}) (cost v (vertex_of_simpl_complex K) K)"
+    unfolding cvsc
+    using non_evasive_impl_non_evasive_vsc
+    
+    using non_evasive_equiv_non_evasive_vsc
+    using Suc.prems (8) try
+    by (metis Suc.prems(1,4,6,7) finite.emptyI finite_Diff2 finite_insert insert_absorb insert_not_empty cost_closed cost_closed_subset cvsc
+        non_evasive.simps(6) powerset_vertex_of_simpl_complex singleton_in_link_ext vertex_of_simpl_complex_subset)
+  
   obtain v where v: "v \<in> vertex_of_simpl_complex K"
         and nl: "non_evasive (vertex_of_simpl_complex K - {v}) (link_ext v (vertex_of_simpl_complex K) K)"
         and nc: "non_evasive (vertex_of_simpl_complex K - {v}) (cost v (vertex_of_simpl_complex K) K)"
-    using Suc.prems (1) unfolding non_evasive.simps (5) [OF cardvK, of K] by auto
+    using Suc.prems (1) unfolding non_evasive.simps (5) [OF cardvK, of K] by auto*)
   have pwv: "K \<subseteq> powerset (vertex_of_simpl_complex K)"
     by (rule powerset_vertex_of_simpl_complex [OF Suc.prems (6)])
-  have "pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)"
+  have p0v: "pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)"
     using pure_d_minus_one_link_ext [OF pwv Suc.prems (6) _ Suc.prems (2), of v]
     using v unfolding vertex_of_simpl_complex_def by simp
   have "card (vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K)) = 1"
@@ -3733,14 +3763,10 @@ next
     show linkne: "link_ext v V K \<noteq> {}"
       using singleton_in_link_ext v vertex_of_simpl_complex_def by fastforce
     show "pure_d 0 (link_ext v V K)"
-      using \<open>\<And>v. link_ext v (vertex_of_simpl_complex K) K = link_ext v V K\<close> \<open>pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)\<close>
+      using \<open>\<And>v. link_ext v (vertex_of_simpl_complex K) K = link_ext v V K\<close> p0v
       by presburger
     show "non_evasive (vertex_of_simpl_complex K - {v}) (link_ext v V K)"
-      using nl
-      unfolding link_ext_vertex_of_simpl_complex [OF Suc.prems (4) Suc.prems (6), symmetric]
-      using fKv linkne
-      using csle lepw non_evasive_impl_non_evasive_vsc
-        vertex_of_simpl_complex_subset by presburger
+      using nl unfolding lvsc .
   qed
   then obtain w where vosc_l: "vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K) = {w}"
     by (rule card_1_singletonE)
@@ -3787,7 +3813,27 @@ next
   qed
   have "2 \<le> card {f. free_face f (cost v V K)}"
   proof (rule Suc.hyps)
-  
+    show "n = card {va \<in> cost v V K. card va = 2}" using card_facets_cost sorry
+    show "non_evasive (vertex_of_simpl_complex (cost v V K)) (cost v V K)" using Suc.prems (1) sorry
+    show "pure_d 1 (cost v V K)"
+    proof (rule pure_d_implies_pure_d_cost)
+      show "K \<subseteq> powerset V" using Suc.prems (4) .
+      show "closed_subset K" using Suc.prems (6) .
+      show "finite V" using Suc.prems (3) .
+      show "pure_d 1 K" using Suc.prems (2) .
+      show "{v} \<in> K" using Suc.prems (7) .
+      show "\<not> cone_peak V K v" using Suc.prems (8) .
+      show "non_evasive (V - {v}) (cost v V K)" using Suc.prems (9) .
+      show "non_evasive (V - {v}) (link_ext v V K)" using Suc.prems (10) .
+    qed
+    show "finite V" using Suc.prems (3) .
+    show "cost v V K \<subseteq> powerset V" using cost_closed using Suc.prems(4) by blast
+    show "cost v V K \<noteq> {}"
+      by (metis Suc.prems(6) \<open>r \<in> K\<close> bot.extremum closed_subset_def empty_iff empty_set_in_cost)
+    show "closed_subset (cost v V K)" by (simp add: Suc.prems(6) cost_closed_subset)
+    show "{v} \<in> cost v V K" unfolding cost_def try
+      show "\<not> cone_peak V (cost v V K) v"
+ show "non_evasive (V - {v}) (cost v V (cost v V K))"
   qed
 
 
