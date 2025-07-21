@@ -3474,41 +3474,151 @@ lemma facets_union: assumes K: "K \<subseteq> powerset V" and c: "closed_subset 
     and nel: "non_evasive (V - {v}) (link_ext v V K)"
   shows "\<exists>w. v \<noteq> w \<and> facets K = {{v,w}} \<union> facets (cost v V K)"
 proof -
-  obtain f where fK: "f \<in> facets K" and cf2: "card f = 1 + 1" using K f v p
-    by (metis empty_iff finite_Pow_iff finite_subset pure_d_facet)
-  show ?thesis
-  proof (cases "v \<in> f")
-    case True then obtain w where fdef: "f = {v,w}" using cf2
-      by (metis card_1_singletonE card_Diff_singleton diff_Suc_1 insert_Diff_single insert_absorb plus_1_eq_Suc)
-    then have vnew: "v \<noteq> w" using cf2 by auto
-    show ?thesis
-    proof (rule exI [of _ w], intro conjI)
-      show "v \<noteq> w" using vnew .
-      show "facets K = {{v, w}} \<union> facets (cost v V K)" 
-      proof
-        show "facets K \<subseteq> {{v, w}} \<union> facets (cost v V K)"
-        proof (rule)
-          fix x 
-          assume x: "x \<in> facets K" 
-          show "x \<in> {{v, w}} \<union> facets (cost v V K)"
-          proof (cases "v \<in> x")
-            case True
-            have "x = {v,w}"
-            proof (rule ccontr)
-              assume xne: "x \<noteq> {v, w}" then obtain w' where xvw': "x = {v,w'}"
-                using True x p unfolding facets_def facet_def pure_d_def
-                by (metis (lifting) card_1_singletonE card_Diff_singleton diff_add_inverse insert_Diff)
-              with xne have wnew': "w \<noteq> w'" by auto
-              show False try
-          next
-            case False
-            show ?thesis using facet_implies_facet_cost [OF K c x False] by simp
-          qed
-        
-  next
-    case False
-    then show ?thesis sorry
+  have fK: "finite K" using f K by (simp add: finite_subset)
+  have pwv: "K \<subseteq> powerset (vertex_of_simpl_complex K)" using powerset_vertex_of_simpl_complex [OF c] .
+  have "pure_d 0 (link_ext v (vertex_of_simpl_complex K) K)"
+    using pure_d_minus_one_link_ext [OF pwv c  _ p v] by simp
+  have "card (vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K)) = 1"
+    unfolding link_ext_vertex_of_simpl_complex [OF K c, symmetric]
+  proof (rule pure_d_0_singleton [of _ "vertex_of_simpl_complex K - {v}"])
+    show lepw: "link_ext v V K \<subseteq> powerset (vertex_of_simpl_complex K - {v})"
+      using link_ext_closed pwv
+      using link_ext_vertex_of_simpl_complex [OF K c] by presburger
+    show csle: "closed_subset (link_ext v V K)"
+      using c link_ext_closed_subset by auto
+    show fKv: "finite (vertex_of_simpl_complex K - {v})"
+      using K f non_evasive.simps(6)
+      using finite_vertex_of_simpl_complex by force
+    show linkne: "link_ext v V K \<noteq> {}"
+      using singleton_in_link_ext v vertex_of_simpl_complex_def by fastforce
+    show "pure_d 0 (link_ext v V K)"
+      using pure_d_minus_one_link_ext [OF pwv c  _ p v] 
+      using link_ext_vertex_of_simpl_complex [OF K c] by simp
+    show "non_evasive (vertex_of_simpl_complex K - {v}) (link_ext v V K)"
+      using nel
+      using link_ext_vertex_of_simpl_complex [OF K c, of v]
+      using fKv linkne
+      using csle lepw non_evasive_impl_non_evasive_vsc
+        vertex_of_simpl_complex_subset
+      by (meson K link_ext_closed non_evasive.simps(6) non_evasive_equiv_non_evasive_vsc)
   qed
+  then obtain w where vosc_l: "vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K) = {w}"
+    by (rule card_1_singletonE)
+  have vwK: "{v, w} \<in> K" using v vosc_l unfolding link_ext_def vertex_of_simpl_complex_def by auto
+  have vnew: "v \<noteq> w" using vosc_l unfolding link_ext_def vertex_of_simpl_complex_def by auto
+  have ffv: "free_face {v} K"
+  proof (unfold free_face_def, rule ex1I [of _ "{v, w}"], intro conjI)
+    show "{v, w} \<in> K" using vwK .
+    show "face {v} {v, w}" using vnew unfolding face_def by auto
+    have fK : "finite K" using K f finite_subset by auto
+    fix b assume b: "b \<in> K \<and> face {v} b"
+    consider (c0) "card b = 0" | (c1) "card b = 1" | (c2) "card b = 2" | (cl2) "2 < card b" by linarith
+    then show "b = {v, w}"
+    proof (cases)
+      case c0 from b have "finite b" using f K
+        by (meson PowD finite_subset subset_iff)
+      with c0 have "b = {}" by simp
+      with b have False unfolding face_def by simp
+      thus ?thesis by (rule ccontr)
+    next
+      case c1
+      with b have False unfolding face_def
+        using card_1_singletonE by blast
+      thus ?thesis by (rule ccontr)
+    next
+      case c2
+      show ?thesis
+      proof (rule ccontr)
+        assume bvw: "b \<noteq> {v, w}"
+        obtain v2 where b2: "b = {v, v2}" using b c2 card_2_iff [of b] unfolding face_def by auto
+        with bvw have wnb: "w \<notin> b" using b2 using vnew by fastforce
+        hence wnev2: "w \<noteq> v2" using b2 by blast
+        have vnev2: "v \<noteq> v2" using c2 b2 by auto
+        have "{v2} \<in> (link_ext v (vertex_of_simpl_complex K) K)"
+          using b vnev2 unfolding b2 link_ext_def vertex_of_simpl_complex_def
+          using c closed_subset_def by fastforce
+        hence "v2 \<in> vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K)"
+          unfolding vertex_of_simpl_complex_def by simp
+        thus False using vosc_l wnev2 by simp
+      qed
+    next
+      case cl2
+      then show ?thesis using pure_d_card [OF p fK] using cl2 b by auto
+    qed
+  qed
+  show ?thesis
+  proof (rule exI [of _ w], intro conjI)
+    show vnew: "v \<noteq> w"
+      using link_ext_def vertex_of_simpl_complex_def vosc_l by fastforce
+    show "facets K = {{v, w}} \<union> facets (cost v V K)"
+    proof (rule)
+      show "facets K \<subseteq> {{v, w}} \<union> facets (cost v V K)"
+      proof
+        fix x assume x: "x \<in> facets K"
+        show "x \<in> {{v, w}} \<union> facets (cost v V K)"
+        proof (cases "v \<in> x")
+          case True hence "x = {v,w}"
+          proof -
+            from vosc_l have "{v,w} \<in> K" unfolding link_ext_def vertex_of_simpl_complex_def by auto
+            moreover have "{v} \<subset> {v,w}" using vnew by auto
+            ultimately show ?thesis 
+              using ffv x True unfolding free_face_def face_def facet_def facets_def by auto
+          qed
+          thus ?thesis by simp
+        next
+          case False
+          show ?thesis using facet_implies_facet_cost [OF K c x False] by simp
+        qed
+      qed
+    next
+      show "{{v, w}} \<union> facets (cost v V K) \<subseteq> facets K"
+      proof (rule)
+        fix x
+        assume xor: "x \<in> {{v, w}} \<union> facets (cost v V K)"
+        then consider (xvw) "x = {v,w}" | (xf) "x \<in> facets (cost v V K)" by auto
+        then show "x \<in> facets K"
+        proof (cases)
+          case xvw
+          show ?thesis 
+          proof (unfold facets_def facet_def, rule, intro conjI)
+            show "x \<in> K" using vwK xvw by simp
+            show "\<forall>b\<in>K. x \<subseteq> b \<longrightarrow> x = b"
+            proof (rule, rule)
+              fix b
+              assume b: "b \<in> K" and x: "x \<subseteq> b"
+              from pure_d_card [OF p fK] b have "card b \<le> 2" by auto
+              moreover have "finite b" using K f b fK by (meson PowD finite_subset in_mono)
+              moreover have "card x = 2" using xvw vnew by simp
+              ultimately show "x = b" using x by (simp add: card_seteq)
+            qed
+          qed
+        next
+          case xf
+          show ?thesis
+          proof (rule facet_cost_implies_facet [of _ V _ v])
+            show "K \<subseteq> powerset V" using K .
+            show "closed_subset K" using c .
+            show xfc: "x \<in> facets (cost v V K)" using xf .
+            show "x \<notin> link_ext v V K"
+            proof (rule ccontr, simp)
+              assume xle: "x \<in> link_ext v V K"
+              have xfl: "x \<in> facets (link_ext v V K)" 
+                using facet_cost_impl_facet_link_ext [OF xfc xle f K c] .
+              have p0l: "pure_d 0 (link_ext v V K)"
+                using pure_d_minus_one_link_ext [OF K c _ p v] by simp
+              from xfc have cx2: "card x = 2"
+                using pure_d_implies_pure_d_cost [OF K c f p v nc nec nel]
+                unfolding pure_d_def by simp
+              from p0l xfl have "card x = 1"
+                unfolding pure_d_def by simp
+              thus False using cx2 by simp
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
 
 lemma assumes K: "K \<subseteq> powerset V" and c: "closed_subset K" and f: "finite V"
     and p: "pure_d 1 K" and v: "{v} \<in> K" and nc: "\<not> (cone_peak V K v)" 
@@ -3521,7 +3631,7 @@ proof -
     by (simp add: finite_subset)
   have "{v,w} \<notin> cost v V K" unfolding cost_def by simp
   hence vwnin: "{v,w} \<notin> facets (cost v V K)" unfolding facets_def facet_def by simp
-  from facets_union [OF K c f p v nc nec nel vnew] vnew 
+  from facets_union [OF K c f p v nc nec nel] vnew 
   obtain w where vnew: "v \<noteq> w" and funion: "facets K = {{v,w}} \<union> facets (cost v V K)" by auto
   have "{v,w} \<notin> cost v V K" unfolding cost_def by simp
   hence vwnin: "{v,w} \<notin> facets (cost v V K)" unfolding facets_def facet_def by simp
@@ -3529,8 +3639,6 @@ proof -
     by (metis Collect_mem_eq Diff_insert_absorb Un_insert_left add.commute card_Diff_singleton cf insertI1 nat_less_le
         ordered_cancel_comm_monoid_diff_class.add_diff_inverse sup_bot_left)
 qed
-
-
 
 lemma non_evasive_dim_1_two_free_faces: assumes neVK: "non_evasive V K"
   and p: "pure_d 1 K" and f: "finite V" and K: "K \<subseteq> powerset V" and Kne: "K \<noteq> {}" and cs: "closed_subset K"
@@ -3633,7 +3741,7 @@ next
       using fKv linkne
       using csle lepw non_evasive_impl_non_evasive_vsc
         vertex_of_simpl_complex_subset by presburger
-  qed find_theorems "pure_d"
+  qed
   then obtain w where vosc_l: "vertex_of_simpl_complex (link_ext v (vertex_of_simpl_complex K) K) = {w}"
     by (rule card_1_singletonE)
   have ffv: "free_face {v} K"
@@ -3676,6 +3784,10 @@ next
       case cl2
       then show ?thesis using pure_d_card [OF Suc.prems (2) fK] using cl2 b by auto
     qed
+  qed
+  have "2 \<le> card {f. free_face f (cost v V K)}"
+  proof (rule Suc.hyps)
+  
   qed
 
 
